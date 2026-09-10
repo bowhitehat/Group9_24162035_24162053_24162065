@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: group9-topic-management
+  config:
+    import: optional:file:.env[.properties]
+  profiles:
+    default: dev
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: none
+  thymeleaf:
+    cache: false
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+server:
+  port: ${PORT:8080}
+  error:
+    whitelabel:
+      enabled: false
+app:
+  upload-dir: ${UPLOAD_DIR:./uploads}
+  demo-password: ${DEMO_PASSWORD:}
