@@ -42,6 +42,16 @@ public class UserService {
         return users.findByUsernameIgnoreCase(username).orElseThrow(() -> new NotFoundException("Không tìm thấy tài khoản"));
     }
 
+    public java.util.Optional<User> findByUsername(String username) {
+        return users.findByUsernameIgnoreCase(username);
+    }
+
+    public List<User> findUsersByRole(String roleName) {
+        return users.findAll().stream()
+                .filter(u -> u.getRoles().stream().anyMatch(r -> r.getName().name().equalsIgnoreCase(roleName) || r.getName().toString().equalsIgnoreCase(roleName)))
+                .toList();
+    }
+
     @Transactional
     public User create(String username, String fullName, String email, String studentCode, Long departmentId, Set<RoleName> roleNames, String rawPassword) {
         if (users.existsByUsernameIgnoreCase(username)) throw new BusinessRuleException("Tên đăng nhập đã tồn tại");

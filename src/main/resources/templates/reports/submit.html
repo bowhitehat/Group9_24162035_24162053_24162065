@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: page(~{::content})}">
+<head>
+    <title>Nộp báo cáo</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="mb-3">
+        <a th:href="@{/groups/my-group}" class="btn btn-sm btn-outline-secondary">&larr; Quay lại Nhóm của tôi</a>
+    </div>
+
+    <div class="card mb-4">
+        <div class="card-header bg-white py-3">
+            <h4 class="card-title mb-0">Nộp báo cáo tiến độ / khóa luận</h4>
+        </div>
+        <div class="card-body">
+            <p><strong>Đề tài:</strong> <span th:text="${registration.topic.title}"></span></p>
+            <p><strong>Trưởng nhóm:</strong> <span th:text="${registration.studentGroup.leader.fullName}"></span></p>
+
+            <form th:action="@{/reports/submit}" th:object="${reportForm}" method="post" enctype="multipart/form-data" class="mt-4 border-top pt-3">
+                <input type="hidden" th:field="*{topicRegistrationId}">
+
+                <div class="mb-3">
+                    <label class="form-label">Chọn tệp báo cáo <span class="text-danger">*</span></label>
+                    <input type="file" name="file" class="form-control" required>
+                    <div class="form-text">Định dạng hỗ trợ: PDF, DOC, DOCX, ZIP...</div>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label">Ghi chú lượt nộp</label>
+                    <textarea th:field="*{note}" class="form-control" rows="3" placeholder="Ghi chú nội dung nộp hoặc nộp lại..."></textarea>
+                </div>
+
+                <button type="submit" class="btn btn-primary">Nộp báo cáo</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Lịch sử nộp -->
+    <div class="card">
+        <div class="card-header bg-white py-3">
+            <h5 class="card-title mb-0">Lịch sử nộp bài (Phiên bản)</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th>Phiên bản</th>
+                        <th>Tên tập tin</th>
+                        <th>Kích thước</th>
+                        <th>Ghi chú</th>
+                        <th>Thời gian nộp</th>
+                        <th>Tải về</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="sub : ${submissions}">
+                        <td><span class="badge bg-secondary" th:text="${'v' + sub.version}"></span></td>
+                        <td th:text="${sub.originalFileName}"></td>
+                        <td th:text="${#numbers.formatDecimal(sub.fileSize / 1024.0, 1, 2) + ' KB'}"></td>
+                        <td th:text="${sub.note}"></td>
+                        <td th:text="${#temporals.format(sub.createdAt, 'dd/MM/yyyy HH:mm')}"></td>
+                        <td>
+                            <a th:href="@{/reports/download/{id}(id=${sub.id})}" class="btn btn-sm btn-outline-primary">Tải tệp</a>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(submissions)}">
+                        <td colspan="6" class="text-center py-4 text-muted">Chưa nộp báo cáo nào</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

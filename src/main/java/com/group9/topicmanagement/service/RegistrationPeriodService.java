@@ -35,6 +35,10 @@ public class RegistrationPeriodService {
         return value.isBlank() ? periods.findAllByOrderByCreatedAtDesc() : periods.findByNameContainingIgnoreCaseOrderByCreatedAtDesc(value);
     }
 
+    public List<RegistrationPeriod> findAllPeriods() {
+        return search("", null, null);
+    }
+
     @Transactional
     public RegistrationPeriod save(RegistrationPeriod period) {
         validate(period);

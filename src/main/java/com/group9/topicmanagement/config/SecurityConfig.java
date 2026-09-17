@@ -14,6 +14,7 @@ import org.springframework.security.web.SecurityFilterChain;
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
+
     @Bean PasswordEncoder passwordEncoder() { return new BCryptPasswordEncoder(); }
 
     @Bean
@@ -31,6 +32,13 @@ public class SecurityConfig {
                 .requestMatchers("/login", "/css/**", "/images/**", "/webjars/**", "/error/**").permitAll()
                 .requestMatchers("/admin/**").hasRole("ADMIN")
                 .requestMatchers("/faculty/**").hasAnyRole("FACULTY_MANAGER", "ADMIN")
+                .requestMatchers("/topics/create", "/topics/edit/**", "/topics/submit/**").hasRole("LECTURER")
+                .requestMatchers("/topics/approve/**", "/topics/reject/**", "/topics/publish/**").hasAnyRole("FACULTY_MANAGER", "ADMIN")
+                .requestMatchers("/groups/**").hasRole("STUDENT")
+                .requestMatchers("/registrations/register").hasRole("STUDENT")
+                .requestMatchers("/registrations/approve/**", "/registrations/reject/**").hasAnyRole("FACULTY_MANAGER", "ADMIN")
+                .requestMatchers("/reports/submit").hasRole("STUDENT")
+                .requestMatchers("/reports/download/**", "/reports/history/**").authenticated()
                 .anyRequest().authenticated())
             .formLogin(form -> form.loginPage("/login").defaultSuccessUrl("/dashboard", true).failureUrl("/login?error").permitAll())
             .logout(logout -> logout.logoutSuccessUrl("/login?logout"))

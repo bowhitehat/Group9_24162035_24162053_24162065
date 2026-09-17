@@ -26,6 +26,10 @@ public class DepartmentService {
             : departments.findByCodeContainingIgnoreCaseOrNameContainingIgnoreCaseOrderByCode(value, value);
     }
 
+    public List<Department> findAllDepartments() {
+        return search("");
+    }
+
     public Department get(Long id) {
         return departments.findById(id).orElseThrow(() -> new NotFoundException("Không tìm thấy bộ môn"));
     }
