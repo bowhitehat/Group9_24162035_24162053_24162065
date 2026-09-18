@@ -1,5 +1,5 @@
 # Hệ thống quản lý đề tài sinh viên — Group 9
-
+# TRƯỜNG ĐẠI HỌC CÔNG NGHỆ KỸ THUẬT HCM-UTE
 Nhánh `feature/core-admin` là phần của **Trang Sĩ Hoàng — 24162035**, phụ trách nền tảng kỹ thuật, tích hợp, SQL Workbench, tài khoản–phân quyền, bộ môn và đợt đăng ký.
 
 ## Thành viên
