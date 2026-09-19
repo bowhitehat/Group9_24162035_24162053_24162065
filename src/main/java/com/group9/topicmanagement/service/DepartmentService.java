@@ -30,6 +30,8 @@ public class DepartmentService {
         return search("");
     }
 
+    public long countDepartments() { return departments.count(); }
+
     public Department get(Long id) {
         return departments.findById(id).orElseThrow(() -> new NotFoundException("Không tìm thấy bộ môn"));
     }

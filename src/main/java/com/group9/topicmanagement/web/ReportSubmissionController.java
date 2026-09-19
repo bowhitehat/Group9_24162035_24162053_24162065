@@ -4,7 +4,6 @@ import com.group9.topicmanagement.config.UploadConfig;
 import com.group9.topicmanagement.domain.registration.ReportSubmission;
 import com.group9.topicmanagement.domain.registration.TopicRegistration;
 import com.group9.topicmanagement.service.ReportSubmissionService;
-import com.group9.topicmanagement.service.TopicRegistrationService;
 import com.group9.topicmanagement.web.form.ReportSubmissionForm;
 import jakarta.validation.Valid;
 import org.springframework.core.io.Resource;
@@ -12,6 +11,8 @@ import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.ContentDisposition;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -21,6 +22,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.net.MalformedURLException;
 import java.nio.file.Path;
+import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.List;
 
@@ -29,25 +31,22 @@ import java.util.List;
 public class ReportSubmissionController {
 
     private final ReportSubmissionService reportService;
-    private final TopicRegistrationService registrationService;
     private final UploadConfig uploadConfig;
 
     public ReportSubmissionController(ReportSubmissionService reportService,
-                                      TopicRegistrationService registrationService,
                                       UploadConfig uploadConfig) {
         this.reportService = reportService;
-        this.registrationService = registrationService;
         this.uploadConfig = uploadConfig;
     }
 
     @PreAuthorize("hasRole('STUDENT')")
     @GetMapping("/submit")
-    public String showSubmitForm(@RequestParam Long registrationId, Model model) {
-        TopicRegistration registration = registrationService.getRegistrationById(registrationId);
+    public String showSubmitForm(@RequestParam Long registrationId, Principal principal, Model model) {
+        TopicRegistration registration = reportService.getRegistrationForSubmission(registrationId, principal.getName());
         ReportSubmissionForm form = new ReportSubmissionForm();
         form.setTopicRegistrationId(registrationId);
 
-        List<ReportSubmission> submissions = reportService.getSubmissionHistory(registrationId);
+        List<ReportSubmission> submissions = reportService.getSubmissionHistoryForUser(registrationId, principal.getName());
 
         model.addAttribute("reportForm", form);
         model.addAttribute("registration", registration);
@@ -63,9 +62,9 @@ public class ReportSubmissionController {
                                Model model,
                                RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
-            TopicRegistration registration = registrationService.getRegistrationById(form.getTopicRegistrationId());
+            TopicRegistration registration = reportService.getRegistrationForSubmission(form.getTopicRegistrationId(), principal.getName());
             model.addAttribute("registration", registration);
-            model.addAttribute("submissions", reportService.getSubmissionHistory(form.getTopicRegistrationId()));
+            model.addAttribute("submissions", reportService.getSubmissionHistoryForUser(form.getTopicRegistrationId(), principal.getName()));
             return "reports/submit";
         }
 
@@ -73,19 +72,21 @@ public class ReportSubmissionController {
             reportService.submitReport(form, principal.getName());
             redirectAttributes.addFlashAttribute("successMessage", "Nộp báo cáo thành công!");
             return "redirect:/reports/submit?registrationId=" + form.getTopicRegistrationId();
+        } catch (AccessDeniedException error) {
+            throw error;
         } catch (Exception e) {
-            TopicRegistration registration = registrationService.getRegistrationById(form.getTopicRegistrationId());
+            TopicRegistration registration = reportService.getRegistrationForSubmission(form.getTopicRegistrationId(), principal.getName());
             model.addAttribute("errorMessage", e.getMessage());
             model.addAttribute("registration", registration);
-            model.addAttribute("submissions", reportService.getSubmissionHistory(form.getTopicRegistrationId()));
+            model.addAttribute("submissions", reportService.getSubmissionHistoryForUser(form.getTopicRegistrationId(), principal.getName()));
             return "reports/submit";
         }
     }
 
     @GetMapping("/history/{registrationId}")
-    public String viewHistory(@PathVariable Long registrationId, Model model) {
-        TopicRegistration registration = registrationService.getRegistrationById(registrationId);
-        List<ReportSubmission> submissions = reportService.getSubmissionHistory(registrationId);
+    public String viewHistory(@PathVariable Long registrationId, Principal principal, Model model) {
+        List<ReportSubmission> submissions = reportService.getSubmissionHistoryForUser(registrationId, principal.getName());
+        TopicRegistration registration = reportService.getRegistrationForUser(registrationId, principal.getName());
 
         model.addAttribute("registration", registration);
         model.addAttribute("submissions", submissions);
@@ -93,9 +94,11 @@ public class ReportSubmissionController {
     }
 
     @GetMapping("/download/{id}")
-    public ResponseEntity<Resource> downloadReport(@PathVariable Long id) {
-        ReportSubmission submission = reportService.getSubmissionById(id);
-        Path filePath = uploadConfig.getUploadDirectory().resolve(submission.getStoredFileName());
+    public ResponseEntity<Resource> downloadReport(@PathVariable Long id, Principal principal) {
+        ReportSubmission submission = reportService.getSubmissionByIdForUser(id, principal.getName());
+        Path uploadDirectory = uploadConfig.getUploadDirectory().toAbsolutePath().normalize();
+        Path filePath = uploadDirectory.resolve(submission.getStoredFileName()).normalize();
+        if (!filePath.startsWith(uploadDirectory)) throw new AccessDeniedException("Đường dẫn tập tin không hợp lệ");
 
         try {
             Resource resource = new UrlResource(filePath.toUri());
@@ -105,7 +108,8 @@ public class ReportSubmissionController {
 
             return ResponseEntity.ok()
                     .contentType(MediaType.parseMediaType(submission.getContentType()))
-                    .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + submission.getOriginalFileName() + "\"")
+                    .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
+                            .filename(submission.getOriginalFileName(), StandardCharsets.UTF_8).build().toString())
                     .body(resource);
         } catch (MalformedURLException e) {
             throw new RuntimeException("Lỗi tải tệp báo cáo", e);

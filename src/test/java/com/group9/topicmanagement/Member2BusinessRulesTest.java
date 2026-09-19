@@ -25,6 +25,7 @@ import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMock
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -36,6 +37,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -112,6 +114,7 @@ class Member2BusinessRulesTest {
         period.setLecturerEnd(now.plusDays(5));
         period.setStudentStart(now.minusDays(2));
         period.setStudentEnd(now.plusDays(10));
+        period.setReportSubmissionDeadline(now.plusDays(20));
         period.setStatus(PeriodStatus.STUDENT_REGISTRATION);
         period = periods.save(period);
     }
@@ -196,6 +199,7 @@ class Member2BusinessRulesTest {
         Topic topic = topicService.createTopic(form, lecturer1.getUsername());
         topicService.submitTopic(topic.getId(), lecturer1.getUsername());
         topicService.approveTopic(topic.getId());
+        topicService.publishTopic(topic.getId());
 
         StudentGroup group1 = groupService.createGroup(period.getId(), student1.getUsername());
         groupService.addMember(group1.getId(), student2.getUsername(), student1.getUsername());
@@ -229,6 +233,7 @@ class Member2BusinessRulesTest {
         Topic topic = topicService.createTopic(form, lecturer1.getUsername());
         topicService.submitTopic(topic.getId(), lecturer1.getUsername());
         topicService.approveTopic(topic.getId());
+        topicService.publishTopic(topic.getId());
 
         StudentGroup group = groupService.createGroup(period.getId(), student1.getUsername());
         groupService.addMember(group.getId(), student2.getUsername(), student1.getUsername());
@@ -244,7 +249,7 @@ class Member2BusinessRulesTest {
 
         // Thành viên thường nộp -> Lỗi
         assertThatThrownBy(() -> reportService.submitReport(form1, student2.getUsername()))
-                .isInstanceOf(BusinessRuleException.class)
+                .isInstanceOf(AccessDeniedException.class)
                 .hasMessageContaining("Chỉ trưởng nhóm");
 
         // Trưởng nhóm nộp lần 1 -> version = 1
@@ -261,7 +266,7 @@ class Member2BusinessRulesTest {
         ReportSubmission sub2 = reportService.submitReport(form2, student1.getUsername());
         assertThat(sub2.getVersion()).isEqualTo(2);
 
-        List<ReportSubmission> history = reportService.getSubmissionHistory(reg.getId());
+        List<ReportSubmission> history = reportService.getSubmissionHistoryForUser(reg.getId(), student1.getUsername());
         assertThat(history).hasSize(2);
         assertThat(history.get(0).getVersion()).isEqualTo(2);
     }
@@ -274,5 +279,92 @@ class Member2BusinessRulesTest {
 
         // Sinh viên truy cập đường dẫn duyệt đăng ký của Khoa -> 403 Forbidden
         mvc.perform(post("/registrations/approve/1")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void testRejectReasonIsRequired() {
+        TopicForm form = topicForm("DT06", "Đề tài cần phản hồi");
+        Topic topic = topicService.createTopic(form, lecturer1.getUsername());
+        topicService.submitTopic(topic.getId(), lecturer1.getUsername());
+
+        assertThatThrownBy(() -> topicService.rejectTopic(topic.getId(), "  "))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("không được để trống");
+    }
+
+    @Test
+    void testInvalidReportFileIsRejectedAndOtherGroupCannotRead() {
+        TopicRegistration registration = createApprovedRegistration();
+        ReportSubmissionForm invalidForm = reportForm(registration.getId(), "malware.exe", "application/octet-stream");
+
+        assertThatThrownBy(() -> reportService.submitReport(invalidForm, student1.getUsername()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("PDF, DOC, DOCX hoặc ZIP");
+
+        ReportSubmission submission = reportService.submitReport(
+                reportForm(registration.getId(), "bao-cao.pdf", "application/pdf"), student1.getUsername());
+        assertThat(submission.getVersion()).isEqualTo(1);
+        assertThatThrownBy(() -> reportService.getSubmissionHistoryForUser(registration.getId(), student4.getUsername()))
+                .isInstanceOf(AccessDeniedException.class);
+    }
+
+    @Test
+    void testReportDeadlineIsEnforced() {
+        TopicRegistration registration = createApprovedRegistration();
+        period.setReportSubmissionDeadline(LocalDateTime.now().minusMinutes(1));
+        periods.save(period);
+
+        assertThatThrownBy(() -> reportService.submitReport(
+                reportForm(registration.getId(), "tre-han.pdf", "application/pdf"), student1.getUsername()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("hết hạn nộp báo cáo");
+    }
+
+    @Test
+    void testTopicOutsideLecturerWindowIsRejected() {
+        period.setLecturerStart(LocalDateTime.now().minusDays(3));
+        period.setLecturerEnd(LocalDateTime.now().minusDays(2));
+        periods.save(period);
+
+        assertThatThrownBy(() -> topicService.createTopic(topicForm("DT07", "Đề tài trễ hạn"), lecturer1.getUsername()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Ngoài thời gian giảng viên");
+    }
+
+    @Test
+    void testReportHistoryReturns403ForStudentFromAnotherGroup() throws Exception {
+        TopicRegistration registration = createApprovedRegistration();
+        reportService.submitReport(reportForm(registration.getId(), "bao-cao.pdf", "application/pdf"), student1.getUsername());
+
+        mvc.perform(get("/reports/history/" + registration.getId())
+                        .with(user(student4.getUsername()).roles("STUDENT")))
+                .andExpect(status().isForbidden());
+    }
+
+    private TopicRegistration createApprovedRegistration() {
+        Topic topic = topicService.createTopic(topicForm("DT-HELPER", "Đề tài kiểm thử báo cáo"), lecturer1.getUsername());
+        topicService.submitTopic(topic.getId(), lecturer1.getUsername());
+        topicService.approveTopic(topic.getId());
+        topicService.publishTopic(topic.getId());
+        StudentGroup group = groupService.createGroup(period.getId(), student1.getUsername());
+        TopicRegistration registration = registrationService.registerTopic(group.getId(), topic.getId(), student1.getUsername());
+        registrationService.approveRegistration(registration.getId(), facultyManager.getUsername());
+        return registration;
+    }
+
+    private TopicForm topicForm(String code, String title) {
+        TopicForm form = new TopicForm();
+        form.setCode(code);
+        form.setTitle(title);
+        form.setDepartmentId(dept.getId());
+        form.setRegistrationPeriodId(period.getId());
+        return form;
+    }
+
+    private ReportSubmissionForm reportForm(Long registrationId, String fileName, String contentType) {
+        ReportSubmissionForm form = new ReportSubmissionForm();
+        form.setTopicRegistrationId(registrationId);
+        form.setFile(new MockMultipartFile("file", fileName, contentType, "test-content".getBytes()));
+        return form;
     }
 }

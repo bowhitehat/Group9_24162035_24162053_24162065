@@ -52,7 +52,11 @@ public class StudentGroupController {
 
         model.addAttribute("periods", periods);
         model.addAttribute("selectedPeriodId", periodId);
-        model.addAttribute("group", groupOpt.orElse(null));
+        StudentGroup group = groupOpt.orElse(null);
+        model.addAttribute("group", group);
+        model.addAttribute("canCreateGroup", group == null && groupService.canCreateGroup(periodId, principal.getName()));
+        model.addAttribute("canAddMember", group != null && groupService.canAddMember(group, principal.getName()));
+        model.addAttribute("removableMemberIds", group == null ? java.util.Set.of() : groupService.removableMemberIds(group, principal.getName()));
         model.addAttribute("groupMemberForm", new GroupMemberForm());
 
         return "groups/my-group";

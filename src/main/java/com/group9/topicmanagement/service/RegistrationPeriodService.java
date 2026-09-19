@@ -39,6 +39,12 @@ public class RegistrationPeriodService {
         return search("", null, null);
     }
 
+    public long countPeriods() { return periods.count(); }
+
+    public boolean canEdit(RegistrationPeriod period) {
+        return period.getStatus() == PeriodStatus.DRAFT;
+    }
+
     @Transactional
     public RegistrationPeriod save(RegistrationPeriod period) {
         validate(period);
@@ -52,6 +58,7 @@ public class RegistrationPeriodService {
         current.setName(input.getName()); current.setType(input.getType());
         current.setLecturerStart(input.getLecturerStart()); current.setLecturerEnd(input.getLecturerEnd());
         current.setStudentStart(input.getStudentStart()); current.setStudentEnd(input.getStudentEnd());
+        current.setReportSubmissionDeadline(input.getReportSubmissionDeadline());
         current.setReviewDeadline(input.getReviewDeadline()); current.setCouncilDate(input.getCouncilDate());
         validate(current);
         return current;
@@ -83,6 +90,8 @@ public class RegistrationPeriodService {
             throw new BusinessRuleException("Thời gian sinh viên bắt đầu phải trước thời gian kết thúc");
         if (period.getLecturerEnd().isAfter(period.getStudentStart()))
             throw new BusinessRuleException("Giai đoạn giảng viên phải kết thúc trước giai đoạn sinh viên");
+        if (period.getReportSubmissionDeadline() != null && period.getReportSubmissionDeadline().isBefore(period.getStudentEnd()))
+            throw new BusinessRuleException("Hạn nộp báo cáo phải sau khi kết thúc đăng ký đề tài");
         if ((period.getType() == PeriodType.TLCN || period.getType() == PeriodType.KLTN) && period.getReviewDeadline() == null)
             throw new BusinessRuleException("TLCN/KLTN phải có hạn nộp điểm phản biện");
         if (period.getType() != PeriodType.KLTN && period.getCouncilDate() != null)

@@ -8,6 +8,8 @@ import com.group9.topicmanagement.domain.User;
 import com.group9.topicmanagement.service.DepartmentService;
 import com.group9.topicmanagement.service.RegistrationPeriodService;
 import com.group9.topicmanagement.service.TopicService;
+import com.group9.topicmanagement.service.StudentGroupService;
+import com.group9.topicmanagement.service.TopicRegistrationService;
 import com.group9.topicmanagement.service.UserService;
 import com.group9.topicmanagement.web.form.RejectForm;
 import com.group9.topicmanagement.web.form.TopicForm;
@@ -16,6 +18,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -33,15 +36,21 @@ public class TopicController {
     private final RegistrationPeriodService periodService;
     private final DepartmentService departmentService;
     private final UserService userService;
+    private final StudentGroupService groupService;
+    private final TopicRegistrationService registrationService;
 
     public TopicController(TopicService topicService,
                            RegistrationPeriodService periodService,
                            DepartmentService departmentService,
-                           UserService userService) {
+                           UserService userService,
+                           StudentGroupService groupService,
+                           TopicRegistrationService registrationService) {
         this.topicService = topicService;
         this.periodService = periodService;
         this.departmentService = departmentService;
         this.userService = userService;
+        this.groupService = groupService;
+        this.registrationService = registrationService;
     }
 
     @GetMapping
@@ -51,6 +60,7 @@ public class TopicController {
                              @RequestParam(required = false) String keyword,
                              @RequestParam(defaultValue = "0") int page,
                              @RequestParam(defaultValue = "10") int size,
+                             Authentication authentication,
                              Model model) {
         Pageable pageable = PageRequest.of(page, size);
         
@@ -59,9 +69,21 @@ public class TopicController {
             periodId = periods.get(0).getId();
         }
 
-        Page<Topic> topicPage = (periodId != null) 
-                ? topicService.findTopicsWithFilters(periodId, departmentId, status, keyword, pageable)
-                : Page.empty();
+        boolean manager = hasRole(authentication, "ADMIN") || hasRole(authentication, "FACULTY_MANAGER");
+        boolean lecturer = hasRole(authentication, "LECTURER");
+        boolean student = hasRole(authentication, "STUDENT");
+        Page<Topic> topicPage = Page.empty();
+        if (periodId != null) {
+            if (manager) {
+                topicPage = topicService.findTopicsWithFilters(periodId, departmentId, status, keyword, pageable);
+            } else if (lecturer) {
+                User currentUser = userService.getByUsername(authentication.getName());
+                topicPage = topicService.findTopicsForLecturer(currentUser.getId(), periodId, departmentId, status, keyword, pageable);
+            } else if (student) {
+                topicPage = topicService.findAvailableTopicsForStudents(periodId, departmentId, keyword, pageable);
+                status = TopicStatus.PUBLISHED;
+            }
+        }
 
         model.addAttribute("topics", topicPage.getContent());
         model.addAttribute("page", topicPage);
@@ -72,15 +94,37 @@ public class TopicController {
         model.addAttribute("selectedDepartmentId", departmentId);
         model.addAttribute("selectedStatus", status);
         model.addAttribute("keyword", keyword);
+        model.addAttribute("canCreateTopic", lecturer);
+        model.addAttribute("showStatusFilter", !student);
 
         return "topics/list";
     }
 
     @GetMapping("/detail/{id}")
-    public String topicDetail(@PathVariable Long id, Model model) {
-        Topic topic = topicService.getTopicById(id);
+    public String topicDetail(@PathVariable Long id, Authentication authentication, Model model) {
+        boolean manager = hasRole(authentication, "ADMIN") || hasRole(authentication, "FACULTY_MANAGER");
+        boolean lecturer = hasRole(authentication, "LECTURER");
+        boolean student = hasRole(authentication, "STUDENT");
+        Topic topic = topicService.getVisibleTopic(id, authentication.getName(), manager, lecturer, student);
         model.addAttribute("topic", topic);
         model.addAttribute("rejectForm", new RejectForm());
+        model.addAttribute("canEdit", topicService.canEdit(topic, authentication.getName()));
+        model.addAttribute("canSubmit", topicService.canSubmit(topic, authentication.getName()));
+        model.addAttribute("canApprove", topicService.canApprove(topic, manager));
+        model.addAttribute("canReject", topicService.canReject(topic, manager));
+        model.addAttribute("canPublish", topicService.canPublish(topic, manager));
+        Long groupId = null;
+        boolean canRegister = false;
+        if (student) {
+            User currentUser = userService.getByUsername(authentication.getName());
+            var group = groupService.findStudentGroupByStudentAndPeriod(currentUser.getId(), topic.getRegistrationPeriod().getId());
+            if (group.isPresent()) {
+                groupId = group.get().getId();
+                canRegister = registrationService.canRegisterTopic(groupId, topic.getId(), authentication.getName());
+            }
+        }
+        model.addAttribute("groupId", groupId);
+        model.addAttribute("canRegister", canRegister);
         return "topics/detail";
     }
 
@@ -125,7 +169,7 @@ public class TopicController {
     @PreAuthorize("hasRole('LECTURER')")
     @GetMapping("/edit/{id}")
     public String showEditForm(@PathVariable Long id, Model model, Principal principal) {
-        Topic topic = topicService.getTopicById(id);
+        Topic topic = topicService.getEditableTopic(id, principal.getName());
         TopicForm form = new TopicForm();
         form.setId(topic.getId());
         form.setCode(topic.getCode());
@@ -197,7 +241,12 @@ public class TopicController {
 
     @PreAuthorize("hasAnyRole('FACULTY_MANAGER', 'ADMIN')")
     @PostMapping("/reject/{id}")
-    public String rejectTopic(@PathVariable Long id, @ModelAttribute RejectForm rejectForm, RedirectAttributes redirectAttributes) {
+    public String rejectTopic(@PathVariable Long id, @Valid @ModelAttribute RejectForm rejectForm,
+                              BindingResult bindingResult, RedirectAttributes redirectAttributes) {
+        if (bindingResult.hasErrors()) {
+            redirectAttributes.addFlashAttribute("errorMessage", bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return "redirect:/topics/detail/" + id;
+        }
         try {
             topicService.rejectTopic(id, rejectForm.getReason());
             redirectAttributes.addFlashAttribute("successMessage", "Đã từ chối đề tài!");
@@ -217,5 +266,9 @@ public class TopicController {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/topics/detail/" + id;
+    }
+
+    private boolean hasRole(Authentication authentication, String role) {
+        return authentication.getAuthorities().stream().anyMatch(authority -> authority.getAuthority().equals("ROLE_" + role));
     }
 }

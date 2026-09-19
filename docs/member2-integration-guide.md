@@ -8,7 +8,7 @@ Hướng dẫn tích hợp cho Thành viên 1 (Core & Admin) và Thành viên 3 
 
 ### 1.1 Quản lý Lược đồ DB (Flyway Migration)
 * Thành viên 2 đã khai báo đầy đủ các Entity JPA và cấu hình Hibernate tự động đồng bộ lược đồ trên H2 trong môi trường Test.
-* Thành viên 1 cần tham khảo [member2-data-contract.md](./member2-data-contract.md) để viết script Flyway Migration (ví dụ: `V6__create_topic_and_group_tables.sql`) cho môi trường MySQL `dev`/`prod`.
+* Migration MySQL đã được tích hợp tại `V6__create_topic_student_workflow.sql`; không bật Hibernate tự tạo bảng ở môi trường dev/prod.
 
 ### 1.2 Sử dụng các Entity dùng chung
 * Thành viên 2 đã tích hợp trực tiếp các Entity từ Thành viên 1: `User`, `Department`, `RegistrationPeriod`.
@@ -28,7 +28,7 @@ Hướng dẫn tích hợp cho Thành viên 1 (Core & Admin) và Thành viên 3 
 ### 2.2 Lấy báo cáo mới nhất của sinh viên (`ReportSubmission`)
 * Hội đồng chấm điểm có thể lấy bản báo cáo mới nhất (phiên bản `version` cao nhất) của nhóm sinh viên bằng cách gọi `ReportSubmissionService`:
   ```java
-  List<ReportSubmission> history = reportSubmissionService.getSubmissionHistory(registrationId);
+  List<ReportSubmission> history = reportSubmissionService.getSubmissionHistoryForEvaluation(registrationId);
   // Phần tử đầu tiên trong danh sách history là bản nộp mới nhất (phiên bản cao nhất)
   ReportSubmission latestReport = history.isEmpty() ? null : history.get(0);
   ```

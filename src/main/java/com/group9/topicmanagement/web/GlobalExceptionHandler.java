@@ -3,6 +3,7 @@ package com.group9.topicmanagement.web;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.exception.NotFoundException;
 import org.springframework.http.HttpStatus;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -10,6 +11,8 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 
 @ControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(AccessDeniedException.class) @ResponseStatus(HttpStatus.FORBIDDEN)
+    String forbidden(AccessDeniedException error, Model model) { model.addAttribute("message", error.getMessage()); return "error/403"; }
     @ExceptionHandler(BusinessRuleException.class) @ResponseStatus(HttpStatus.BAD_REQUEST)
     String business(BusinessRuleException error, Model model) { model.addAttribute("message", error.getMessage()); return "error/400"; }
     @ExceptionHandler(NotFoundException.class) @ResponseStatus(HttpStatus.NOT_FOUND)

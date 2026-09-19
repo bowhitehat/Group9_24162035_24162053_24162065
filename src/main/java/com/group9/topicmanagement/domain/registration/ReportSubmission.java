@@ -7,6 +7,7 @@ import jakarta.persistence.*;
 
 @Entity
 @Table(name = "report_submission",
+       uniqueConstraints = @UniqueConstraint(columnNames = {"topic_registration_id", "version"}),
        indexes = {
            @Index(name = "idx_report_group_topic", columnList = "student_group_id, topic_registration_id")
        })

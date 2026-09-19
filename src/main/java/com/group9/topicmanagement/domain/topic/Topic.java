@@ -62,6 +62,7 @@ public class Topic extends BaseEntity {
             uniqueConstraints = @UniqueConstraint(columnNames = {"topic_id", "advisor_id"}))
     private Set<User> advisors = new HashSet<>();
 
+    @Column(name = "rejection_reason", length = 500)
     private String rejectionReason;
 
     // Getters and Setters

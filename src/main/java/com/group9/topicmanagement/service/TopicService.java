@@ -13,9 +13,12 @@ import com.group9.topicmanagement.repository.UserRepository;
 import com.group9.topicmanagement.web.form.TopicForm;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -28,15 +31,18 @@ public class TopicService {
     private final RegistrationPeriodRepository periodRepository;
     private final DepartmentRepository departmentRepository;
     private final UserRepository userRepository;
+    private final Clock clock;
 
     public TopicService(TopicRepository topicRepository, 
                         RegistrationPeriodRepository periodRepository,
                         DepartmentRepository departmentRepository,
-                        UserRepository userRepository) {
+                        UserRepository userRepository,
+                        Clock clock) {
         this.topicRepository = topicRepository;
         this.periodRepository = periodRepository;
         this.departmentRepository = departmentRepository;
         this.userRepository = userRepository;
+        this.clock = clock;
     }
 
     public Page<Topic> findTopicsByProposer(Long proposerId, Pageable pageable) {
@@ -46,9 +52,13 @@ public class TopicService {
     public Page<Topic> findTopicsWithFilters(Long periodId, Long departmentId, TopicStatus status, String keyword, Pageable pageable) {
         return topicRepository.findWithFilters(periodId, departmentId, status, keyword, pageable);
     }
+
+    public Page<Topic> findTopicsForLecturer(Long proposerId, Long periodId, Long departmentId, TopicStatus status, String keyword, Pageable pageable) {
+        return topicRepository.findByProposerWithFilters(proposerId, periodId, departmentId, status, normalizeKeyword(keyword), pageable);
+    }
     
-    public Page<Topic> findAvailableTopicsForStudents(Long periodId, String keyword, Pageable pageable) {
-        return topicRepository.findAvailableTopicsForStudents(periodId, keyword, pageable);
+    public Page<Topic> findAvailableTopicsForStudents(Long periodId, Long departmentId, String keyword, Pageable pageable) {
+        return topicRepository.findAvailableTopicsForStudents(periodId, departmentId, normalizeKeyword(keyword), pageable);
     }
 
     public Topic getTopicById(Long id) {
@@ -59,12 +69,17 @@ public class TopicService {
     public Topic createTopic(TopicForm form, String proposerUsername) {
         User proposer = userRepository.findByUsernameIgnoreCase(proposerUsername)
                 .orElseThrow(() -> new BusinessRuleException("Không tìm thấy tài khoản giảng viên"));
+        boolean isLecturer = proposer.getRoles().stream()
+                .anyMatch(role -> role.getName() == com.group9.topicmanagement.domain.enums.RoleName.LECTURER);
+        if (!isLecturer) throw new BusinessRuleException("Chỉ giảng viên mới được đề xuất đề tài");
                 
         RegistrationPeriod period = periodRepository.findById(form.getRegistrationPeriodId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đợt đăng ký"));
                 
         Department department = departmentRepository.findById(form.getDepartmentId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy khoa"));
+
+        requireLecturerWindow(period);
 
         Topic topic = new Topic();
         topic.setCode(form.getCode());
@@ -99,6 +114,8 @@ public class TopicService {
         Department department = departmentRepository.findById(form.getDepartmentId())
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy khoa"));
 
+        requireLecturerWindow(period);
+
         topic.setCode(form.getCode());
         topic.setTitle(form.getTitle());
         topic.setDescription(form.getDescription());
@@ -119,6 +136,7 @@ public class TopicService {
         if (topic.getStatus() != TopicStatus.DRAFT && topic.getStatus() != TopicStatus.REJECTED) {
             throw new BusinessRuleException("Chỉ có thể gửi duyệt đề tài ở trạng thái nháp hoặc bị từ chối");
         }
+        requireLecturerWindow(topic.getRegistrationPeriod());
         topic.setStatus(TopicStatus.PENDING);
         topicRepository.save(topic);
     }
@@ -138,9 +156,66 @@ public class TopicService {
         if (topic.getStatus() != TopicStatus.PENDING) {
             throw new BusinessRuleException("Chỉ có thể từ chối đề tài đang chờ duyệt");
         }
+        if (reason == null || reason.isBlank()) {
+            throw new BusinessRuleException("Lý do từ chối không được để trống");
+        }
+        if (reason.trim().length() > 500) throw new BusinessRuleException("Lý do từ chối không được vượt quá 500 ký tự");
         topic.setStatus(TopicStatus.REJECTED);
-        topic.setRejectionReason(reason);
+        topic.setRejectionReason(reason.trim());
         topicRepository.save(topic);
+    }
+
+    public Topic getVisibleTopic(Long id, String username, boolean manager, boolean lecturer, boolean student) {
+        Topic topic = getTopicById(id);
+        if (manager || topic.getStatus() == TopicStatus.PUBLISHED) return topic;
+        boolean isOwnerOrAdvisor = lecturer && (topic.getProposer().getUsername().equalsIgnoreCase(username)
+                || topic.getAdvisors().stream().anyMatch(a -> a.getUsername().equalsIgnoreCase(username)));
+        if (isOwnerOrAdvisor) return topic;
+        if (student || lecturer) throw new AccessDeniedException("Bạn không có quyền xem đề tài này");
+        throw new AccessDeniedException("Bạn không có quyền xem đề tài này");
+    }
+
+    public Topic getEditableTopic(Long id, String username) {
+        Topic topic = getTopicById(id);
+        if (!canEdit(topic, username)) throw new AccessDeniedException("Bạn không có quyền chỉnh sửa đề tài này");
+        return topic;
+    }
+
+    public boolean canEdit(Topic topic, String username) {
+        return topic.getProposer().getUsername().equalsIgnoreCase(username)
+                && (topic.getStatus() == TopicStatus.DRAFT || topic.getStatus() == TopicStatus.REJECTED)
+                && isInsideLecturerWindow(topic.getRegistrationPeriod());
+    }
+
+    public boolean canSubmit(Topic topic, String username) {
+        return canEdit(topic, username);
+    }
+
+    public boolean canApprove(Topic topic, boolean manager) {
+        return manager && topic.getStatus() == TopicStatus.PENDING;
+    }
+
+    public boolean canReject(Topic topic, boolean manager) {
+        return canApprove(topic, manager);
+    }
+
+    public boolean canPublish(Topic topic, boolean manager) {
+        return manager && topic.getStatus() == TopicStatus.APPROVED;
+    }
+
+    private void requireLecturerWindow(RegistrationPeriod period) {
+        if (!isInsideLecturerWindow(period)) {
+            throw new BusinessRuleException("Ngoài thời gian giảng viên đề xuất đề tài");
+        }
+    }
+
+    private boolean isInsideLecturerWindow(RegistrationPeriod period) {
+        LocalDateTime now = LocalDateTime.now(clock);
+        return !now.isBefore(period.getLecturerStart()) && !now.isAfter(period.getLecturerEnd());
+    }
+
+    private String normalizeKeyword(String keyword) {
+        return keyword == null || keyword.isBlank() ? null : keyword.trim();
     }
 
     public void publishTopic(Long id) {

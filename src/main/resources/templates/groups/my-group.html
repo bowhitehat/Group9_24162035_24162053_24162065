@@ -26,7 +26,7 @@
         <div class="card-body text-center py-5">
             <h4 class="text-muted">Bạn chưa thuộc nhóm nào trong đợt đăng ký này</h4>
             <p class="text-secondary">Bạn có thể tạo nhóm mới và làm Trưởng nhóm.</p>
-            <form th:action="@{/groups/create}" method="post">
+            <form th:if="${canCreateGroup}" th:action="@{/groups/create}" method="post">
                 <input type="hidden" name="periodId" th:value="${selectedPeriodId}">
                 <button type="submit" class="btn btn-success mt-2">+ Tạo Nhóm Mới</button>
             </form>
@@ -63,7 +63,7 @@
                             <span class="badge" th:classappend="${m.leader ? 'bg-primary' : 'bg-secondary'}" th:text="${m.leader ? 'Trưởng nhóm' : 'Thành viên'}"></span>
                         </td>
                         <td>
-                            <div th:if="${group.leader.username == #authentication.name && !m.leader}">
+                            <div th:if="${removableMemberIds.contains(m.member.id)}">
                                 <form th:action="@{/groups/remove-member}" method="post" class="d-inline">
                                     <input type="hidden" name="groupId" th:value="${group.id}">
                                     <input type="hidden" name="memberId" th:value="${m.member.id}">
@@ -77,7 +77,7 @@
             </div>
 
             <!-- Thêm thành viên nếu là trưởng nhóm và nhóm chưa đủ 3 người -->
-            <div class="mt-4 border-top pt-3" th:if="${group.leader.username == #authentication.name && group.members.size() < 3}">
+            <div class="mt-4 border-top pt-3" th:if="${canAddMember}">
                 <h6>Thêm thành viên mới</h6>
                 <form th:action="@{/groups/add-member}" method="post" class="row g-2 align-items-center">
                     <input type="hidden" name="groupId" th:value="${group.id}">

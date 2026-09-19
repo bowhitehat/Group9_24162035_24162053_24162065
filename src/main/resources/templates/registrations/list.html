@@ -11,7 +11,7 @@
     <div class="card mb-4">
         <div class="card-body">
             <form th:action="@{/registrations}" method="get" class="row g-3">
-                <div class="col-md-3">
+                <div class="col-md-3" th:if="${canManageRegistrations}">
                     <label class="form-label">Đợt đăng ký</label>
                     <select name="periodId" class="form-select" onchange="this.form.submit()">
                         <option value="">-- Chọn đợt --</option>
@@ -71,9 +71,10 @@
                         </td>
                         <td>
                             <a th:href="@{/reports/history/{id}(id=${reg.id})}" class="btn btn-sm btn-outline-info">Xem báo cáo</a>
+                            <a th:if="${submittableRegistrationIds.contains(reg.id)}" th:href="@{/reports/submit(registrationId=${reg.id})}" class="btn btn-sm btn-primary">Nộp báo cáo</a>
                         </td>
                         <td>
-                            <div sec:authorize="hasAnyRole('FACULTY_MANAGER', 'ADMIN')" th:if="${reg.status.name() == 'PENDING'}" class="d-flex gap-1">
+                            <div th:if="${reviewableRegistrationIds.contains(reg.id)}" class="d-flex gap-1">
                                 <form th:action="@{/registrations/approve/{id}(id=${reg.id})}" method="post">
                                     <button type="submit" class="btn btn-sm btn-success">Duyệt</button>
                                 </form>
@@ -91,7 +92,7 @@
     </div>
 
     <!-- Modals cho Từ chối đăng ký -->
-    <div th:each="reg : ${registrations}" th:if="${reg.status.name() == 'PENDING'}" class="modal fade" th:id="${'rejectRegModal' + reg.id}" tabindex="-1">
+    <div th:each="reg : ${registrations}" th:if="${reviewableRegistrationIds.contains(reg.id)}" class="modal fade" th:id="${'rejectRegModal' + reg.id}" tabindex="-1">
         <div class="modal-dialog">
             <div class="modal-content">
                 <form th:action="@{/registrations/reject/{id}(id=${reg.id})}" th:object="${rejectForm}" method="post">

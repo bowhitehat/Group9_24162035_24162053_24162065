@@ -12,8 +12,7 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "topic_registration",
        uniqueConstraints = {
-           @UniqueConstraint(columnNames = {"student_group_id", "registration_period_id"}),
-           @UniqueConstraint(columnNames = {"topic_id", "registration_period_id"})
+           @UniqueConstraint(columnNames = {"student_group_id", "registration_period_id"})
        },
        indexes = {@Index(name = "idx_reg_status", columnList = "status")})
 public class TopicRegistration extends BaseEntity {

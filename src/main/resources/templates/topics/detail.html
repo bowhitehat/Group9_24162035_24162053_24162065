@@ -46,29 +46,27 @@
                 <p class="text-break" th:text="${topic.requirement}"></p>
             </div>
 
-            <div class="alert alert-danger" th:if="${topic.status.name() == 'REJECTED' && topic.rejectionReason != null}">
+            <div class="alert alert-danger" th:if="${topic.rejectionReason != null}">
                 <strong>Lý do từ chối:</strong> <span th:text="${topic.rejectionReason}"></span>
             </div>
 
             <!-- Thao tác cho Giảng viên -->
-            <div sec:authorize="hasRole('LECTURER')" th:if="${topic.proposer != null && topic.proposer.username == #authentication.name}">
-                <div class="d-flex gap-2" th:if="${topic.status.name() == 'DRAFT' || topic.status.name() == 'REJECTED'}">
-                    <a th:href="@{/topics/edit/{id}(id=${topic.id})}" class="btn btn-warning">Chỉnh sửa</a>
+            <div class="d-flex gap-2" th:if="${canEdit || canSubmit}">
+                    <a th:if="${canEdit}" th:href="@{/topics/edit/{id}(id=${topic.id})}" class="btn btn-warning">Chỉnh sửa</a>
                     <form th:action="@{/topics/submit/{id}(id=${topic.id})}" method="post">
-                        <button type="submit" class="btn btn-primary" onclick="return confirm('Bạn có chắc chắn muốn gửi duyệt đề tài này?')">Gửi duyệt</button>
+                        <button th:if="${canSubmit}" type="submit" class="btn btn-primary" onclick="return confirm('Bạn có chắc chắn muốn gửi duyệt đề tài này?')">Gửi duyệt</button>
                     </form>
-                </div>
             </div>
 
             <!-- Thao tác duyệt cho Khoa / Admin -->
-            <div sec:authorize="hasAnyRole('FACULTY_MANAGER', 'ADMIN')" class="mt-3 border-top pt-3">
-                <div class="d-flex gap-2" th:if="${topic.status.name() == 'PENDING'}">
+            <div class="mt-3 border-top pt-3" th:if="${canApprove || canReject || canPublish}">
+                <div class="d-flex gap-2" th:if="${canApprove || canReject}">
                     <form th:action="@{/topics/approve/{id}(id=${topic.id})}" method="post">
-                        <button type="submit" class="btn btn-success">Duyệt đề tài</button>
+                        <button th:if="${canApprove}" type="submit" class="btn btn-success">Duyệt đề tài</button>
                     </form>
-                    <button class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">Từ chối</button>
+                    <button th:if="${canReject}" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#rejectModal">Từ chối</button>
                 </div>
-                <div class="d-flex gap-2" th:if="${topic.status.name() == 'APPROVED'}">
+                <div class="d-flex gap-2" th:if="${canPublish}">
                     <form th:action="@{/topics/publish/{id}(id=${topic.id})}" method="post">
                         <button type="submit" class="btn btn-info text-white">Công bố đề tài</button>
                     </form>
@@ -76,7 +74,7 @@
             </div>
 
             <!-- Thao tác đăng ký cho Sinh viên (Trưởng nhóm) -->
-            <div sec:authorize="hasRole('STUDENT')" class="mt-3 border-top pt-3" th:if="${topic.status.name() == 'APPROVED' || topic.status.name() == 'PUBLISHED'}">
+            <div class="mt-3 border-top pt-3" th:if="${canRegister}">
                 <form th:action="@{/registrations/register}" method="post" class="d-inline">
                     <input type="hidden" name="topicId" th:value="${topic.id}">
                     <input type="hidden" name="groupId" th:value="${groupId}"> <!-- Injected or selected -->
@@ -87,7 +85,7 @@
     </div>
 
     <!-- Modal từ chối -->
-    <div class="modal fade" id="rejectModal" tabindex="-1">
+    <div class="modal fade" id="rejectModal" tabindex="-1" th:if="${canReject}">
         <div class="modal-dialog">
             <div class="modal-content">
                 <form th:action="@{/topics/reject/{id}(id=${topic.id})}" th:object="${rejectForm}" method="post">

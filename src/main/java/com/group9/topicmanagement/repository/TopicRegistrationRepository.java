@@ -29,4 +29,15 @@ public interface TopicRegistrationRepository extends JpaRepository<TopicRegistra
                                             @Param("status") RegistrationStatus status,
                                             @Param("keyword") String keyword,
                                             Pageable pageable);
+
+    @Query("SELECT DISTINCT r FROM TopicRegistration r JOIN r.studentGroup.members gm " +
+           "WHERE gm.member.username = :username " +
+           "AND (:periodId IS NULL OR r.registrationPeriod.id = :periodId) " +
+           "AND (:status IS NULL OR r.status = :status) " +
+           "AND (:keyword IS NULL OR LOWER(r.topic.title) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    Page<TopicRegistration> findForStudent(@Param("username") String username,
+                                           @Param("periodId") Long periodId,
+                                           @Param("status") RegistrationStatus status,
+                                           @Param("keyword") String keyword,
+                                           Pageable pageable);
 }

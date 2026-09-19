@@ -13,7 +13,11 @@ import com.group9.topicmanagement.repository.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
+import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -23,15 +27,18 @@ public class StudentGroupService {
     private final GroupMemberRepository groupMemberRepository;
     private final RegistrationPeriodRepository periodRepository;
     private final UserRepository userRepository;
+    private final Clock clock;
 
     public StudentGroupService(StudentGroupRepository groupRepository,
                                GroupMemberRepository groupMemberRepository,
                                RegistrationPeriodRepository periodRepository,
-                               UserRepository userRepository) {
+                               UserRepository userRepository,
+                               Clock clock) {
         this.groupRepository = groupRepository;
         this.groupMemberRepository = groupMemberRepository;
         this.periodRepository = periodRepository;
         this.userRepository = userRepository;
+        this.clock = clock;
     }
 
     public StudentGroup createGroup(Long periodId, String leaderUsername) {
@@ -41,9 +48,14 @@ public class StudentGroupService {
         RegistrationPeriod period = periodRepository.findById(periodId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đợt đăng ký"));
 
-        if (period.getStatus() != PeriodStatus.STUDENT_REGISTRATION && period.getStatus() != PeriodStatus.LECTURER_REGISTRATION) {
+        if (period.getStatus() != PeriodStatus.STUDENT_REGISTRATION) {
             throw new BusinessRuleException("Đợt đăng ký không trong thời gian cho phép tạo nhóm");
         }
+        requireStudentWindow(period);
+
+        boolean isStudent = leader.getRoles().stream()
+                .anyMatch(role -> role.getName() == com.group9.topicmanagement.domain.enums.RoleName.STUDENT);
+        if (!isStudent) throw new BusinessRuleException("Chỉ sinh viên mới được tạo nhóm");
 
         if (groupMemberRepository.existsByStudentIdAndPeriodId(leader.getId(), periodId)) {
             throw new BusinessRuleException("Sinh viên đã thuộc một nhóm khác trong cùng đợt đăng ký");
@@ -70,6 +82,7 @@ public class StudentGroupService {
         if (!group.getLeader().getUsername().equalsIgnoreCase(currentUsername)) {
             throw new BusinessRuleException("Chỉ trưởng nhóm mới có quyền thêm thành viên vào nhóm");
         }
+        requireStudentWindow(group.getRegistrationPeriod());
 
         if (group.getMembers().size() >= 3) {
             throw new BusinessRuleException("Mỗi nhóm chỉ được phép tối đa 3 sinh viên");
@@ -104,6 +117,7 @@ public class StudentGroupService {
         if (!group.getLeader().getUsername().equalsIgnoreCase(currentUsername)) {
             throw new BusinessRuleException("Chỉ trưởng nhóm mới có quyền xóa thành viên khỏi nhóm");
         }
+        requireStudentWindow(group.getRegistrationPeriod());
 
         if (group.getLeader().getId().equals(memberIdToRemove)) {
             throw new BusinessRuleException("Không thể xóa trưởng nhóm khỏi nhóm");
@@ -124,5 +138,43 @@ public class StudentGroupService {
     public StudentGroup getGroupById(Long groupId) {
         return groupRepository.findById(groupId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy nhóm sinh viên"));
+    }
+
+    public boolean canCreateGroup(Long periodId, String username) {
+        if (periodId == null) return false;
+        Optional<User> student = userRepository.findByUsernameIgnoreCase(username);
+        Optional<RegistrationPeriod> period = periodRepository.findById(periodId);
+        if (student.isEmpty() || period.isEmpty()) return false;
+        return period.get().getStatus() == PeriodStatus.STUDENT_REGISTRATION
+                && isInsideStudentWindow(period.get())
+                && !groupMemberRepository.existsByStudentIdAndPeriodId(student.get().getId(), periodId);
+    }
+
+    public boolean canManageGroup(StudentGroup group, String username) {
+        return group != null
+                && group.getLeader().getUsername().equalsIgnoreCase(username)
+                && group.getRegistrationPeriod().getStatus() == PeriodStatus.STUDENT_REGISTRATION
+                && isInsideStudentWindow(group.getRegistrationPeriod());
+    }
+
+    public boolean canAddMember(StudentGroup group, String username) {
+        return canManageGroup(group, username) && group.getMembers().size() < 3;
+    }
+
+    public Set<Long> removableMemberIds(StudentGroup group, String username) {
+        if (!canManageGroup(group, username)) return Set.of();
+        return group.getMembers().stream()
+                .filter(member -> !member.isLeader())
+                .map(member -> member.getMember().getId())
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    private void requireStudentWindow(RegistrationPeriod period) {
+        if (!isInsideStudentWindow(period)) throw new BusinessRuleException("Ngoài thời gian sinh viên được phép quản lý nhóm");
+    }
+
+    private boolean isInsideStudentWindow(RegistrationPeriod period) {
+        LocalDateTime now = LocalDateTime.now(clock);
+        return !now.isBefore(period.getStudentStart()) && !now.isAfter(period.getStudentEnd());
     }
 }

@@ -38,6 +38,8 @@ public class UserService {
             : users.findByUsernameContainingIgnoreCaseOrFullNameContainingIgnoreCaseOrderByFullName(value, value);
     }
 
+    public long countUsers() { return users.count(); }
+
     public User getByUsername(String username) {
         return users.findByUsernameIgnoreCase(username).orElseThrow(() -> new NotFoundException("Không tìm thấy tài khoản"));
     }

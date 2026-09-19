@@ -7,14 +7,14 @@
 <div th:fragment="content">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2>Danh sách Đề tài</h2>
-        <a sec:authorize="hasRole('LECTURER')" th:href="@{/topics/create}" class="btn btn-primary">+ Đề xuất đề tài</a>
+        <a th:if="${canCreateTopic}" th:href="@{/topics/create}" class="btn btn-primary">+ Đề xuất đề tài</a>
     </div>
 
     <!-- Card Lọc & Tìm kiếm -->
     <div class="card mb-4">
         <div class="card-body">
             <form th:action="@{/topics}" method="get" class="row g-3">
-                <div class="col-md-3">
+                <div class="col-md-3" th:if="${showStatusFilter}">
                     <label class="form-label">Đợt đăng ký</label>
                     <select name="periodId" class="form-select" onchange="this.form.submit()">
                         <option value="">-- Chọn đợt --</option>

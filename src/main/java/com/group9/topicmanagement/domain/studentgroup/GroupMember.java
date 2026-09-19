@@ -1,12 +1,13 @@
 package com.group9.topicmanagement.domain.studentgroup;
 
+import com.group9.topicmanagement.domain.BaseEntity;
 import com.group9.topicmanagement.domain.User;
 import jakarta.persistence.*;
 
 @Entity
 @Table(name = "group_member",
        uniqueConstraints = {@UniqueConstraint(columnNames = {"group_id", "member_id"})})
-public class GroupMember {
+public class GroupMember extends BaseEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

@@ -21,6 +21,7 @@ public class RegistrationPeriod extends BaseEntity {
     @Column(nullable = false) private LocalDateTime lecturerEnd;
     @Column(nullable = false) private LocalDateTime studentStart;
     @Column(nullable = false) private LocalDateTime studentEnd;
+    private LocalDateTime reportSubmissionDeadline;
     private LocalDateTime reviewDeadline;
     private LocalDate councilDate;
 
@@ -39,6 +40,8 @@ public class RegistrationPeriod extends BaseEntity {
     public void setStudentStart(LocalDateTime studentStart) { this.studentStart = studentStart; }
     public LocalDateTime getStudentEnd() { return studentEnd; }
     public void setStudentEnd(LocalDateTime studentEnd) { this.studentEnd = studentEnd; }
+    public LocalDateTime getReportSubmissionDeadline() { return reportSubmissionDeadline; }
+    public void setReportSubmissionDeadline(LocalDateTime reportSubmissionDeadline) { this.reportSubmissionDeadline = reportSubmissionDeadline; }
     public LocalDateTime getReviewDeadline() { return reviewDeadline; }
     public void setReviewDeadline(LocalDateTime reviewDeadline) { this.reviewDeadline = reviewDeadline; }
     public LocalDate getCouncilDate() { return councilDate; }
