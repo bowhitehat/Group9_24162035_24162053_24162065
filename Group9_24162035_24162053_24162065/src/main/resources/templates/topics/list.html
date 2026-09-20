@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" th:replace="~{fragments/layout :: page(~{::content})}">
+<head>
+    <title>Danh sách Đề tài</title>
+</head>
+<body>
+<div th:fragment="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2>Danh sách Đề tài</h2>
+        <a th:if="${canCreateTopic}" th:href="@{/topics/create}" class="btn btn-primary">+ Đề xuất đề tài</a>
+    </div>
+
+    <!-- Card Lọc & Tìm kiếm -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form th:action="@{/topics}" method="get" class="row g-3">
+                <div class="col-md-3" th:if="${showStatusFilter}">
+                    <label class="form-label">Đợt đăng ký</label>
+                    <select name="periodId" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- Chọn đợt --</option>
+                        <option th:each="p : ${periods}" th:value="${p.id}" th:text="${p.name}" th:selected="${p.id == selectedPeriodId}"></option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Khoa / Bộ môn</label>
+                    <select name="departmentId" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- Tất cả bộ môn --</option>
+                        <option th:each="d : ${departments}" th:value="${d.id}" th:text="${d.name}" th:selected="${d.id == selectedDepartmentId}"></option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Trạng thái</label>
+                    <select name="status" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- Tất cả trạng thái --</option>
+                        <option th:each="s : ${statuses}" th:value="${s}" th:text="${s}" th:selected="${s == selectedStatus}"></option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Từ khóa</label>
+                    <div class="input-group">
+                        <input type="text" name="keyword" class="form-control" placeholder="Mã hoặc tên đề tài..." th:value="${keyword}">
+                        <button type="submit" class="btn btn-outline-secondary">Tìm</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Bảng đề tài -->
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th>Mã</th>
+                        <th>Tên đề tài</th>
+                        <th>Khoa/Bộ môn</th>
+                        <th>Giảng viên đề xuất</th>
+                        <th>Trạng thái</th>
+                        <th>Thao tác</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="topic : ${topics}">
+                        <td th:text="${topic.code}" class="fw-bold"></td>
+                        <td th:text="${topic.title}"></td>
+                        <td th:text="${topic.department != null ? topic.department.name : ''}"></td>
+                        <td th:text="${topic.proposer != null ? topic.proposer.fullName : ''}"></td>
+                        <td>
+                            <span class="badge" th:classappend="${topic.status.name() == 'PUBLISHED' ? 'bg-success' : (topic.status.name() == 'APPROVED' ? 'bg-info' : (topic.status.name() == 'PENDING' ? 'bg-warning text-dark' : (topic.status.name() == 'REJECTED' ? 'bg-danger' : 'bg-secondary')))}" th:text="${topic.status}"></span>
+                        </td>
+                        <td>
+                            <a th:href="@{/topics/detail/{id}(id=${topic.id})}" class="btn btn-sm btn-outline-primary">Chi tiết</a>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(topics)}">
+                        <td colspan="6" class="text-center py-4 text-muted">Không tìm thấy đề tài nào</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Phân trang -->
+    <nav th:if="${page != null && page.totalPages > 1}" class="mt-4">
+        <ul class="pagination justify-content-center">
+            <li class="page-item" th:classappend="${page.first} ? 'disabled'">
+                <a class="page-link" th:href="@{/topics(periodId=${selectedPeriodId}, departmentId=${selectedDepartmentId}, status=${selectedStatus}, keyword=${keyword}, page=${page.number - 1})}">Trước</a>
+            </li>
+            <li th:each="i : ${#numbers.sequence(0, page.totalPages - 1)}" class="page-item" th:classappend="${i == page.number} ? 'active'">
+                <a class="page-link" th:href="@{/topics(periodId=${selectedPeriodId}, departmentId=${selectedDepartmentId}, status=${selectedStatus}, keyword=${keyword}, page=${i})}" th:text="${i + 1}">1</a>
+            </li>
+            <li class="page-item" th:classappend="${page.last} ? 'disabled'">
+                <a class="page-link" th:href="@{/topics(periodId=${selectedPeriodId}, departmentId=${selectedDepartmentId}, status=${selectedStatus}, keyword=${keyword}, page=${page.number + 1})}">Sau</a>
+            </li>
+        </ul>
+    </nav>
+</div>
+</body>
+</html>

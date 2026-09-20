@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" th:replace="~{fragments/layout :: page(~{::content})}">
+<head><title>Chấm điểm Đề tài</title></head>
+<body>
+<div th:fragment="content">
+    <div class="mb-4">
+        <h4>Chấm điểm Đề tài</h4>
+        <p class="text-muted" th:text="${topic.code + ' - ' + topic.title}"></p>
+        <p>Vai trò: <span th:text="${evalType}" class="fw-bold"></span></p>
+        <p>Trạng thái phiếu chấm: <span th:text="${evaluation.status}" class="badge bg-info"></span></p>
+    </div>
+    <div class="card shadow-sm">
+        <div class="card-body p-4">
+            <form th:action="@{/evaluations/topic/{id}(id=${topic.id})}" method="post">
+                <input type="hidden" name="type" th:value="${evalType}" />
+                <table class="table table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Tiêu chí</th>
+                            <th>Mô tả</th>
+                            <th style="width: 150px;">Điểm (0-10)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr th:each="c : ${criteria}">
+                            <td>
+                                <span th:text="${c.name}"></span>
+                                <span th:if="${c.isMandatory}" class="text-danger">*</span>
+                            </td>
+                            <td th:text="${c.description}"></td>
+                            <td>
+                                <input type="number" step="0.01" min="0" max="10" 
+                                       th:name="'score_' + ${c.id}" 
+                                       class="form-control" 
+                                       th:required="${c.isMandatory}"
+                                       th:value="${#lists.isEmpty(existingScores) ? '' : (existingScores.^[criterion.id == c.id] != null ? existingScores.^[criterion.id == c.id].score : '')}">
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+                <div class="mb-3">
+                    <label class="form-label">Nhận xét chung</label>
+                    <textarea name="comments" class="form-control" rows="3" th:text="${evaluation.comments}"></textarea>
+                </div>
+                <div th:if="${evaluation.status.name() != 'LOCKED' and evaluation.status.name() != 'SUBMITTED'}">
+                    <button type="submit" class="btn btn-secondary">Lưu nháp</button>
+                    <button type="submit" name="submitAction" value="true" class="btn btn-primary" onclick="return confirm('Sau khi nộp sẽ không thể sửa lại. Bạn chắc chắn?')">Nộp điểm</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>
