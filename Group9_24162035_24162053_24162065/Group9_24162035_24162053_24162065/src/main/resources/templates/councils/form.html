@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" th:replace="~{fragments/layout :: page(~{::content})}">
+<head><title>Tạo Hội đồng</title></head>
+<body>
+<div th:fragment="content">
+    <div class="mb-4">
+        <h4>Tạo hội đồng mới</h4>
+        <a th:href="@{/councils}" class="text-decoration-none">&laquo; Quay lại danh sách</a>
+    </div>
+
+    <div class="card shadow-sm max-w-md">
+        <div class="card-body p-4">
+            <form th:action="@{/councils/create}" method="post">
+                <div class="mb-3">
+                    <label class="form-label">Tên hội đồng</label>
+                    <input type="text" name="name" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Đợt</label>
+                    <select name="periodId" class="form-select" required>
+                        <option value="">-- Chọn đợt --</option>
+                        <option th:each="p : ${periods}" th:value="${p.id}" th:text="${p.name}"></option>
+                    </select>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Ngày và giờ báo cáo</label>
+                    <input type="datetime-local" name="reportDate" class="form-control" required>
+                </div>
+                <div class="mb-3">
+                    <label class="form-label">Địa điểm</label>
+                    <input type="text" name="location" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Lưu hội đồng</button>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>
