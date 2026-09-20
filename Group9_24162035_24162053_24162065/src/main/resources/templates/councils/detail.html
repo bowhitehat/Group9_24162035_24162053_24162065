@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" th:replace="~{fragments/layout :: page(~{::content})}">
+<head><title>Chi tiết Hội đồng</title></head>
+<body>
+<div th:fragment="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 th:text="'Hội đồng: ' + ${council.name}"></h4>
+            <a th:href="@{/councils}" class="text-decoration-none">&laquo; Quay lại danh sách</a>
+        </div>
+        <div sec:authorize="hasRole('FACULTY_MANAGER')" th:if="${council.status.name() == 'DRAFT'}">
+            <form th:action="@{/councils/{id}/activate(id=${council.id})}" method="post" class="d-inline">
+                <button type="submit" class="btn btn-success" onclick="return confirm('Kích hoạt hội đồng này?')">Kích hoạt</button>
+            </form>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white fw-bold">Thông tin chung</div>
+                <div class="card-body">
+                    <p><strong>Trạng thái:</strong> 
+                        <span th:if="${council.status.name() == 'DRAFT'}" class="badge bg-secondary">Nháp</span>
+                        <span th:if="${council.status.name() == 'ACTIVE'}" class="badge bg-primary">Hoạt động</span>
+                        <span th:if="${council.status.name() == 'COMPLETED'}" class="badge bg-success">Hoàn tất</span>
+                        <span th:if="${council.status.name() == 'CANCELLED'}" class="badge bg-danger">Đã hủy</span>
+                    </p>
+                    <p><strong>Đợt:</strong> <span th:text="${council.registrationPeriod.name}"></span></p>
+                    <p><strong>Ngày báo cáo:</strong> <span th:text="${#temporals.format(council.reportDate, 'dd/MM/yyyy HH:mm')}"></span></p>
+                    <p><strong>Địa điểm:</strong> <span th:text="${council.location}"></span></p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6 mb-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
+                    <span>Thành viên hội đồng</span>
+                </div>
+                <div class="card-body">
+                    <ul class="list-group mb-3">
+                        <li class="list-group-item" th:each="m : ${members}">
+                            <span th:text="${m.member.fullName}"></span> - 
+                            <strong th:text="${m.role}"></strong>
+                        </li>
+                        <li class="list-group-item text-muted" th:if="${#lists.isEmpty(members)}">Chưa có thành viên</li>
+                    </ul>
+
+                    <form sec:authorize="hasRole('FACULTY_MANAGER')" th:if="${council.status.name() == 'DRAFT'}" th:action="@{/councils/{id}/add-member(id=${council.id})}" method="post">
+                        <div class="input-group">
+                            <select name="userId" class="form-select" required>
+                                <option value="">- Giảng viên -</option>
+                                <option th:each="gv : ${allLecturers}" th:value="${gv.id}" th:text="${gv.fullName}"></option>
+                            </select>
+                            <select name="role" class="form-select" required>
+                                <option th:each="r : ${memberRoles}" th:value="${r}" th:text="${r}"></option>
+                            </select>
+                            <button type="submit" class="btn btn-outline-primary">Thêm</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mt-2">
+        <div class="card-header bg-white fw-bold">Danh sách Đề tài được phân công</div>
+        <div class="card-body">
+            <table class="table table-bordered align-middle">
+                <thead class="table-light">
+                    <tr>
+                        <th>Mã ĐT</th>
+                        <th>Tên Đề tài</th>
+                        <th>Nhóm thực hiện</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr th:each="a : ${assignments}">
+                        <td th:text="${a.topic.code}"></td>
+                        <td th:text="${a.topic.title}"></td>
+                        <td>Đã gán</td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(assignments)}">
+                        <td colspan="3" class="text-center text-muted">Chưa có đề tài nào</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <form sec:authorize="hasRole('FACULTY_MANAGER')" th:if="${council.status.name() == 'DRAFT'}" th:action="@{/councils/{id}/assign-topic(id=${council.id})}" method="post" class="mt-3">
+                <div class="input-group">
+                    <select name="topicId" class="form-select" required>
+                        <option value="">- Chọn đề tài đã duyệt trong đợt -</option>
+                        <option th:each="reg : ${approvedRegistrations}" th:value="${reg.topic.id}" th:text="${reg.topic.code + ' - ' + reg.topic.title}"></option>
+                    </select>
+                    <button type="submit" class="btn btn-outline-primary">Gán đề tài</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+</body>
+</html>

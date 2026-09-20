@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" th:replace="~{fragments/layout :: page(~{::content})}">
+<head>
+    <title>Danh sách Đăng ký Đề tài</title>
+</head>
+<body>
+<div th:fragment="content">
+    <h2 class="mb-4">Quản lý Đăng ký Đề tài</h2>
+
+    <!-- Filter Card -->
+    <div class="card mb-4">
+        <div class="card-body">
+            <form th:action="@{/registrations}" method="get" class="row g-3">
+                <div class="col-md-3" th:if="${canManageRegistrations}">
+                    <label class="form-label">Đợt đăng ký</label>
+                    <select name="periodId" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- Chọn đợt --</option>
+                        <option th:each="p : ${periods}" th:value="${p.id}" th:text="${p.name}" th:selected="${p.id == selectedPeriodId}"></option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Khoa / Bộ môn</label>
+                    <select name="departmentId" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- Tất cả bộ môn --</option>
+                        <option th:each="d : ${departments}" th:value="${d.id}" th:text="${d.name}" th:selected="${d.id == selectedDepartmentId}"></option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Trạng thái</label>
+                    <select name="status" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- Tất cả trạng thái --</option>
+                        <option th:each="s : ${statuses}" th:value="${s}" th:text="${s}" th:selected="${s == selectedStatus}"></option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label">Từ khóa</label>
+                    <div class="input-group">
+                        <input type="text" name="keyword" class="form-control" placeholder="Tên đề tài..." th:value="${keyword}">
+                        <button type="submit" class="btn btn-outline-secondary">Tìm</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Registration Table -->
+    <div class="card">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th>Đề tài</th>
+                        <th>Trưởng nhóm</th>
+                        <th>Số lượng SV</th>
+                        <th>Trạng thái</th>
+                        <th>Báo cáo</th>
+                        <th>Thao tác</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="reg : ${registrations}">
+                        <td>
+                            <strong th:text="${reg.topic.title}"></strong><br>
+                            <small class="text-muted" th:text="${'Mã: ' + reg.topic.code}"></small>
+                        </td>
+                        <td th:text="${reg.studentGroup.leader.fullName}"></td>
+                        <td th:text="${reg.studentGroup.members.size()}"></td>
+                        <td>
+                            <span class="badge" th:classappend="${reg.status.name() == 'APPROVED' ? 'bg-success' : (reg.status.name() == 'PENDING' ? 'bg-warning text-dark' : 'bg-danger')}" th:text="${reg.status}"></span>
+                        </td>
+                        <td>
+                            <a th:href="@{/reports/history/{id}(id=${reg.id})}" class="btn btn-sm btn-outline-info">Xem báo cáo</a>
+                            <a th:if="${submittableRegistrationIds.contains(reg.id)}" th:href="@{/reports/submit(registrationId=${reg.id})}" class="btn btn-sm btn-primary">Nộp báo cáo</a>
+                        </td>
+                        <td>
+                            <div th:if="${reviewableRegistrationIds.contains(reg.id)}" class="d-flex gap-1">
+                                <form th:action="@{/registrations/approve/{id}(id=${reg.id})}" method="post">
+                                    <button type="submit" class="btn btn-sm btn-success">Duyệt</button>
+                                </form>
+                                <button class="btn btn-sm btn-danger" data-bs-toggle="modal" th:data-bs-target="${'#rejectRegModal' + reg.id}">Từ chối</button>
+                            </div>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(registrations)}">
+                        <td colspan="6" class="text-center py-4 text-muted">Không tìm thấy bản ghi đăng ký nào</td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modals cho Từ chối đăng ký -->
+    <div th:each="reg : ${registrations}" th:if="${reviewableRegistrationIds.contains(reg.id)}" class="modal fade" th:id="${'rejectRegModal' + reg.id}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form th:action="@{/registrations/reject/{id}(id=${reg.id})}" th:object="${rejectForm}" method="post">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Từ chối đăng ký đề tài</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label">Lý do từ chối <span class="text-danger">*</span></label>
+                            <textarea th:field="*{reason}" class="form-control" rows="3" required></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                        <button type="submit" class="btn btn-danger">Xác nhận từ chối</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
