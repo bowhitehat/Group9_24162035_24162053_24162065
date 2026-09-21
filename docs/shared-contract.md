@@ -54,7 +54,8 @@ Thành viên 2–3 không tự tạo enum trùng tên; nếu cần giá trị m�
 - **Trang Sĩ Hoàng - 24162035** là người duy nhất phụ trách MySQL Workbench, thiết kế schema, Flyway migration, constraint, index và seed data.
 - Thành viên 2 và thành viên 3 chỉ mô tả nhu cầu database trong data contract; không tự tạo/sửa migration, datasource hoặc schema MySQL.
 - Schema module thành viên 2 nằm ở V6. Schema module thành viên 3 bắt đầu từ V7 và seed tương ứng ở V8, do thành viên 1 tạo.
-- V9: tiêu chí cho đợt mới (trigger) và unique một đăng ký `APPROVED` trên mỗi đề tài.
+- V9: backfill tiêu chí và unique một đăng ký `APPROVED` trên mỗi đề tài.
+- V10: bỏ trigger của V9; `RegistrationPeriodService` sinh tiêu chí mặc định trong transaction tạo đợt.
 - Khóa ngoại phải có tên; trường tra cứu thường xuyên phải có index; không xóa cứng dữ liệu tham chiếu.
 
 ## 7. Liên kết module

@@ -1,0 +1,69 @@
+digraph DatabaseERD {
+  graph [rankdir=TB, bgcolor="white", pad="0.25", nodesep="0.3", ranksep="0.7", splines=polyline];
+  node [shape=record, style="rounded,filled", fillcolor="#eef5fb", color="#0b5f9e", fontname="Arial", fontsize=9];
+  edge [color="#607d8b", arrowsize=0.65, fontname="Arial", fontsize=8];
+
+  roles [label="{roles|id PK\lname UK\l}"];
+  users [label="{users|id PK\lusername UK\lemail UK\ldepartment_id FK\l}"];
+  user_roles [label="{user_roles|user_id PK,FK\lrole_id PK,FK\l}"];
+  departments [label="{departments|id PK\lcode UK\lname\l}"];
+  periods [label="{registration_periods|id PK\lname\ltype\lstatus\l}"];
+
+  topic [label="{topic|id PK\lcode + period UK\ldepartment_id FK\lperiod_id FK\lproposer_id FK\lstatus\l}"];
+  topic_advisors [label="{topic_advisors|topic_id PK,FK\ladvisor_id PK,FK\l}"];
+  student_group [label="{student_group|id PK\lperiod_id FK\lleader_id FK\l}"];
+  group_member [label="{group_member|id PK\lgroup_id FK\lmember_id FK\lis_leader\l}"];
+  registration [label="{topic_registration|id PK\lgroup_id FK\ltopic_id FK\lperiod_id FK\lstatus\l}"];
+  report [label="{report_submission|id PK\lregistration_id FK\lgroup_id FK\lsubmitter_id FK\lversion\l}"];
+
+  reviewer [label="{reviewer_assignments|id PK\ltopic_id FK\lreviewer_id FK\lassigner_id FK\lstatus\ldeadline\l}"];
+  councils [label="{councils|id PK\lperiod_id FK\lname\lstatus\l}"];
+  council_members [label="{council_members|id PK\lcouncil_id FK\lmember_id FK\lrole\l}"];
+  council_assignments [label="{council_assignments|id PK\lcouncil_id FK\ltopic_id FK\l}"];
+  criteria [label="{evaluation_criteria|id PK\lperiod_id FK\lname\ldisplay_order\l}"];
+  evaluations [label="{evaluations|id PK\ltopic_id FK\levaluator_id FK\lreviewer_assignment_id FK\lcouncil_member_id FK\lstatus\l}"];
+  scores [label="{evaluation_scores|id PK\levaluation_id FK\lcriterion_id FK\lscore\l}"];
+  results [label="{topic_results|id PK\ltopic_id FK\lcouncil_assignment_id FK\lfinal_score\lstatus\l}"];
+  announcements [label="{announcements|id PK\lcreator_id FK\ltitle\lstatus\l}"];
+  announcement_roles [label="{announcement_target_roles|announcement_id PK,FK\lrole_id PK,FK\l}"];
+
+  departments -> users [label="1 - N"];
+  users -> user_roles;
+  roles -> user_roles;
+  periods -> topic;
+  departments -> topic;
+  users -> topic [label="proposer"];
+  topic -> topic_advisors;
+  users -> topic_advisors;
+  periods -> student_group;
+  users -> student_group [label="leader"];
+  student_group -> group_member;
+  users -> group_member;
+  student_group -> registration;
+  topic -> registration;
+  periods -> registration;
+  registration -> report;
+  student_group -> report;
+  users -> report [label="submitter"];
+
+  topic -> reviewer;
+  users -> reviewer [label="reviewer / assigner"];
+  periods -> councils;
+  councils -> council_members;
+  users -> council_members;
+  councils -> council_assignments;
+  topic -> council_assignments;
+  periods -> criteria;
+  topic -> evaluations;
+  users -> evaluations [label="evaluator"];
+  reviewer -> evaluations;
+  council_members -> evaluations;
+  evaluations -> scores;
+  criteria -> scores;
+  topic -> results;
+  council_assignments -> results;
+  users -> results [label="confirm / publish"];
+  users -> announcements [label="creator"];
+  announcements -> announcement_roles;
+  roles -> announcement_roles;
+}

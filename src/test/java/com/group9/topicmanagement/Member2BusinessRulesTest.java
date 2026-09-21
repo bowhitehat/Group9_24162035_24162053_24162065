@@ -61,6 +61,7 @@ class Member2BusinessRulesTest {
     @Autowired StudentGroupRepository groups;
     @Autowired TopicRegistrationRepository registrations;
     @Autowired ReportSubmissionRepository reports;
+    @Autowired EvaluationCriterionRepository criteria;
 
     private User lecturer1;
     private User lecturer2;
@@ -79,6 +80,7 @@ class Member2BusinessRulesTest {
         registrations.deleteAll();
         groups.deleteAll();
         topics.deleteAll();
+        criteria.deleteAll();
         periods.deleteAll();
         users.deleteAll();
         roles.deleteAll();
