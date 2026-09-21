@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" th:replace="~{fragments/layout :: page(~{::content})}">
+<head><title>Kết quả nhóm</title></head>
+<body>
+<div th:fragment="content">
+    <h4 class="mb-3">Kết quả đề tài của nhóm</h4>
+    <div class="card mb-3">
+        <div class="card-body">
+            <p><strong>Đề tài:</strong> <span th:text="${result.topic.code + ' - ' + result.topic.title}"></span></p>
+            <p><strong>Điểm trung bình:</strong> <span th:text="${result.finalScore}"></span></p>
+            <p><strong>Trạng thái:</strong> <span th:text="${result.status}"></span></p>
+        </div>
+    </div>
+    <h5>Điểm thành phần</h5>
+    <div class="card mb-3" th:each="e : ${evaluations}">
+        <div class="card-header" th:text="${e.evaluator.fullName + ' · ' + e.evaluationType + ' · ' + e.status}"></div>
+        <div class="card-body">
+            <p th:if="${e.comments != null}"><strong>Nhận xét:</strong> <span th:text="${e.comments}"></span></p>
+            <ul>
+                <li th:each="s : ${e.scores}" th:text="${s.criterion.name + ': ' + s.score}"></li>
+            </ul>
+        </div>
+    </div>
+</div>
+</body>
+</html>

@@ -7,7 +7,7 @@
         <h4>Chấm điểm Đề tài</h4>
         <p class="text-muted" th:text="${topic.code + ' - ' + topic.title}"></p>
         <p>Vai trò: <span th:text="${evalType}" class="fw-bold"></span></p>
-        <p>Trạng thái phiếu chấm: <span th:text="${evaluation.status}" class="badge bg-info"></span></p>
+        <p>Trạng thái phiếu chấm: <span th:text="${evaluation.status != null ? evaluation.status : 'DRAFT'}" class="badge bg-info"></span></p>
     </div>
     <div class="card shadow-sm">
         <div class="card-body p-4">
@@ -42,7 +42,7 @@
                     <label class="form-label">Nhận xét chung</label>
                     <textarea name="comments" class="form-control" rows="3" th:text="${evaluation.comments}"></textarea>
                 </div>
-                <div th:if="${evaluation.status.name() != 'LOCKED' and evaluation.status.name() != 'SUBMITTED'}">
+                <div th:if="${evaluation.status == null or (evaluation.status.name() != 'LOCKED' and evaluation.status.name() != 'SUBMITTED')}">
                     <button type="submit" class="btn btn-secondary">Lưu nháp</button>
                     <button type="submit" name="submitAction" value="true" class="btn btn-primary" onclick="return confirm('Sau khi nộp sẽ không thể sửa lại. Bạn chắc chắn?')">Nộp điểm</button>
                 </div>

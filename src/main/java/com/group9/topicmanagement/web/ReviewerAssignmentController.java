@@ -1,47 +1,63 @@
 package com.group9.topicmanagement.web;
 
-import com.group9.topicmanagement.domain.User;
-import com.group9.topicmanagement.domain.enums.RoleName;
-import com.group9.topicmanagement.domain.evaluation.ReviewerAssignment;
-import com.group9.topicmanagement.domain.registration.TopicRegistration;
+import com.group9.topicmanagement.domain.enums.ReviewerAssignmentStatus;
 import com.group9.topicmanagement.exception.BusinessRuleException;
-import com.group9.topicmanagement.repository.ReviewerAssignmentRepository;
-import com.group9.topicmanagement.repository.TopicRegistrationRepository;
-import com.group9.topicmanagement.repository.UserRepository;
+import com.group9.topicmanagement.service.RegistrationPeriodService;
 import com.group9.topicmanagement.service.ReviewerAssignmentService;
+import com.group9.topicmanagement.service.TopicRegistrationService;
+import com.group9.topicmanagement.service.UserService;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 @Controller
 @RequestMapping("/reviewer-assignments")
 public class ReviewerAssignmentController {
     private final ReviewerAssignmentService assignmentService;
-    private final ReviewerAssignmentRepository assignmentRepository;
-    private final TopicRegistrationRepository registrationRepository;
-    private final UserRepository userRepository;
+    private final TopicRegistrationService registrationService;
+    private final UserService userService;
+    private final RegistrationPeriodService periodService;
 
     public ReviewerAssignmentController(ReviewerAssignmentService assignmentService,
-                                        ReviewerAssignmentRepository assignmentRepository,
-                                        TopicRegistrationRepository registrationRepository,
-                                        UserRepository userRepository) {
+                                        TopicRegistrationService registrationService,
+                                        UserService userService,
+                                        RegistrationPeriodService periodService) {
         this.assignmentService = assignmentService;
-        this.assignmentRepository = assignmentRepository;
-        this.registrationRepository = registrationRepository;
-        this.userRepository = userRepository;
+        this.registrationService = registrationService;
+        this.userService = userService;
+        this.periodService = periodService;
     }
 
     @GetMapping
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
-    public String listAll(Model model) {
-        model.addAttribute("assignments", assignmentRepository.findAll());
+    public String listAll(@RequestParam(required = false) Long periodId,
+                          @RequestParam(required = false) Long departmentId,
+                          @RequestParam(required = false) Long reviewerId,
+                          @RequestParam(required = false) ReviewerAssignmentStatus status,
+                          @RequestParam(required = false) boolean missingReviewer,
+                          @RequestParam(required = false) boolean pendingScore,
+                          Model model) {
+        model.addAttribute("assignments", assignmentService.listAssignments(
+                periodId, departmentId, reviewerId, status, missingReviewer, pendingScore));
+        model.addAttribute("topicsWithoutReviewer", assignmentService.topicsWithoutReviewer());
+        model.addAttribute("periods", periodService.findAllPeriods());
+        model.addAttribute("lecturers", userService.findUsersByRole("LECTURER"));
+        model.addAttribute("statuses", ReviewerAssignmentStatus.values());
+        model.addAttribute("periodId", periodId);
+        model.addAttribute("reviewerId", reviewerId);
+        model.addAttribute("status", status);
+        model.addAttribute("pendingScore", pendingScore);
+        model.addAttribute("missingReviewer", missingReviewer);
         return "reviewer_assignments/list";
     }
 
@@ -55,16 +71,8 @@ public class ReviewerAssignmentController {
     @GetMapping("/create")
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
     public String showCreateForm(Model model) {
-        List<TopicRegistration> approvedRegistrations = registrationRepository.findAll().stream()
-                .filter(r -> "APPROVED".equals(r.getStatus().name()))
-                .toList();
-        
-        List<User> lecturers = userRepository.findAll().stream()
-                .filter(u -> u.getRoles().stream().anyMatch(r -> r.getName() == RoleName.LECTURER))
-                .toList();
-
-        model.addAttribute("approvedRegistrations", approvedRegistrations);
-        model.addAttribute("lecturers", lecturers);
+        model.addAttribute("approvedRegistrations", registrationService.listApprovedRegistrations());
+        model.addAttribute("lecturers", userService.findUsersByRole("LECTURER"));
         return "reviewer_assignments/form";
     }
 
@@ -81,6 +89,21 @@ public class ReviewerAssignmentController {
         } catch (BusinessRuleException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
             return "redirect:/reviewer-assignments/create";
+        }
+        return "redirect:/reviewer-assignments";
+    }
+
+    @PostMapping("/{id}/change")
+    @PreAuthorize("hasRole('FACULTY_MANAGER')")
+    public String changeReviewer(@PathVariable Long id,
+                                 @RequestParam Long reviewerId,
+                                 @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) LocalDateTime deadline,
+                                 RedirectAttributes redirectAttributes) {
+        try {
+            assignmentService.changeReviewer(id, reviewerId, deadline);
+            redirectAttributes.addFlashAttribute("successMessage", "Đã đổi giảng viên phản biện");
+        } catch (BusinessRuleException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/reviewer-assignments";
     }

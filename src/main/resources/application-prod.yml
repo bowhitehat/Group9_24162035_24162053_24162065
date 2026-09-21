@@ -12,3 +12,12 @@ spring:
     cache: true
 server:
   forward-headers-strategy: framework
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      probes:
+        enabled: true

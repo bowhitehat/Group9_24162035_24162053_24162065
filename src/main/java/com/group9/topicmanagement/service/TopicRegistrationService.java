@@ -192,6 +192,25 @@ public class TopicRegistrationService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đăng ký đề tài"));
     }
 
+    public Optional<TopicRegistration> findApprovedForTopic(Long topicId) {
+        return registrationRepository.findApprovedRegistrationForTopic(topicId);
+    }
+
+    public List<TopicRegistration> listApprovedRegistrations() {
+        return registrationRepository.findByStatusWithTopicAndGroup(RegistrationStatus.APPROVED);
+    }
+
+    public long countApprovedRegistrations() {
+        return registrationRepository.countByStatus(RegistrationStatus.APPROVED);
+    }
+
+    public boolean isStudentOnApprovedTopic(Long topicId, Long studentId) {
+        return findApprovedForTopic(topicId)
+                .map(reg -> reg.getStudentGroup().getMembers().stream()
+                        .anyMatch(m -> m.getMember().getId().equals(studentId)))
+                .orElse(false);
+    }
+
     private String normalizeKeyword(String keyword) {
         return keyword == null || keyword.isBlank() ? null : keyword.trim();
     }

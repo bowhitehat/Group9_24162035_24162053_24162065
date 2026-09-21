@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface TopicRegistrationRepository extends JpaRepository<TopicRegistration, Long> {
@@ -40,4 +41,9 @@ public interface TopicRegistrationRepository extends JpaRepository<TopicRegistra
                                            @Param("status") RegistrationStatus status,
                                            @Param("keyword") String keyword,
                                            Pageable pageable);
+
+    @Query("SELECT r FROM TopicRegistration r JOIN FETCH r.topic JOIN FETCH r.studentGroup WHERE r.status = :status")
+    List<TopicRegistration> findByStatusWithTopicAndGroup(@Param("status") RegistrationStatus status);
+
+    long countByStatus(RegistrationStatus status);
 }

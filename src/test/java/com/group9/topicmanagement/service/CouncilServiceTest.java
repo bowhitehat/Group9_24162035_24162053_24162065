@@ -34,7 +34,7 @@ public class CouncilServiceTest {
     @Mock private TopicRepository topicRepository;
     @Mock private UserRepository userRepository;
     @Mock private RegistrationPeriodRepository periodRepository;
-    @Mock private TopicRegistrationRepository topicRegistrationRepository;
+    @Mock private TopicRegistrationService topicRegistrationService;
 
     @InjectMocks
     private CouncilService councilService;
