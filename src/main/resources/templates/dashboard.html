@@ -1,1 +1,86 @@
-<!doctype html><html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" th:replace="~{fragments/layout :: page(~{::main})}"><main><div class="hero"><p class="eyebrow text-white-50">MODULE THÀNH VIÊN 1</p><h1>Nền tảng kỹ thuật và quản trị</h1><p class="mb-0">Đăng nhập, phân quyền, bộ môn, đợt đăng ký và hợp đồng tích hợp chung.</p></div><div class="row g-4 mt-1"><div class="col-md-4"><div class="card metric-card"><strong th:text="${userCount}">0</strong><span>Tài khoản</span></div></div><div class="col-md-4"><div class="card metric-card"><strong th:text="${departmentCount}">0</strong><span>Bộ môn</span></div></div><div class="col-md-4"><div class="card metric-card"><strong th:text="${periodCount}">0</strong><span>Đợt đăng ký</span></div></div></div><div class="card p-4 mt-4"><h2 class="h5">Phân quyền đang hoạt động</h2><div class="d-flex gap-2 flex-wrap"><span class="badge text-bg-dark">ADMIN</span><span class="badge text-bg-primary">FACULTY_MANAGER</span><span class="badge text-bg-success">LECTURER</span><span class="badge text-bg-warning">STUDENT</span></div></div></main></html>
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" th:replace="~{fragments/layout :: page(~{::main})}">
+<main>
+    <div class="hero">
+        <p class="eyebrow text-white-50">HỆ THỐNG QUẢN LÝ ĐỀ TÀI</p>
+        <h1>Trang tổng quan (Dashboard)</h1>
+        <p class="mb-0">Chào mừng bạn đến với hệ thống quản lý đề tài sinh viên.</p>
+    </div>
+
+    <div class="row g-4 mt-1" sec:authorize="hasRole('ADMIN')">
+        <div class="col-md-4"><div class="card metric-card"><strong th:text="${userCount}">0</strong><span>Tài khoản</span></div></div>
+        <div class="col-md-4"><div class="card metric-card"><strong th:text="${departmentCount}">0</strong><span>Bộ môn</span></div></div>
+        <div class="col-md-4"><div class="card metric-card"><strong th:text="${periodCount}">0</strong><span>Đợt đăng ký</span></div></div>
+    </div>
+
+    <div class="row g-4 mt-1" sec:authorize="hasRole('FACULTY_MANAGER')">
+        <div class="col-md-3"><div class="card metric-card"><strong th:text="${openPeriods}">0</strong><span>Đợt đang mở</span></div></div>
+        <div class="col-md-3"><div class="card metric-card"><strong th:text="${pendingTopics}">0</strong><span>Đề tài chờ duyệt</span></div></div>
+        <div class="col-md-3"><div class="card metric-card"><strong th:text="${approvedGroups}">0</strong><span>Nhóm đã đăng ký</span></div></div>
+        <div class="col-md-3"><div class="card metric-card"><strong th:text="${submittedReports}">0</strong><span>Báo cáo đã nộp</span></div></div>
+        <div class="col-md-3"><div class="card metric-card"><strong th:text="${topicsWithoutReviewer}">0</strong><span>Chưa có GVPB</span></div></div>
+        <div class="col-md-3"><div class="card metric-card"><strong th:text="${reviewersPendingScore}">0</strong><span>GVPB chưa nộp điểm</span></div></div>
+        <div class="col-md-3"><div class="card metric-card"><strong th:text="${topicsMissingScores}">0</strong><span>Đề tài chưa đủ điểm</span></div></div>
+        <div class="col-md-3"><div class="card metric-card"><strong th:text="${activeCouncils}">0</strong><span>Hội đồng đang hoạt động</span></div></div>
+        <div class="col-md-3"><div class="card metric-card"><strong th:text="${confirmedResults}">0</strong><span>Kết quả đã xác nhận</span></div></div>
+        <div class="col-md-3"><div class="card metric-card"><strong th:text="${publishedResults}">0</strong><span>Kết quả đã công bố</span></div></div>
+    </div>
+
+    <div class="row g-4 mt-1" sec:authorize="hasRole('LECTURER')">
+        <div class="col-md-4"><div class="card metric-card"><strong th:text="${advisingTopics != null ? #lists.size(advisingTopics) : 0}">0</strong><span>Đề tài đang hướng dẫn</span></div></div>
+        <div class="col-md-4"><div class="card metric-card"><strong th:text="${reviewerAssignments != null ? #lists.size(reviewerAssignments) : 0}">0</strong><span>Đề tài được phân công phản biện</span></div></div>
+        <div class="col-md-4"><div class="card metric-card"><strong th:text="${gradingTasks != null ? #lists.size(gradingTasks) : 0}">0</strong><span>Đề tài cần chấm</span></div></div>
+    </div>
+    <div class="card mt-4" sec:authorize="hasRole('LECTURER')" th:if="${gradingTasks != null and !#lists.isEmpty(gradingTasks)}">
+        <div class="card-header">Hạn nộp điểm</div>
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item" th:each="a : ${gradingTasks}">
+                <span th:text="${a.topic.code + ' - ' + a.topic.title}"></span>
+                <span class="text-muted" th:text="'Hạn: ' + ${#temporals.format(a.deadline, 'dd/MM/yyyy HH:mm')}"></span>
+            </li>
+        </ul>
+    </div>
+
+    <div class="row g-4 mt-1" sec:authorize="hasRole('STUDENT')">
+        <div class="col-md-6">
+            <div class="card metric-card">
+                <strong th:text="${studentGroup != null ? 'Đã có nhóm' : 'Chưa có nhóm'}">Chưa có nhóm</strong>
+                <span>Nhóm hiện tại</span>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card metric-card">
+                <strong th:text="${registration != null ? registration.topic.title : 'Chưa đăng ký'}">Chưa đăng ký</strong>
+                <span>Đề tài / trạng thái
+                    <span th:if="${registration != null}" th:text="${registration.status}"></span>
+                </span>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card metric-card">
+                <strong th:text="${latestReport != null ? latestReport.originalFileName : 'Chưa nộp'}">Chưa nộp</strong>
+                <span>Báo cáo mới nhất</span>
+            </div>
+        </div>
+        <div class="col-md-6">
+            <div class="card metric-card">
+                <strong th:text="${publishedResult != null ? publishedResult.finalScore : 'Chưa công bố'}">Chưa công bố</strong>
+                <span>Kết quả đã công bố</span>
+            </div>
+        </div>
+        <div class="col-12" th:if="${publishedResult != null}">
+            <a class="btn btn-primary" th:href="@{/evaluations/my-result(topicId=${publishedResult.topic.id})}">Xem chi tiết kết quả</a>
+        </div>
+    </div>
+
+    <div class="card mt-4" th:if="${announcements != null and !#lists.isEmpty(announcements)}">
+        <div class="card-header">Thông báo mới</div>
+        <ul class="list-group list-group-flush">
+            <li class="list-group-item" th:each="a : ${announcements}">
+                <strong th:text="${a.title}"></strong>
+                <p class="mb-0" th:text="${a.content}"></p>
+            </li>
+        </ul>
+    </div>
+</main>
+</html>

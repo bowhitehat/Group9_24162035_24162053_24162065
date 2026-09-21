@@ -1,0 +1,32 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" th:replace="~{fragments/layout :: page(~{::content})}">
+<head><title>Thông báo</title></head>
+<body>
+<div th:fragment="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h4>Danh sách thông báo</h4>
+        <a sec:authorize="hasAnyRole('ADMIN', 'FACULTY_MANAGER')" th:href="@{/announcements/create}" class="btn btn-primary">Tạo thông báo</a>
+    </div>
+
+    <div th:each="a : ${announcements}" class="card shadow-sm mb-3">
+        <div class="card-body">
+            <h5 class="card-title" th:text="${a.title}"></h5>
+            <h6 class="card-subtitle mb-2 text-muted">
+                Đăng ngày: <span th:text="${#temporals.format(a.publishedTime, 'dd/MM/yyyy HH:mm')}"></span>
+                <span th:if="${a.status.name() == 'DRAFT'}" class="badge bg-secondary ms-2">Nháp</span>
+                <span th:if="${a.status.name() == 'ARCHIVED'}" class="badge bg-dark ms-2">Lưu trữ</span>
+            </h6>
+            <p class="card-text" th:text="${a.content}"></p>
+            <div sec:authorize="hasAnyRole('ADMIN', 'FACULTY_MANAGER')" class="d-flex gap-2">
+                <form th:if="${a.status.name() == 'DRAFT'}" th:action="@{/announcements/{id}/publish(id=${a.id})}" method="post">
+                    <button class="btn btn-sm btn-success">Công bố</button>
+                </form>
+                <form th:if="${a.status.name() != 'ARCHIVED'}" th:action="@{/announcements/{id}/archive(id=${a.id})}" method="post">
+                    <button class="btn btn-sm btn-outline-secondary">Lưu trữ</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>

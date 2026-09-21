@@ -66,6 +66,15 @@ public class TopicService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đề tài"));
     }
 
+    public boolean isAdvisor(Long topicId, Long userId) {
+        Topic topic = getTopicById(topicId);
+        return topic.getAdvisors().stream().anyMatch(advisor -> advisor.getId().equals(userId));
+    }
+
+    public long countByStatus(TopicStatus status) {
+        return topicRepository.findAll().stream().filter(t -> t.getStatus() == status).count();
+    }
+
     public Topic createTopic(TopicForm form, String proposerUsername) {
         User proposer = userRepository.findByUsernameIgnoreCase(proposerUsername)
                 .orElseThrow(() -> new BusinessRuleException("Không tìm thấy tài khoản giảng viên"));
