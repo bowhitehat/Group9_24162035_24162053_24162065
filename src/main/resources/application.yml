@@ -20,6 +20,14 @@ server:
   error:
     whitelabel:
       enabled: false
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never
 app:
   upload-dir: ${UPLOAD_DIR:./uploads}
   demo-password: ${DEMO_PASSWORD:}

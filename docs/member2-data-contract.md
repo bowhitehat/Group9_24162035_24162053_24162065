@@ -85,7 +85,8 @@ Migration tích hợp đã được Thành viên 1 bổ sung tại `V6__create_t
   - `UNIQUE (student_group_id, registration_period_id)`
   - `INDEX idx_reg_status (status)`
   - `INDEX idx_reg_topic_period_status (topic_id, registration_period_id, status)`
-  - Không đặt `UNIQUE (topic_id, registration_period_id)` vì phải lưu được lịch sử đăng ký bị từ chối/hủy; service bảo đảm chỉ có một đăng ký `APPROVED`.
+  - Không đặt `UNIQUE (topic_id, registration_period_id)` vì phải lưu được lịch sử đăng ký bị từ chối/hủy.
+  - V9: cột sinh `approved_topic_id` = `topic_id` khi `status = 'APPROVED'`, unique `uk_topic_registration_approved_topic`. MySQL cho phép nhiều NULL nên REJECTED/CANCELLED/PENDING không đụng nhau.
 
 ---
 

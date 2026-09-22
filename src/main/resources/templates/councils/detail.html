@@ -8,9 +8,15 @@
             <h4 th:text="'Hội đồng: ' + ${council.name}"></h4>
             <a th:href="@{/councils}" class="text-decoration-none">&laquo; Quay lại danh sách</a>
         </div>
-        <div sec:authorize="hasRole('FACULTY_MANAGER')" th:if="${council.status.name() == 'DRAFT'}">
-            <form th:action="@{/councils/{id}/activate(id=${council.id})}" method="post" class="d-inline">
+        <div sec:authorize="hasRole('FACULTY_MANAGER')" class="d-flex gap-2">
+            <form th:if="${canActivate}" th:action="@{/councils/{id}/activate(id=${council.id})}" method="post">
                 <button type="submit" class="btn btn-success" onclick="return confirm('Kích hoạt hội đồng này?')">Kích hoạt</button>
+            </form>
+            <form th:if="${canComplete}" th:action="@{/councils/{id}/complete(id=${council.id})}" method="post">
+                <button type="submit" class="btn btn-primary" onclick="return confirm('Hoàn tất hội đồng?')">Hoàn tất</button>
+            </form>
+            <form th:if="${canCancel}" th:action="@{/councils/{id}/cancel(id=${council.id})}" method="post">
+                <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Hủy hội đồng?')">Hủy</button>
             </form>
         </div>
     </div>
@@ -20,40 +26,49 @@
             <div class="card shadow-sm h-100">
                 <div class="card-header bg-white fw-bold">Thông tin chung</div>
                 <div class="card-body">
-                    <p><strong>Trạng thái:</strong> 
-                        <span th:if="${council.status.name() == 'DRAFT'}" class="badge bg-secondary">Nháp</span>
-                        <span th:if="${council.status.name() == 'ACTIVE'}" class="badge bg-primary">Hoạt động</span>
-                        <span th:if="${council.status.name() == 'COMPLETED'}" class="badge bg-success">Hoàn tất</span>
-                        <span th:if="${council.status.name() == 'CANCELLED'}" class="badge bg-danger">Đã hủy</span>
+                    <p><strong>Trạng thái:</strong>
+                        <span th:text="${council.status}" class="badge bg-secondary"></span>
                     </p>
                     <p><strong>Đợt:</strong> <span th:text="${council.registrationPeriod.name}"></span></p>
-                    <p><strong>Ngày báo cáo:</strong> <span th:text="${#temporals.format(council.reportDate, 'dd/MM/yyyy HH:mm')}"></span></p>
-                    <p><strong>Địa điểm:</strong> <span th:text="${council.location}"></span></p>
+                    <form sec:authorize="hasRole('FACULTY_MANAGER')" th:if="${canEditCouncil}" th:object="${updateForm}"
+                          th:action="@{/councils/{id}/update(id=${council.id})}" method="post">
+                        <div class="mb-2"><label class="form-label">Tên</label><input class="form-control" th:field="*{name}" required></div>
+                        <div class="mb-2"><label class="form-label">Ngày báo cáo</label>
+                            <input class="form-control" type="datetime-local" th:field="*{reportDate}" required>
+                        </div>
+                        <div class="mb-2"><label class="form-label">Địa điểm</label><input class="form-control" th:field="*{location}" required></div>
+                        <button class="btn btn-outline-primary btn-sm">Cập nhật</button>
+                    </form>
+                    <div th:unless="${canEditCouncil}">
+                        <p><strong>Ngày báo cáo:</strong> <span th:text="${#temporals.format(council.reportDate, 'dd/MM/yyyy HH:mm')}"></span></p>
+                        <p><strong>Địa điểm:</strong> <span th:text="${council.location}"></span></p>
+                    </div>
                 </div>
             </div>
         </div>
 
         <div class="col-lg-6 mb-4">
             <div class="card shadow-sm h-100">
-                <div class="card-header bg-white fw-bold d-flex justify-content-between align-items-center">
-                    <span>Thành viên hội đồng</span>
-                </div>
+                <div class="card-header bg-white fw-bold">Thành viên hội đồng</div>
                 <div class="card-body">
                     <ul class="list-group mb-3">
-                        <li class="list-group-item" th:each="m : ${members}">
-                            <span th:text="${m.member.fullName}"></span> - 
-                            <strong th:text="${m.role}"></strong>
+                        <li class="list-group-item d-flex justify-content-between" th:each="m : ${members}">
+                            <span><span th:text="${m.member.fullName}"></span> - <strong th:text="${m.role}"></strong></span>
+                            <form sec:authorize="hasRole('FACULTY_MANAGER')" th:if="${canEditStructure}"
+                                  th:action="@{/councils/{id}/members/{memberId}/remove(id=${council.id},memberId=${m.id})}" method="post">
+                                <button class="btn btn-sm btn-outline-danger">Xóa</button>
+                            </form>
                         </li>
                         <li class="list-group-item text-muted" th:if="${#lists.isEmpty(members)}">Chưa có thành viên</li>
                     </ul>
-
-                    <form sec:authorize="hasRole('FACULTY_MANAGER')" th:if="${council.status.name() == 'DRAFT'}" th:action="@{/councils/{id}/add-member(id=${council.id})}" method="post">
+                    <form sec:authorize="hasRole('FACULTY_MANAGER')" th:if="${canEditStructure}" th:object="${memberForm}"
+                          th:action="@{/councils/{id}/add-member(id=${council.id})}" method="post">
                         <div class="input-group">
-                            <select name="userId" class="form-select" required>
+                            <select th:field="*{userId}" class="form-select" required>
                                 <option value="">- Giảng viên -</option>
                                 <option th:each="gv : ${allLecturers}" th:value="${gv.id}" th:text="${gv.fullName}"></option>
                             </select>
-                            <select name="role" class="form-select" required>
+                            <select th:field="*{role}" class="form-select" required>
                                 <option th:each="r : ${memberRoles}" th:value="${r}" th:text="${r}"></option>
                             </select>
                             <button type="submit" class="btn btn-outline-primary">Thêm</button>
@@ -65,31 +80,37 @@
     </div>
 
     <div class="card shadow-sm mt-2">
-        <div class="card-header bg-white fw-bold">Danh sách Đề tài được phân công</div>
+        <div class="card-header bg-white fw-bold">Danh sách đề tài / lịch báo cáo</div>
         <div class="card-body">
             <table class="table table-bordered align-middle">
                 <thead class="table-light">
-                    <tr>
-                        <th>Mã ĐT</th>
-                        <th>Tên Đề tài</th>
-                        <th>Nhóm thực hiện</th>
-                    </tr>
+                <tr>
+                    <th>Mã ĐT</th>
+                    <th>Tên đề tài</th>
+                    <th></th>
+                </tr>
                 </thead>
                 <tbody>
-                    <tr th:each="a : ${assignments}">
-                        <td th:text="${a.topic.code}"></td>
-                        <td th:text="${a.topic.title}"></td>
-                        <td>Đã gán</td>
-                    </tr>
-                    <tr th:if="${#lists.isEmpty(assignments)}">
-                        <td colspan="3" class="text-center text-muted">Chưa có đề tài nào</td>
-                    </tr>
+                <tr th:each="a : ${assignments}">
+                    <td th:text="${a.topic.code}"></td>
+                    <td th:text="${a.topic.title}"></td>
+                    <td>
+                        <a sec:authorize="hasRole('LECTURER')" th:if="${canGrade}" th:href="@{/evaluations/topic/{id}?type=COUNCIL_MEMBER(id=${a.topic.id})}" class="btn btn-sm btn-info text-white">Chấm điểm</a>
+                        <form sec:authorize="hasRole('FACULTY_MANAGER')" th:if="${canEditStructure}"
+                              th:action="@{/councils/{id}/assignments/{assignmentId}/remove(id=${council.id},assignmentId=${a.id})}" method="post" class="d-inline">
+                            <button class="btn btn-sm btn-outline-danger">Bỏ đề tài</button>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(assignments)}">
+                    <td colspan="3" class="text-center text-muted">Chưa có đề tài nào</td>
+                </tr>
                 </tbody>
             </table>
-
-            <form sec:authorize="hasRole('FACULTY_MANAGER')" th:if="${council.status.name() == 'DRAFT'}" th:action="@{/councils/{id}/assign-topic(id=${council.id})}" method="post" class="mt-3">
+            <form sec:authorize="hasRole('FACULTY_MANAGER')" th:if="${canEditStructure}" th:object="${topicForm}"
+                  th:action="@{/councils/{id}/assign-topic(id=${council.id})}" method="post" class="mt-3">
                 <div class="input-group">
-                    <select name="topicId" class="form-select" required>
+                    <select th:field="*{topicId}" class="form-select" required>
                         <option value="">- Chọn đề tài đã duyệt trong đợt -</option>
                         <option th:each="reg : ${approvedRegistrations}" th:value="${reg.topic.id}" th:text="${reg.topic.code + ' - ' + reg.topic.title}"></option>
                     </select>

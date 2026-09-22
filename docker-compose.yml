@@ -1,0 +1,39 @@
+services:
+  mysql:
+    image: mysql:8.0
+    environment:
+      MYSQL_DATABASE: group9_topic_management
+      MYSQL_USER: group9_app
+      MYSQL_PASSWORD: ${DB_PASSWORD:-change_me}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-change_root}
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    depends_on:
+      mysql:
+        condition: service_healthy
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      DB_URL: jdbc:mysql://mysql:3306/group9_topic_management?useUnicode=true&characterEncoding=UTF-8&serverTimezone=Asia/Ho_Chi_Minh&allowPublicKeyRetrieval=true&useSSL=false
+      DB_USERNAME: group9_app
+      DB_PASSWORD: ${DB_PASSWORD:-change_me}
+      DEMO_PASSWORD: ${DEMO_PASSWORD:-Password@123}
+      UPLOAD_DIR: /data/uploads
+      PORT: 8080
+    ports:
+      - "8080:8080"
+    volumes:
+      - upload_data:/data/uploads
+
+volumes:
+  mysql_data:
+  upload_data:

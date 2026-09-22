@@ -3,11 +3,11 @@ package com.group9.topicmanagement.service;
 import com.group9.topicmanagement.domain.RegistrationPeriod;
 import com.group9.topicmanagement.domain.User;
 import com.group9.topicmanagement.domain.enums.PeriodStatus;
+import com.group9.topicmanagement.domain.enums.PeriodType;
 import com.group9.topicmanagement.domain.registration.TopicRegistration;
 import com.group9.topicmanagement.domain.topic.Topic;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.repository.ReviewerAssignmentRepository;
-import com.group9.topicmanagement.repository.TopicRegistrationRepository;
 import com.group9.topicmanagement.repository.TopicRepository;
 import com.group9.topicmanagement.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -34,7 +34,7 @@ public class ReviewerAssignmentServiceTest {
     @Mock private ReviewerAssignmentRepository assignmentRepository;
     @Mock private TopicRepository topicRepository;
     @Mock private UserRepository userRepository;
-    @Mock private TopicRegistrationRepository registrationRepository;
+    @Mock private TopicRegistrationService topicRegistrationService;
 
     @InjectMocks
     private ReviewerAssignmentService assignmentService;
@@ -49,12 +49,16 @@ public class ReviewerAssignmentServiceTest {
         ReflectionTestUtils.setField(topic, "id", 1L);
         RegistrationPeriod period = new RegistrationPeriod();
         period.setStatus(PeriodStatus.IN_PROGRESS);
+        period.setType(PeriodType.MON_HOC);
         topic.setRegistrationPeriod(period);
         topic.setAdvisors(new HashSet<>());
 
         reviewer = new User();
         ReflectionTestUtils.setField(reviewer, "id", 10L);
         reviewer.setUsername("GV01");
+        com.group9.topicmanagement.domain.Role lecturerRole = new com.group9.topicmanagement.domain.Role();
+        lecturerRole.setName(com.group9.topicmanagement.domain.enums.RoleName.LECTURER);
+        reviewer.getRoles().add(lecturerRole);
 
         assigner = new User();
         assigner.setUsername("FMANAGER");
@@ -65,8 +69,9 @@ public class ReviewerAssignmentServiceTest {
         when(topicRepository.findById(1L)).thenReturn(Optional.of(topic));
         when(userRepository.findById(10L)).thenReturn(Optional.of(reviewer));
         when(userRepository.findByUsernameIgnoreCase("FMANAGER")).thenReturn(Optional.of(assigner));
-        when(registrationRepository.findApprovedRegistrationForTopic(1L)).thenReturn(Optional.of(new TopicRegistration()));
+        when(topicRegistrationService.findApprovedForTopic(1L)).thenReturn(Optional.of(new TopicRegistration()));
         when(assignmentRepository.existsByTopicIdAndReviewerId(1L, 10L)).thenReturn(false);
+        when(assignmentRepository.findByTopicIdAndReviewerId(1L, 10L)).thenReturn(Optional.empty());
 
         assignmentService.assignReviewer(1L, 10L, "FMANAGER", LocalDateTime.now().plusDays(5));
 
@@ -80,7 +85,7 @@ public class ReviewerAssignmentServiceTest {
         when(topicRepository.findById(1L)).thenReturn(Optional.of(topic));
         when(userRepository.findById(10L)).thenReturn(Optional.of(reviewer));
         when(userRepository.findByUsernameIgnoreCase("FMANAGER")).thenReturn(Optional.of(assigner));
-        when(registrationRepository.findApprovedRegistrationForTopic(1L)).thenReturn(Optional.of(new TopicRegistration()));
+        when(topicRegistrationService.findApprovedForTopic(1L)).thenReturn(Optional.of(new TopicRegistration()));
         when(assignmentRepository.existsByTopicIdAndReviewerId(1L, 10L)).thenReturn(false);
 
         BusinessRuleException e = assertThrows(BusinessRuleException.class, () -> {

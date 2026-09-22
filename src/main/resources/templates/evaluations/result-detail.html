@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" th:replace="~{fragments/layout :: page(~{::content})}">
+<head><title>Chi tiết điểm</title></head>
+<body>
+<div th:fragment="content">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h4 th:text="'Chi tiết điểm: ' + ${result.topic.code} + ' - ' + ${result.topic.title}"></h4>
+            <a th:href="@{/evaluations/results}" class="text-decoration-none">&laquo; Quay lại kết quả</a>
+        </div>
+        <div class="d-flex gap-2">
+            <form sec:authorize="hasRole('LECTURER')" th:if="${canConfirm}" th:action="@{/evaluations/topic/{id}/confirm(id=${result.topic.id})}" method="post">
+                <button type="submit" class="btn btn-success" onclick="return confirm('Xác nhận kết quả điểm này?')">Xác nhận kết quả</button>
+            </form>
+            <form sec:authorize="hasRole('FACULTY_MANAGER')" th:if="${canPublish}" th:action="@{/evaluations/topic/{id}/publish(id=${result.topic.id})}" method="post">
+                <button type="submit" class="btn btn-primary" onclick="return confirm('Công bố kết quả cho sinh viên?')">Công bố</button>
+            </form>
+            <form sec:authorize="hasRole('FACULTY_MANAGER')" th:if="${canCalculate}" th:action="@{/evaluations/topic/{id}/calculate(id=${result.topic.id})}" method="post">
+                <button type="submit" class="btn btn-outline-primary" th:text="${result.finalScore == null ? 'Tính điểm' : 'Tính lại điểm'}"></button>
+            </form>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <p><strong>Điểm tổng kết:</strong> <span class="fs-4 text-primary" th:text="${result.finalScore != null ? result.finalScore : 'Chưa có'}"></span></p>
+                    <p><strong>Trạng thái:</strong> <span class="badge bg-secondary" th:text="${result.status != null ? result.status : 'Chưa tính điểm'}"></span></p>
+                    <p th:if="${result.confirmer != null}"><strong>Người xác nhận:</strong> <span th:text="${result.confirmer.fullName}"></span></p>
+                    <p th:if="${result.publisher != null}"><strong>Người công bố:</strong> <span th:text="${result.publisher.fullName}"></span></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card shadow-sm">
+        <div class="card-header bg-white fw-bold">Chi tiết các phiếu chấm</div>
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                <tr>
+                    <th>Người chấm</th>
+                    <th>Vai trò</th>
+                    <th>Trạng thái</th>
+                    <th>Thời gian nộp</th>
+                    <th>Điểm / Nhận xét</th>
+                    <th sec:authorize="hasRole('FACULTY_MANAGER')">Thao tác</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="eval : ${evaluations}">
+                    <td th:text="${eval.evaluator.fullName}"></td>
+                    <td th:text="${eval.evaluationType}"></td>
+                    <td>
+                        <span th:class="${eval.status.name() == 'SUBMITTED' ? 'badge bg-success' : (eval.status.name() == 'LOCKED' ? 'badge bg-dark' : 'badge bg-warning')}" 
+                              th:text="${eval.status}"></span>
+                    </td>
+                    <td th:text="${eval.submissionTime != null ? #temporals.format(eval.submissionTime, 'dd/MM/yyyy HH:mm') : ''}"></td>
+                    <td>
+                        <div th:if="${not #lists.isEmpty(eval.scores)}">
+                            <div th:each="s : ${eval.scores}">
+                                <small><span th:text="${s.criterion.name}"></span>: <strong th:text="${s.score}"></strong></small>
+                            </div>
+                        </div>
+                        <div th:if="${eval.comments != null and not #strings.isEmpty(eval.comments)}">
+                            <small class="text-muted" th:text="${eval.comments}"></small>
+                        </div>
+                    </td>
+                    <td sec:authorize="hasRole('FACULTY_MANAGER')">
+                        <form th:if="${lockableEvaluationIds.contains(eval.id)}" th:action="@{/evaluations/{id}/lock(id=${eval.id})}" method="post">
+                            <button class="btn btn-sm btn-outline-dark">Khóa</button>
+                        </form>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(evaluations)}">
+                    <td colspan="6" class="text-center text-muted">Chưa có phiếu chấm nào</td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+</body>
+</html>

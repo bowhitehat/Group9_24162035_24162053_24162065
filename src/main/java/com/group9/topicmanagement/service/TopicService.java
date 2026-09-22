@@ -62,8 +62,17 @@ public class TopicService {
     }
 
     public Topic getTopicById(Long id) {
-        return topicRepository.findById(id)
+        return topicRepository.findByIdWithDetails(id)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đề tài"));
+    }
+
+    public boolean isAdvisor(Long topicId, Long userId) {
+        Topic topic = getTopicById(topicId);
+        return topic.getAdvisors().stream().anyMatch(advisor -> advisor.getId().equals(userId));
+    }
+
+    public long countByStatus(TopicStatus status) {
+        return topicRepository.findAll().stream().filter(t -> t.getStatus() == status).count();
     }
 
     public Topic createTopic(TopicForm form, String proposerUsername) {
@@ -167,10 +176,13 @@ public class TopicService {
 
     public Topic getVisibleTopic(Long id, String username, boolean manager, boolean lecturer, boolean student) {
         Topic topic = getTopicById(id);
-        if (manager || topic.getStatus() == TopicStatus.PUBLISHED) return topic;
-        boolean isOwnerOrAdvisor = lecturer && (topic.getProposer().getUsername().equalsIgnoreCase(username)
-                || topic.getAdvisors().stream().anyMatch(a -> a.getUsername().equalsIgnoreCase(username)));
-        if (isOwnerOrAdvisor) return topic;
+        if (manager) return topic;
+        if (student && topic.getStatus() == TopicStatus.PUBLISHED) return topic;
+        if (lecturer) {
+            User viewer = userRepository.findByUsernameIgnoreCase(username)
+                    .orElseThrow(() -> new AccessDeniedException("Bạn không có quyền xem đề tài này"));
+            if (topicRepository.existsAccessibleToLecturer(id, viewer.getId())) return topic;
+        }
         if (student || lecturer) throw new AccessDeniedException("Bạn không có quyền xem đề tài này");
         throw new AccessDeniedException("Bạn không có quyền xem đề tài này");
     }

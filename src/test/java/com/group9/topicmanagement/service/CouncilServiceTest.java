@@ -34,7 +34,7 @@ public class CouncilServiceTest {
     @Mock private TopicRepository topicRepository;
     @Mock private UserRepository userRepository;
     @Mock private RegistrationPeriodRepository periodRepository;
-    @Mock private TopicRegistrationRepository topicRegistrationRepository;
+    @Mock private TopicRegistrationService topicRegistrationService;
 
     @InjectMocks
     private CouncilService councilService;
@@ -54,11 +54,14 @@ public class CouncilServiceTest {
 
         lecturer = new User();
         ReflectionTestUtils.setField(lecturer, "id", 10L);
+        com.group9.topicmanagement.domain.Role r = new com.group9.topicmanagement.domain.Role();
+        r.setName(com.group9.topicmanagement.domain.enums.RoleName.LECTURER);
+        lecturer.getRoles().add(r);
     }
 
     @Test
     void addMember_Success() {
-        when(councilRepository.findById(1L)).thenReturn(Optional.of(council));
+        when(councilRepository.findByIdWithPeriod(1L)).thenReturn(Optional.of(council));
         when(userRepository.findById(10L)).thenReturn(Optional.of(lecturer));
         when(memberRepository.existsByCouncilIdAndMemberId(1L, 10L)).thenReturn(false);
         when(memberRepository.findByCouncilId(1L)).thenReturn(new ArrayList<>());
@@ -70,7 +73,7 @@ public class CouncilServiceTest {
 
     @Test
     void addMember_ThrowsException_IfAlreadyExists() {
-        when(councilRepository.findById(1L)).thenReturn(Optional.of(council));
+        when(councilRepository.findByIdWithPeriod(1L)).thenReturn(Optional.of(council));
         when(userRepository.findById(10L)).thenReturn(Optional.of(lecturer));
         when(memberRepository.existsByCouncilIdAndMemberId(1L, 10L)).thenReturn(true);
 
@@ -82,7 +85,7 @@ public class CouncilServiceTest {
 
     @Test
     void addMember_ThrowsException_IfMoreThan5Members() {
-        when(councilRepository.findById(1L)).thenReturn(Optional.of(council));
+        when(councilRepository.findByIdWithPeriod(1L)).thenReturn(Optional.of(council));
         when(userRepository.findById(10L)).thenReturn(Optional.of(lecturer));
         when(memberRepository.existsByCouncilIdAndMemberId(1L, 10L)).thenReturn(false);
         
@@ -98,7 +101,7 @@ public class CouncilServiceTest {
     
     @Test
     void addMember_ThrowsException_IfChairAlreadyExists() {
-        when(councilRepository.findById(1L)).thenReturn(Optional.of(council));
+        when(councilRepository.findByIdWithPeriod(1L)).thenReturn(Optional.of(council));
         when(userRepository.findById(10L)).thenReturn(Optional.of(lecturer));
         when(memberRepository.existsByCouncilIdAndMemberId(1L, 10L)).thenReturn(false);
         

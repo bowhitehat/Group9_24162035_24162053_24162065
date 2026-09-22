@@ -8,24 +8,24 @@
     </div>
     <div class="card shadow-sm max-w-md">
         <div class="card-body p-4">
-            <form th:action="@{/reviewer-assignments/create}" method="post">
+            <form th:action="@{/reviewer-assignments/create}" th:object="${assignmentForm}" method="post">
                 <div class="mb-3">
                     <label class="form-label">Đề tài</label>
-                    <select name="topicId" class="form-select" required>
+                    <select th:field="*{topicId}" class="form-select" required>
                         <option value="">- Chọn đề tài đã duyệt -</option>
                         <option th:each="reg : ${approvedRegistrations}" th:value="${reg.topic.id}" th:text="${reg.topic.code + ' - ' + reg.topic.title}"></option>
                     </select>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Giảng viên</label>
-                    <select name="reviewerId" class="form-select" required>
+                    <select th:field="*{reviewerId}" class="form-select" required>
                         <option value="">- Chọn giảng viên -</option>
                         <option th:each="gv : ${lecturers}" th:value="${gv.id}" th:text="${gv.fullName}"></option>
                     </select>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Hạn nộp điểm</label>
-                    <input type="datetime-local" name="deadline" class="form-control" required>
+                    <input type="datetime-local" th:field="*{deadline}" class="form-control" required>
                 </div>
                 <button type="submit" class="btn btn-primary">Phân công</button>
             </form>

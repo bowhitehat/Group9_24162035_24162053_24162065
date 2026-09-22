@@ -7,12 +7,12 @@
         <h4>Chấm điểm Đề tài</h4>
         <p class="text-muted" th:text="${topic.code + ' - ' + topic.title}"></p>
         <p>Vai trò: <span th:text="${evalType}" class="fw-bold"></span></p>
-        <p>Trạng thái phiếu chấm: <span th:text="${evaluation.status}" class="badge bg-info"></span></p>
+        <p>Trạng thái phiếu chấm: <span th:text="${evaluation.status != null ? evaluation.status : 'DRAFT'}" class="badge bg-info"></span></p>
     </div>
     <div class="card shadow-sm">
         <div class="card-body p-4">
-            <form th:action="@{/evaluations/topic/{id}(id=${topic.id})}" method="post">
-                <input type="hidden" name="type" th:value="${evalType}" />
+            <form th:action="@{/evaluations/topic/{id}(id=${topic.id})}" th:object="${formDto}" method="post">
+                <input type="hidden" th:field="*{type}" />
                 <table class="table table-bordered">
                     <thead class="table-light">
                         <tr>
@@ -30,21 +30,21 @@
                             <td th:text="${c.description}"></td>
                             <td>
                                 <input type="number" step="0.01" min="0" max="10" 
-                                       th:name="'score_' + ${c.id}" 
+                                       th:field="*{scores[__${c.id}__]}" 
                                        class="form-control" 
                                        th:required="${c.isMandatory}"
-                                       th:value="${#lists.isEmpty(existingScores) ? '' : (existingScores.^[criterion.id == c.id] != null ? existingScores.^[criterion.id == c.id].score : '')}">
+                                       th:disabled="${!canEdit}">
                             </td>
                         </tr>
                     </tbody>
                 </table>
                 <div class="mb-3">
                     <label class="form-label">Nhận xét chung</label>
-                    <textarea name="comments" class="form-control" rows="3" th:text="${evaluation.comments}"></textarea>
+                    <textarea th:field="*{comments}" class="form-control" rows="3" th:disabled="${!canEdit}"></textarea>
                 </div>
-                <div th:if="${evaluation.status.name() != 'LOCKED' and evaluation.status.name() != 'SUBMITTED'}">
+                <div th:if="${canEdit}">
                     <button type="submit" class="btn btn-secondary">Lưu nháp</button>
-                    <button type="submit" name="submitAction" value="true" class="btn btn-primary" onclick="return confirm('Sau khi nộp sẽ không thể sửa lại. Bạn chắc chắn?')">Nộp điểm</button>
+                    <button type="submit" name="submitAction" value="true" class="btn btn-primary" onclick="return confirm('Nộp điểm?')">Nộp điểm</button>
                 </div>
             </form>
         </div>

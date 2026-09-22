@@ -3,6 +3,7 @@ package com.group9.topicmanagement.web;
 import com.group9.topicmanagement.domain.RegistrationPeriod;
 import com.group9.topicmanagement.domain.enums.RegistrationStatus;
 import com.group9.topicmanagement.domain.registration.TopicRegistration;
+import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.service.DepartmentService;
 import com.group9.topicmanagement.service.RegistrationPeriodService;
 import com.group9.topicmanagement.service.TopicRegistrationService;
@@ -94,7 +95,7 @@ public class TopicRegistrationController {
         try {
             registrationService.registerTopic(groupId, topicId, principal.getName());
             redirectAttributes.addFlashAttribute("successMessage", "Đăng ký đề tài thành công, vui lòng chờ duyệt!");
-        } catch (Exception e) {
+        } catch (BusinessRuleException | IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/topics/detail/" + topicId;
@@ -106,7 +107,7 @@ public class TopicRegistrationController {
         try {
             registrationService.approveRegistration(id, principal.getName());
             redirectAttributes.addFlashAttribute("successMessage", "Phê duyệt đăng ký đề tài thành công!");
-        } catch (Exception e) {
+        } catch (BusinessRuleException | IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/registrations";
@@ -126,7 +127,7 @@ public class TopicRegistrationController {
         try {
             registrationService.rejectRegistration(id, rejectForm.getReason(), principal.getName());
             redirectAttributes.addFlashAttribute("successMessage", "Đã từ chối đăng ký đề tài!");
-        } catch (Exception e) {
+        } catch (BusinessRuleException | IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/registrations";

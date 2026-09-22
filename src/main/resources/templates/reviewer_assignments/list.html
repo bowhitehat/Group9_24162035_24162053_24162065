@@ -7,31 +7,72 @@
         <h4>Phân công phản biện</h4>
         <a sec:authorize="hasRole('FACULTY_MANAGER')" th:href="@{/reviewer-assignments/create}" class="btn btn-primary">Thêm phân công</a>
     </div>
+
+    <form class="row g-2 mb-3" method="get" th:action="@{/reviewer-assignments}">
+        <div class="col-md-3">
+            <select name="periodId" class="form-select">
+                <option value="">Tất cả đợt</option>
+                <option th:each="p : ${periods}" th:value="${p.id}" th:text="${p.name}" th:selected="${periodId == p.id}"></option>
+            </select>
+        </div>
+        <div class="col-md-3">
+            <select name="reviewerId" class="form-select">
+                <option value="">Tất cả giảng viên</option>
+                <option th:each="gv : ${lecturers}" th:value="${gv.id}" th:text="${gv.fullName}" th:selected="${reviewerId == gv.id}"></option>
+            </select>
+        </div>
+        <div class="col-md-2">
+            <select name="status" class="form-select">
+                <option value="">Tất cả trạng thái</option>
+                <option th:each="s : ${statuses}" th:value="${s}" th:text="${s}" th:selected="${status == s}"></option>
+            </select>
+        </div>
+        <div class="col-md-2 form-check mt-2">
+            <input class="form-check-input" type="checkbox" name="pendingScore" value="true" id="pendingScore" th:checked="${pendingScore}">
+            <label class="form-check-label" for="pendingScore">Chưa nộp điểm</label>
+        </div>
+        <div class="col-md-2"><button class="btn btn-outline-secondary w-100">Lọc</button></div>
+    </form>
+
+    <div class="alert alert-warning" th:if="${topicsWithoutReviewer != null and !#lists.isEmpty(topicsWithoutReviewer)}">
+        Đề tài chưa có người phản biện:
+        <span th:each="reg, iter : ${topicsWithoutReviewer}" th:text="${reg.topic.code + (iter.last ? '' : ', ')}"></span>
+    </div>
+
     <div class="table-responsive">
         <table class="table table-bordered table-hover align-middle">
             <thead class="table-light">
-                <tr>
-                    <th>Đề tài</th>
-                    <th>Giảng viên PB</th>
-                    <th>Ngày phân công</th>
-                    <th>Hạn nộp</th>
-                    <th>Trạng thái</th>
-                    <th>Thao tác</th>
-                </tr>
+            <tr>
+                <th>Đề tài</th>
+                <th>Bộ môn</th>
+                <th>Giảng viên PB</th>
+                <th>Ngày phân công</th>
+                <th>Hạn nộp</th>
+                <th>Trạng thái</th>
+                <th>Thao tác</th>
+            </tr>
             </thead>
             <tbody>
-                <tr th:each="a : ${assignments}">
-                    <td th:text="${a.topic.code + ' - ' + a.topic.title}"></td>
-                    <td th:text="${a.reviewer.fullName}"></td>
-                    <td th:text="${#temporals.format(a.assignedAt, 'dd/MM/yyyy')}"></td>
-                    <td th:text="${#temporals.format(a.deadline, 'dd/MM/yyyy HH:mm')}"></td>
-                    <td th:text="${a.status}"></td>
-                    <td>
-                        <form th:if="${a.status.name() != 'SUBMITTED' and a.status.name() != 'CANCELLED'}" th:action="@{/reviewer-assignments/{id}/cancel(id=${a.id})}" method="post">
-                            <button class="btn btn-sm btn-danger" type="submit" onclick="return confirm('Bạn có chắc muốn hủy?')">Hủy</button>
-                        </form>
-                    </td>
-                </tr>
+            <tr th:each="a : ${assignments}">
+                <td th:text="${a.topic.code + ' - ' + a.topic.title}"></td>
+                <td th:text="${a.topic.department.name}"></td>
+                <td th:text="${a.reviewer.fullName}"></td>
+                <td th:text="${#temporals.format(a.assignedAt, 'dd/MM/yyyy')}"></td>
+                <td th:text="${#temporals.format(a.deadline, 'dd/MM/yyyy HH:mm')}"></td>
+                <td th:text="${a.status}"></td>
+                <td>
+                    <form th:if="${modifiableAssignmentIds.contains(a.id)}" class="d-flex gap-1"
+                          th:action="@{/reviewer-assignments/{id}/change(id=${a.id})}" method="post">
+                        <select name="reviewerId" class="form-select form-select-sm">
+                            <option th:each="gv : ${lecturers}" th:value="${gv.id}" th:text="${gv.fullName}" th:selected="${gv.id == a.reviewer.id}"></option>
+                        </select>
+                        <button class="btn btn-sm btn-outline-primary">Đổi GV</button>
+                    </form>
+                    <form th:if="${modifiableAssignmentIds.contains(a.id)}" th:action="@{/reviewer-assignments/{id}/cancel(id=${a.id})}" method="post" class="mt-1">
+                        <button class="btn btn-sm btn-danger" type="submit" onclick="return confirm('Bạn có chắc muốn hủy?')">Hủy</button>
+                    </form>
+                </td>
+            </tr>
             </tbody>
         </table>
     </div>

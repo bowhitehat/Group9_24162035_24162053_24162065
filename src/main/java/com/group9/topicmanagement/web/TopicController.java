@@ -5,6 +5,7 @@ import com.group9.topicmanagement.domain.RegistrationPeriod;
 import com.group9.topicmanagement.domain.topic.Topic;
 import com.group9.topicmanagement.domain.topic.TopicStatus;
 import com.group9.topicmanagement.domain.User;
+import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.service.DepartmentService;
 import com.group9.topicmanagement.service.RegistrationPeriodService;
 import com.group9.topicmanagement.service.TopicService;
@@ -157,7 +158,7 @@ public class TopicController {
             topicService.createTopic(form, principal.getName());
             redirectAttributes.addFlashAttribute("successMessage", "Đề xuất đề tài thành công!");
             return "redirect:/topics";
-        } catch (Exception e) {
+        } catch (BusinessRuleException | IllegalArgumentException e) {
             model.addAttribute("errorMessage", e.getMessage());
             model.addAttribute("periods", periodService.findAllPeriods());
             model.addAttribute("departments", departmentService.findAllDepartments());
@@ -206,7 +207,7 @@ public class TopicController {
             topicService.updateTopic(id, form, principal.getName());
             redirectAttributes.addFlashAttribute("successMessage", "Cập nhật đề tài thành công!");
             return "redirect:/topics/detail/" + id;
-        } catch (Exception e) {
+        } catch (BusinessRuleException | IllegalArgumentException e) {
             model.addAttribute("errorMessage", e.getMessage());
             model.addAttribute("periods", periodService.findAllPeriods());
             model.addAttribute("departments", departmentService.findAllDepartments());
@@ -221,7 +222,7 @@ public class TopicController {
         try {
             topicService.submitTopic(id, principal.getName());
             redirectAttributes.addFlashAttribute("successMessage", "Đã gửi đề tài để chờ duyệt!");
-        } catch (Exception e) {
+        } catch (BusinessRuleException | IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/topics/detail/" + id;
@@ -233,7 +234,7 @@ public class TopicController {
         try {
             topicService.approveTopic(id);
             redirectAttributes.addFlashAttribute("successMessage", "Đã duyệt đề tài thành công!");
-        } catch (Exception e) {
+        } catch (BusinessRuleException | IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/topics/detail/" + id;
@@ -250,7 +251,7 @@ public class TopicController {
         try {
             topicService.rejectTopic(id, rejectForm.getReason());
             redirectAttributes.addFlashAttribute("successMessage", "Đã từ chối đề tài!");
-        } catch (Exception e) {
+        } catch (BusinessRuleException | IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/topics/detail/" + id;
@@ -262,7 +263,7 @@ public class TopicController {
         try {
             topicService.publishTopic(id);
             redirectAttributes.addFlashAttribute("successMessage", "Đã công bố đề tài thành công!");
-        } catch (Exception e) {
+        } catch (BusinessRuleException | IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/topics/detail/" + id;

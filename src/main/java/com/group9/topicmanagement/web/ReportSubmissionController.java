@@ -72,9 +72,7 @@ public class ReportSubmissionController {
             reportService.submitReport(form, principal.getName());
             redirectAttributes.addFlashAttribute("successMessage", "Nộp báo cáo thành công!");
             return "redirect:/reports/submit?registrationId=" + form.getTopicRegistrationId();
-        } catch (AccessDeniedException error) {
-            throw error;
-        } catch (Exception e) {
+        } catch (com.group9.topicmanagement.exception.BusinessRuleException | IllegalArgumentException e) {
             TopicRegistration registration = reportService.getRegistrationForSubmission(form.getTopicRegistrationId(), principal.getName());
             model.addAttribute("errorMessage", e.getMessage());
             model.addAttribute("registration", registration);
