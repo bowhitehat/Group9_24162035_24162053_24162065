@@ -1,4 +1,4 @@
-package com.group9.topicmanagement.web.form;
+package com.group9.topicmanagement.controller.form;
 
 import org.springframework.web.multipart.MultipartFile;
 import jakarta.validation.constraints.NotNull;

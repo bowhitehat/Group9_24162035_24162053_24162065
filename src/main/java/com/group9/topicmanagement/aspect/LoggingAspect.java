@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 @Aspect @Component @Order(Ordered.LOWEST_PRECEDENCE)
 public class LoggingAspect {
     private static final Logger log = LoggerFactory.getLogger(LoggingAspect.class);
-    @Around("execution(public * com.group9.topicmanagement.service..*(..)) || execution(public * com.group9.topicmanagement.web..*(..))")
+    @Around("execution(public * com.group9.topicmanagement.service..*(..)) || execution(public * com.group9.topicmanagement.controller..*(..))")
     public Object logCall(ProceedingJoinPoint point) throws Throwable {
         long start = System.nanoTime(); String name = point.getSignature().toShortString();
         try { Object result = point.proceed(); log.debug("Hoàn tất {} trong {} ms", name, elapsed(start)); return result; }

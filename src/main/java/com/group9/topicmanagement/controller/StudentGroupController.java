@@ -1,4 +1,4 @@
-package com.group9.topicmanagement.web;
+package com.group9.topicmanagement.controller;
 
 import com.group9.topicmanagement.domain.RegistrationPeriod;
 import com.group9.topicmanagement.domain.User;
@@ -6,7 +6,7 @@ import com.group9.topicmanagement.domain.studentgroup.StudentGroup;
 import com.group9.topicmanagement.service.RegistrationPeriodService;
 import com.group9.topicmanagement.service.StudentGroupService;
 import com.group9.topicmanagement.service.UserService;
-import com.group9.topicmanagement.web.form.GroupMemberForm;
+import com.group9.topicmanagement.controller.form.GroupMemberForm;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;

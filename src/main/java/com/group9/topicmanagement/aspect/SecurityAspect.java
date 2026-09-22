@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 @Aspect @Component
 public class SecurityAspect {
     private static final Logger log = LoggerFactory.getLogger(SecurityAspect.class);
-    @Before("execution(public * com.group9.topicmanagement.web..*(..))")
+    @Before("execution(public * com.group9.topicmanagement.controller..*(..))")
     public void audit(JoinPoint point) {
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         log.info("SECURITY actor={} action={}", authentication == null ? "anonymous" : authentication.getName(), point.getSignature().toShortString());

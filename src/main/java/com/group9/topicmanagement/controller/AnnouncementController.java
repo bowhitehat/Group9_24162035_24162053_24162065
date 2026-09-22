@@ -1,4 +1,4 @@
-package com.group9.topicmanagement.web;
+package com.group9.topicmanagement.controller;
 
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.service.AnnouncementService;

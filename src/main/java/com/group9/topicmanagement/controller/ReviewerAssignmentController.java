@@ -1,4 +1,4 @@
-package com.group9.topicmanagement.web;
+package com.group9.topicmanagement.controller;
 
 import com.group9.topicmanagement.domain.enums.ReviewerAssignmentStatus;
 import com.group9.topicmanagement.exception.BusinessRuleException;

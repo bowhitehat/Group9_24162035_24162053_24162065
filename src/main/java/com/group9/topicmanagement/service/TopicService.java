@@ -10,7 +10,7 @@ import com.group9.topicmanagement.repository.DepartmentRepository;
 import com.group9.topicmanagement.repository.RegistrationPeriodRepository;
 import com.group9.topicmanagement.repository.TopicRepository;
 import com.group9.topicmanagement.repository.UserRepository;
-import com.group9.topicmanagement.web.form.TopicForm;
+import com.group9.topicmanagement.controller.form.TopicForm;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;

@@ -1,4 +1,4 @@
-package com.group9.topicmanagement.web;
+package com.group9.topicmanagement.controller;
 
 import com.group9.topicmanagement.domain.Department;
 import com.group9.topicmanagement.domain.RegistrationPeriod;
@@ -11,8 +11,8 @@ import com.group9.topicmanagement.service.TopicService;
 import com.group9.topicmanagement.service.StudentGroupService;
 import com.group9.topicmanagement.service.TopicRegistrationService;
 import com.group9.topicmanagement.service.UserService;
-import com.group9.topicmanagement.web.form.RejectForm;
-import com.group9.topicmanagement.web.form.TopicForm;
+import com.group9.topicmanagement.controller.form.RejectForm;
+import com.group9.topicmanagement.controller.form.TopicForm;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;

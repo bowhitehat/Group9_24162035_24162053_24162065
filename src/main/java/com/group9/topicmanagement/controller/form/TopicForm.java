@@ -1,4 +1,4 @@
-package com.group9.topicmanagement.web.form;
+package com.group9.topicmanagement.controller.form;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;

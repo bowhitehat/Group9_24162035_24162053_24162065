@@ -1,9 +1,9 @@
-package com.group9.topicmanagement.web;
+package com.group9.topicmanagement.controller;
 
 import com.group9.topicmanagement.domain.enums.PeriodStatus;
 import com.group9.topicmanagement.domain.enums.PeriodType;
 import com.group9.topicmanagement.service.RegistrationPeriodService;
-import com.group9.topicmanagement.web.form.PeriodForm;
+import com.group9.topicmanagement.controller.form.PeriodForm;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
