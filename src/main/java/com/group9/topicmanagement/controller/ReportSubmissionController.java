@@ -1,10 +1,10 @@
-package com.group9.topicmanagement.web;
+package com.group9.topicmanagement.controller;
 
 import com.group9.topicmanagement.config.UploadConfig;
 import com.group9.topicmanagement.domain.registration.ReportSubmission;
 import com.group9.topicmanagement.domain.registration.TopicRegistration;
 import com.group9.topicmanagement.service.ReportSubmissionService;
-import com.group9.topicmanagement.web.form.ReportSubmissionForm;
+import com.group9.topicmanagement.controller.form.ReportSubmissionForm;
 import jakarta.validation.Valid;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;

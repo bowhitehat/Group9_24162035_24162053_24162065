@@ -12,7 +12,7 @@ import com.group9.topicmanagement.exception.NotFoundException;
 import com.group9.topicmanagement.repository.ReportSubmissionRepository;
 import com.group9.topicmanagement.repository.TopicRegistrationRepository;
 import com.group9.topicmanagement.repository.UserRepository;
-import com.group9.topicmanagement.web.form.ReportSubmissionForm;
+import com.group9.topicmanagement.controller.form.ReportSubmissionForm;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;

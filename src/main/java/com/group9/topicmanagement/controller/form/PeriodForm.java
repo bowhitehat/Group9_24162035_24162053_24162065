@@ -1,4 +1,4 @@
-package com.group9.topicmanagement.web.form;
+package com.group9.topicmanagement.controller.form;
 
 import com.group9.topicmanagement.domain.RegistrationPeriod;
 import com.group9.topicmanagement.domain.enums.PeriodType;
