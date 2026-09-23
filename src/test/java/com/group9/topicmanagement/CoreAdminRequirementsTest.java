@@ -8,6 +8,7 @@ import com.group9.topicmanagement.domain.enums.PeriodType;
 import com.group9.topicmanagement.domain.enums.RoleName;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.repository.DepartmentRepository;
+import com.group9.topicmanagement.repository.EvaluationCriterionRepository;
 import com.group9.topicmanagement.repository.RegistrationPeriodRepository;
 import com.group9.topicmanagement.repository.RoleRepository;
 import com.group9.topicmanagement.repository.UserRepository;
@@ -41,11 +42,12 @@ class CoreAdminRequirementsTest {
     @Autowired RoleRepository roles;
     @Autowired DepartmentRepository departments;
     @Autowired RegistrationPeriodRepository periods;
+    @Autowired EvaluationCriterionRepository criteria;
     @Autowired PasswordEncoder encoder;
 
     @BeforeEach
     void setUp() {
-        periods.deleteAll(); users.deleteAll(); roles.deleteAll(); departments.deleteAll();
+        criteria.deleteAll(); periods.deleteAll(); users.deleteAll(); roles.deleteAll(); departments.deleteAll();
         for (RoleName name : RoleName.values()) { Role role = new Role(); role.setName(name); roles.save(role); }
         Department department = new Department(); department.setCode("CNPM"); department.setName("Công nghệ phần mềm"); departments.save(department);
         userService.create("admin", "Quản trị", "admin@test.local", null, department.getId(), Set.of(RoleName.ADMIN), "Password@123");
@@ -84,6 +86,13 @@ class CoreAdminRequirementsTest {
         RegistrationPeriod saved = periodService.save(validPeriod(PeriodType.MON_HOC));
         assertThat(saved.getStatus()).isEqualTo(PeriodStatus.DRAFT);
         assertThatThrownBy(() -> periodService.transition(saved.getId(), PeriodStatus.GRADING)).isInstanceOf(BusinessRuleException.class).hasMessageContaining("Không thể chuyển");
+    }
+
+    @Test void newPeriodGetsFiveDefaultEvaluationCriteria() {
+        RegistrationPeriod saved = periodService.save(validPeriod(PeriodType.MON_HOC));
+        assertThat(criteria.findByRegistrationPeriodIdOrderByDisplayOrderAsc(saved.getId()))
+                .extracting("name")
+                .containsExactly("Nội dung", "Kỹ thuật", "Sản phẩm", "Báo cáo", "Trình bày/phản biện");
     }
 
     private RegistrationPeriod validPeriod(PeriodType type) {

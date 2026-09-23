@@ -3,8 +3,10 @@ package com.group9.topicmanagement.service;
 import com.group9.topicmanagement.domain.RegistrationPeriod;
 import com.group9.topicmanagement.domain.enums.PeriodStatus;
 import com.group9.topicmanagement.domain.enums.PeriodType;
+import com.group9.topicmanagement.domain.evaluation.EvaluationCriterion;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.exception.NotFoundException;
+import com.group9.topicmanagement.repository.EvaluationCriterionRepository;
 import com.group9.topicmanagement.repository.RegistrationPeriodRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -16,10 +18,14 @@ import java.util.List;
 @Transactional(readOnly = true)
 public class RegistrationPeriodService {
     private final RegistrationPeriodRepository periods;
+    private final EvaluationCriterionRepository criteria;
     private final Clock clock;
 
-    public RegistrationPeriodService(RegistrationPeriodRepository periods, Clock clock) {
+    public RegistrationPeriodService(RegistrationPeriodRepository periods,
+                                     EvaluationCriterionRepository criteria,
+                                     Clock clock) {
         this.periods = periods;
+        this.criteria = criteria;
         this.clock = clock;
     }
 
@@ -48,7 +54,12 @@ public class RegistrationPeriodService {
     @Transactional
     public RegistrationPeriod save(RegistrationPeriod period) {
         validate(period);
-        return periods.save(period);
+        boolean creating = period.getId() == null;
+        RegistrationPeriod saved = periods.save(period);
+        if (creating) {
+            seedDefaultCriteria(saved);
+        }
+        return saved;
     }
 
     @Transactional
@@ -98,5 +109,30 @@ public class RegistrationPeriodService {
             throw new BusinessRuleException("Chỉ KLTN được thiết lập ngày báo cáo hội đồng");
         if (period.getType() == PeriodType.KLTN && period.getCouncilDate() == null)
             throw new BusinessRuleException("KLTN phải có ngày báo cáo hội đồng");
+    }
+
+    private void seedDefaultCriteria(RegistrationPeriod period) {
+        if (!criteria.findByRegistrationPeriodIdOrderByDisplayOrderAsc(period.getId()).isEmpty()) {
+            return;
+        }
+
+        String[][] defaults = {
+                {"Nội dung", "Mức độ đầy đủ, chính xác và phù hợp của nội dung đề tài."},
+                {"Kỹ thuật", "Giải pháp kỹ thuật, kiến trúc và chất lượng triển khai."},
+                {"Sản phẩm", "Mức độ hoàn thiện và khả năng vận hành của sản phẩm."},
+                {"Báo cáo", "Chất lượng tài liệu, cấu trúc và cách trình bày báo cáo."},
+                {"Trình bày/phản biện", "Khả năng trình bày, trả lời câu hỏi và bảo vệ kết quả."}
+        };
+
+        for (int index = 0; index < defaults.length; index++) {
+            EvaluationCriterion criterion = new EvaluationCriterion();
+            criterion.setName(defaults[index][0]);
+            criterion.setDescription(defaults[index][1]);
+            criterion.setRegistrationPeriod(period);
+            criterion.setDisplayOrder(index + 1);
+            criterion.setIsMandatory(true);
+            criterion.setIsActive(true);
+            criteria.save(criterion);
+        }
     }
 }

@@ -23,7 +23,7 @@ import com.group9.topicmanagement.domain.topic.Topic;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.repository.*;
 import com.group9.topicmanagement.service.*;
-import com.group9.topicmanagement.web.form.TopicForm;
+import com.group9.topicmanagement.controller.form.TopicForm;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

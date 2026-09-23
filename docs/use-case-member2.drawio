@@ -1,0 +1,133 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mxfile host="Electron" modified="2026-09-22T08:00:00.000Z" agent="Antigravity" version="21.6.8" type="device">
+  <diagram id="usecase-member2" name="Use Case Diagram - Module Thanh vien 2">
+    <mxGraphModel dx="1200" dy="800" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        
+        <!-- System Boundary -->
+        <mxCell id="sys_boundary" value="MODULE THÀNH VIÊN 2 - QUẢN LÝ ĐỀ TÀI &amp; NHÓM SINH VIÊN" style="shape=rect;html=1;whiteSpace=wrap;align=center;verticalAlign=top;fontStyle=1;fontSize=14;fillColor=#f5f5f5;strokeColor=#666666;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="240" y="40" width="680" height="740" as="geometry" />
+        </mxCell>
+
+        <!-- Actors -->
+        <mxCell id="actor_lecturer" value="Giảng viên&#10;(Lecturer)" style="shape=umlActor;html=1;whiteSpace=wrap;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#dae8fc;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="140" width="50" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="actor_faculty" value="Bộ môn / Khoa&#10;(Faculty Manager)" style="shape=umlActor;html=1;whiteSpace=wrap;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#d5e8d4;strokeColor=#82b366;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="80" y="380" width="50" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="actor_student_leader" value="Trưởng nhóm SV&#10;(Group Leader)" style="shape=umlActor;html=1;whiteSpace=wrap;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#ffe6cc;strokeColor=#d79b00;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="980" y="240" width="50" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="actor_student_member" value="Sinh viên thành viên&#10;(Student Member)" style="shape=umlActor;html=1;whiteSpace=wrap;verticalLabelPosition=bottom;verticalAlign=top;align=center;fillColor=#fff2cc;strokeColor=#d6b656;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="980" y="520" width="50" height="90" as="geometry" />
+        </mxCell>
+
+        <!-- Use Cases: Topic Management (Lecturer & Faculty) -->
+        <mxCell id="uc_create_topic" value="UC01: Tạo / Đề xuất đề tài" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="300" y="80" width="180" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_edit_topic" value="UC02: Chỉnh sửa đề tài" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="300" y="160" width="180" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_submit_topic" value="UC03: Gửi duyệt đề tài" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#6c8ebf;" vertex="1" parent="1">
+          <mxGeometry x="300" y="240" width="180" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_approve_topic" value="UC04: Duyệt đề tài" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="300" y="340" width="180" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_reject_topic" value="UC05: Từ chối đề tài" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;" vertex="1" parent="1">
+          <mxGeometry x="300" y="420" width="180" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_publish_topic" value="UC06: Công bố đề tài" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="300" y="500" width="180" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Use Cases: Group & Registration & Report (Student & Leader & Faculty) -->
+        <mxCell id="uc_create_group" value="UC07: Tạo nhóm sinh viên" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="650" y="120" width="180" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_manage_member" value="UC08: Thêm / Xóa thành viên" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;" vertex="1" parent="1">
+          <mxGeometry x="650" y="200" width="180" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_register_topic" value="UC09: Đăng ký đề tài" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="650" y="290" width="180" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_approve_registration" value="UC10: Duyệt / Từ chối đăng ký" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#82b366;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="470" y="380" width="180" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_submit_report" value="UC11: Nộp / Nộp lại báo cáo" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#d79b00;fontStyle=1;" vertex="1" parent="1">
+          <mxGeometry x="650" y="460" width="180" height="60" as="geometry" />
+        </mxCell>
+
+        <mxCell id="uc_view_history" value="UC12: Xem lịch sử báo cáo &amp; Tải tệp" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ffffff;strokeColor=#b85450;" vertex="1" parent="1">
+          <mxGeometry x="580" y="570" width="220" height="60" as="geometry" />
+        </mxCell>
+
+        <!-- Connections: Lecturer -->
+        <mxCell id="edge_lec1" edge="1" parent="1" source="actor_lecturer" target="uc_create_topic">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_lec2" edge="1" parent="1" source="actor_lecturer" target="uc_edit_topic">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_lec3" edge="1" parent="1" source="actor_lecturer" target="uc_submit_topic">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Connections: Faculty -->
+        <mxCell id="edge_fac1" edge="1" parent="1" source="actor_faculty" target="uc_approve_topic">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_fac2" edge="1" parent="1" source="actor_faculty" target="uc_reject_topic">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_fac3" edge="1" parent="1" source="actor_faculty" target="uc_publish_topic">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_fac4" edge="1" parent="1" source="actor_faculty" target="uc_approve_registration">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Connections: Leader -->
+        <mxCell id="edge_lead1" edge="1" parent="1" source="actor_student_leader" target="uc_create_group">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_lead2" edge="1" parent="1" source="actor_student_leader" target="uc_manage_member">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_lead3" edge="1" parent="1" source="actor_student_leader" target="uc_register_topic">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="edge_lead4" edge="1" parent="1" source="actor_student_leader" target="uc_submit_report">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Generalization: Student Member -> Leader -->
+        <mxCell id="edge_gen" edge="1" parent="1" source="actor_student_leader" target="actor_student_member" style="endArrow=block;endSize=16;endFill=0;html=1;">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <!-- Connections: Student Member -->
+        <mxCell id="edge_mem1" edge="1" parent="1" source="actor_student_member" target="uc_view_history">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

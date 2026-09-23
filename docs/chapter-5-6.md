@@ -2,7 +2,7 @@
 
 Chương 5 chỉ dùng ảnh chụp sản phẩm đang chạy thật (không mockup). Mỗi hình có số, tên và mô tả.
 
-Ảnh gốc lưu tại `screenshots/` sau khi chạy ứng dụng local hoặc hosting.
+Ảnh gốc dưới đây được chụp trực tiếp từ ứng dụng chạy local với Spring Boot và MySQL ngày 23/09/2026. Dữ liệu trong ảnh là dữ liệu demo, không chứa mật khẩu hay bí mật triển khai.
 
 Các luồng cần chụp:
 
@@ -15,6 +15,48 @@ Các luồng cần chụp:
 7. Giảng viên nhập điểm, khoa khóa điểm, chủ tịch xác nhận, khoa công bố.
 8. Sinh viên xem kết quả nhóm mình.
 9. Dashboard và thông báo theo vai trò.
+
+## 5.1. Đăng nhập hệ thống
+
+![Giao diện đăng nhập](../screenshots/00_dang_nhap.png)
+
+*Hình 5.1: Giao diện đăng nhập có logo HCMUTE và Khoa Công nghệ Thông tin.*
+
+## 5.2. Dashboard của cán bộ khoa
+
+![Dashboard khoa](../screenshots/06_dashboard_khoa.png)
+
+*Hình 5.2: Dashboard tổng hợp số đợt mở, đề tài, nhóm, báo cáo, phản biện, hội đồng và kết quả.*
+
+## 5.3. Danh sách đề tài
+
+![Danh sách đề tài](../screenshots/01_danh_sach_de_tai.png)
+
+*Hình 5.3: Cán bộ khoa tra cứu đề tài theo đợt, bộ môn, trạng thái và từ khóa.*
+
+## 5.4. Giảng viên đề xuất đề tài
+
+![Form đề xuất đề tài](../screenshots/02_chi_tiet_tao_de_tai.png)
+
+*Hình 5.4: Biểu mẫu đề xuất đề tài của giảng viên.*
+
+## 5.5. Nhóm sinh viên
+
+![Nhóm sinh viên](../screenshots/03_nhom_sinh_vien.png)
+
+*Hình 5.5: Nhóm có một trưởng nhóm và ba thành viên theo giới hạn nghiệp vụ.*
+
+## 5.6. Đăng ký đề tài
+
+![Đăng ký đề tài](../screenshots/04_dang_ky_de_tai.png)
+
+*Hình 5.6: Đăng ký đã được duyệt và các thao tác xem, nộp báo cáo dành cho sinh viên.*
+
+## 5.7. Nộp báo cáo và lịch sử phiên bản
+
+![Nộp báo cáo](../screenshots/05_nop_bao_cao.png)
+
+*Hình 5.7: Biểu mẫu nộp báo cáo và lịch sử hai phiên bản đã lưu trong MySQL.*
 
 # Chương 6. Kết luận
 
@@ -33,7 +75,7 @@ Hệ thống quản lý đề tài sinh viên đi hết luồng từ tạo đợ
 
 - Chưa có URL hosting công khai nếu nhóm chưa đăng nhập nhà cung cấp.
 - Upload lưu local disk, có thể mất khi container không gắn volume bền.
-- Screenshot Chương 5 cần chụp khi demo trên máy có MySQL.
+- Chưa có URL hosting công khai; bộ ảnh hiện được chụp từ môi trường local kết nối MySQL.
 
 ## 6.4. Hướng phát triển
 
