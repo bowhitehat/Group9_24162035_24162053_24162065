@@ -1,6 +1,6 @@
 # Chương 3: Thiết kế và Mô tả Module Quản lý Đề tài & Nhóm Sinh viên (Thành viên 2)
 
-**Thành viên thực hiện**: Vũ Trọng Hưng (MSSV: 24162053)  
+**Thành viên thực hiện**: Vũ Trọng Hưng (MSSV: 24162053)
 **Phân hệ phụ trách**: Quản lý Đề tài, Quản lý Nhóm Sinh viên, Đăng ký Đề tài & Nộp Báo cáo Tiến độ.
 
 ---
@@ -9,11 +9,11 @@
 
 Sơ đồ Use Case tổng quan thể hiện sự tương tác giữa các Tác nhân (Actors) và các Chức năng (Use Cases) thuộc phân hệ Thành viên 2 trong Hệ thống Quản lý đề tài khóa luận/luận văn:
 
-![Sơ đồ Use Case Module Thành viên 2](file:///c:/Users/lenovo/Desktop/Group9_24162035_24162053_24162065-feature-core-admin/docs/use-case-member2.png)
+![Sơ đồ Use Case Module Thành viên 2](use-case-member2.png)
 
 > **Tệp thiết kế đính kèm**:
-> - File thiết kế sơ đồ gốc dạng sơ đồ DrawIO: [use-case-member2.drawio](file:///c:/Users/lenovo/Desktop/Group9_24162035_24162053_24162065-feature-core-admin/docs/use-case-member2.drawio)
-> - Ảnh chuẩn sơ đồ PNG: [use-case-member2.png](file:///c:/Users/lenovo/Desktop/Group9_24162035_24162053_24162065-feature-core-admin/docs/use-case-member2.png)
+> - File thiết kế sơ đồ gốc dạng DrawIO: [use-case-member2.drawio](use-case-member2.drawio)
+> - Ảnh sơ đồ PNG: [use-case-member2.png](use-case-member2.png)
 
 ---
 
@@ -67,9 +67,9 @@ sequenceDiagram
 2. **Bước 2 — Giảng viên gửi duyệt**: Khi hoàn thiện thông tin, giảng viên bấm nút "Gửi duyệt". Trạng thái chuyển từ `DRAFT` (hoặc `REJECTED`) sang `PENDING`.
 3. **Bước 3 — Khoa duyệt và công bố đề tài**: Quản lý Khoa xem danh sách đề tài chờ duyệt. Nếu đạt yêu cầu, Khoa bấm "Duyệt" (`APPROVED`). Khi đến thời điểm mở cho sinh viên, Khoa bấm "Công bố" (`PUBLISHED`) để đề tài hiển thị công khai. Nếu chưa đạt, Khoa bấm "Từ chối" kèm lý do phản hồi chi tiết để GV chỉnh sửa.
 4. **Bước 4 — Sinh viên tạo nhóm**: Trong thời gian sinh viên đăng ký, một sinh viên tạo nhóm mới cho đợt đăng ký đó. Hệ thống khởi tạo bản ghi `StudentGroup`, đồng thời tự động thêm sinh viên này vào bảng `GroupMember` với cờ `is_leader = true`.
-5. **Bước 5 — Thêm/xóa thành viên nhóm**: Trưởng nhóm nhập MSSV/Username của các bạn cùng nhóm. Hệ thống kiểm tra ràng buộc: mỗi nhóm tối đa 3 thành viên và sinh viên chưa tham gia bất kỳ nhóm nào khác trong cùng đợt. Trưởng nhóm có quyền xóa thành viên nếu có thay đổi.
+5. **Bước 5 — Thêm/xóa thành viên nhóm**: Trưởng nhóm nhập tên đăng nhập của các bạn cùng nhóm. Hệ thống kiểm tra ràng buộc: mỗi nhóm tối đa 3 thành viên và sinh viên chưa tham gia bất kỳ nhóm nào khác trong cùng đợt. Trưởng nhóm có quyền xóa thành viên nếu có thay đổi.
 6. **Bước 6 — Trưởng nhóm đăng ký đề tài**: Trưởng nhóm duyệt danh mục các đề tài đã `PUBLISHED`, chọn đề tài phù hợp và bấm "Đăng ký". Hệ thống ghi nhận bản ghi `TopicRegistration` với trạng thái `PENDING`. Thành viên thường bấm đăng ký sẽ bị chặn.
-7. **Bước 7 — Khoa duyệt đăng ký đề tài**: Quản lý Khoa tra cứu danh sách đăng ký theo đợt và bộ môn. Khi Khoa phê duyệt (`APPROVED`) cho nhóm, hệ thống xác nhận đề tài thuộc về nhóm đó và tự động từ chối hoặc ngăn chặn các nhóm khác đăng ký trùng đề tài.
+7. **Bước 7 — Khoa duyệt đăng ký đề tài**: Quản lý Khoa tra cứu danh sách đăng ký theo đợt và bộ môn. Khi Khoa phê duyệt (`APPROVED`) cho nhóm, hệ thống xác nhận đề tài thuộc về nhóm đó và ngăn phê duyệt trùng cho nhóm khác.
 8. **Bước 8 — Trưởng nhóm nộp và tải lại báo cáo**: Khi đề tài đã được duyệt chính thức, Trưởng nhóm truy cập chức năng nộp báo cáo tiến độ, đính kèm file (PDF, DOC, DOCX, ZIP) và ghi chú. Khi nộp lại, hệ thống tự động tăng phiên bản (`version = latestVersion + 1`) và lưu trữ an toàn. Trưởng nhóm, thành viên nhóm, GVHD và Quản lý Khoa có quyền xem lịch sử và tải file về máy.
 
 ---
@@ -89,10 +89,10 @@ flowchart TD
     end
 
     subgraph Service_Layer["2. Tầng Nghiệp vụ (Business Service) - com.group9.topicmanagement.service"]
-        TS["TopicService / TopicServiceImpl"]
-        SGS["StudentGroupService / StudentGroupServiceImpl"]
-        TRS["TopicRegistrationService / TopicRegistrationServiceImpl"]
-        RSS["ReportSubmissionService / ReportSubmissionServiceImpl"]
+        TS["TopicService"]
+        SGS["StudentGroupService"]
+        TRS["TopicRegistrationService"]
+        RSS["ReportSubmissionService"]
     end
 
     subgraph Data_Layer["3. Tầng Dữ liệu (Repository & Entity) - com.group9.topicmanagement.repository"]
@@ -126,7 +126,7 @@ flowchart TD
 
 ### 3. Tầng Truy cập Dữ liệu (`com.group9.topicmanagement.repository`)
 - Kế thừa `JpaRepository` của Spring Data JPA, hỗ trợ tự động sinh câu lệnh truy vấn tối ưu, hỗ trợ phân trang và sắp xếp `Pageable`.
-- Kiểm tra trùng lặp thông qua các phương thức dẫn xuất: `existsByStudentIdAndPeriodId`, `findByTopicIdAndStatus`, `findLatestVersionByRegistrationId`.
+- Kiểm tra trùng lặp và dữ liệu mới nhất thông qua các phương thức repository: `existsByStudentIdAndPeriodId`, `findApprovedRegistrationForTopic`, `findLatestByRegistrationId`.
 
 ---
 
@@ -149,11 +149,11 @@ flowchart TD
 
 ### 2. Quy tắc Phi chức năng (Non-Functional Requirements: NFR-01 -> NFR-05)
 
-* **NFR-01 (Strict RBAC Authorization)**: Kiểm soát chặt chẽ trên toàn bộ endpoint backend thông qua chú thích `@PreAuthorize`. Bất kỳ truy cập trái thẩm quyền đều bị ngắt lập tức và trả về HTTP `403 Forbidden`.
+* **NFR-01 (Strict RBAC Authorization)**: Kiểm soát endpoint backend bằng cả `SecurityFilterChain` và `@PreAuthorize`. Truy cập sai vai trò vào tài nguyên được bảo vệ trả về HTTP `403 Forbidden`.
 * **NFR-02 (Xử lý Ngoại lệ Tinh gọn)**: Phân tách rõ ràng giữa ngoại lệ nghiệp vụ (`BusinessRuleException`) và lỗi hệ thống không mong muốn. Tích hợp `GlobalExceptionHandler` bắt tập trung.
 * **NFR-03 (Tính Toàn vẹn Dữ liệu & Giao dịch)**: Tất cả các thao tác ghi dữ liệu phức hợp được quản lý qua giao dịch `@Transactional` đảm bảo tính nguyên tố (All-or-Nothing).
 * **NFR-04 (Bảo mật Tệp Upload & Chống Path Traversal)**: Tên file tải lên được mã hóa lại bằng UUID ngẫu nhiên trước khi lưu vào đĩa cứng. Hệ thống chuẩn hóa đường dẫn thông qua `Path.normalize()` để ngăn chặn triệt để tấn công Path Traversal.
-* **NFR-05 (Tối ưu Hiệu năng & Truy vấn)**: Sử dụng các câu truy vấn lọc kết hợp phân trang `Pageable` của Spring Data JPA, loại bỏ hiện tượng N+1 query và tối ưu thời gian phản hồi dưới 200ms.
+* **NFR-05 (Tối ưu Truy vấn)**: Sử dụng bộ lọc kết hợp phân trang `Pageable` và `@EntityGraph` để tải trước các quan hệ cần hiển thị khi `open-in-view=false`.
 
 ---
 
@@ -164,23 +164,23 @@ Tất cả ảnh chụp giao diện chức năng thực tế của phân hệ Th
 ### 1. Giao diện Tra cứu & Phân loại Đề tài (`/topics`)
 Màn hình tra cứu đa tiêu chí cho phép lọc theo Đợt đăng ký, Khoa/Bộ môn, Trạng thái phê duyệt (`ALL`, `DRAFT`, `PENDING`, `APPROVED`, `PUBLISHED`), tìm kiếm từ khóa và phân trang dữ liệu:
 
-![Danh sách Đề tài](file:///c:/Users/lenovo/Desktop/Group9_24162035_24162053_24162065-feature-core-admin/screenshots/01_danh_sach_de_tai.png)
+![Danh sách Đề tài](../screenshots/01_danh_sach_de_tai.png)
 *Hình 3.1: Giao diện Danh sách và bộ lọc Đề tài (`screenshots/01_danh_sach_de_tai.png`)*
 
 ---
 
-### 2. Giao diện Chi tiết Đề tài & Bảng Điều khiển Thao tác (`/topics/detail/{id}`)
-Hiển thị toàn bộ thông tin đề tài, danh sách tối đa 2 GVHD, danh sách nhóm đăng ký và các nút hành động tương ứng theo vai trò (Gửi duyệt, Duyệt đề tài, Công bố đề tài, Chỉnh sửa):
+### 2. Giao diện Đề xuất Đề tài (`/topics/create`)
+Biểu mẫu dành cho giảng viên nhập mã, tên, đợt đăng ký, bộ môn, mô tả, yêu cầu và chọn tối đa hai giảng viên hướng dẫn:
 
-![Chi tiết Đề tài](file:///c:/Users/lenovo/Desktop/Group9_24162035_24162053_24162065-feature-core-admin/screenshots/02_chi_tiet_tao_de_tai.png)
-*Hình 3.2: Giao diện Chi tiết Đề tài và nút xử lý phê duyệt (`screenshots/02_chi_tiet_tao_de_tai.png`)*
+![Đề xuất Đề tài](../screenshots/02_chi_tiet_tao_de_tai.png)
+*Hình 3.2: Giao diện giảng viên đề xuất đề tài mới (`screenshots/02_chi_tiet_tao_de_tai.png`)*
 
 ---
 
 ### 3. Giao diện Quản lý Nhóm Sinh viên (`/groups/my-group`)
 Cho phép sinh viên khởi tạo nhóm, hiển thị huy hiệu Trưởng nhóm (`LEADER`), danh sách thành viên (tối đa 3 SV), biểu mẫu mời thêm thành viên bằng MSSV và nút xóa thành viên:
 
-![Quản lý Nhóm Sinh viên](file:///c:/Users/lenovo/Desktop/Group9_24162035_24162053_24162065-feature-core-admin/screenshots/03_nhom_sinh_vien.png)
+![Quản lý Nhóm Sinh viên](../screenshots/03_nhom_sinh_vien.png)
 *Hình 3.3: Giao diện Quản lý Nhóm Sinh viên và phân quyền Trưởng nhóm (`screenshots/03_nhom_sinh_vien.png`)*
 
 ---
@@ -188,7 +188,7 @@ Cho phép sinh viên khởi tạo nhóm, hiển thị huy hiệu Trưởng nhóm
 ### 4. Giao diện Quản lý Đăng ký Đề tài (`/registrations`)
 Giao diện dành cho Ban quản lý Khoa theo dõi danh sách các nhóm sinh viên đăng ký đề tài, trạng thái thẩm định (`PENDING`, `APPROVED`, `REJECTED`) và thực hiện thao tác Duyệt/Từ chối:
 
-![Quản lý Đăng ký Đề tài](file:///c:/Users/lenovo/Desktop/Group9_24162035_24162053_24162065-feature-core-admin/screenshots/04_dang_ky_de_tai.png)
+![Quản lý Đăng ký Đề tài](../screenshots/04_dang_ky_de_tai.png)
 *Hình 3.4: Giao diện Quản lý Đăng ký Đề tài của Khoa (`screenshots/04_dang_ky_de_tai.png`)*
 
 ---
@@ -196,7 +196,7 @@ Giao diện dành cho Ban quản lý Khoa theo dõi danh sách các nhóm sinh v
 ### 5. Giao diện Nộp Báo cáo Tiến độ & Lịch sử Phiên bản (`/reports/submit`)
 Biểu mẫu tải file báo cáo dành cho Trưởng nhóm, tích hợp bảng lịch sử theo dõi phiên bản (`v1`, `v2`,...), người nộp, thời gian nộp và nút tải file báo cáo bảo mật:
 
-![Nộp Báo cáo và Phiên bản](file:///c:/Users/lenovo/Desktop/Group9_24162035_24162053_24162065-feature-core-admin/screenshots/05_nop_bao_cao.png)
+![Nộp Báo cáo và Phiên bản](../screenshots/05_nop_bao_cao.png)
 *Hình 3.5: Giao diện Nộp Báo cáo và Lịch sử Phiên bản Báo cáo (`screenshots/05_nop_bao_cao.png`)*
 
 ---

@@ -8,19 +8,19 @@ Tài liệu này tổng hợp toàn bộ thông tin, dữ liệu, sơ đồ và 
 
 Tất cả các tài liệu và hình ảnh đã được chuẩn bị đầy đủ tại thư mục `docs/`:
 
-1. **Nội dung Chương 3 (Hoàn chỉnh)**: [docs/chapter-3.md](file:///c:/Users/lenovo/Desktop/Group9_24162035_24162053_24162065-feature-core-admin/docs/chapter-3.md)
+1. **Nội dung Chương 3 (Hoàn chỉnh)**: [chapter-3.md](chapter-3.md)
    - Thiết kế sơ đồ Use case
    - Danh sách Tác nhân (Actors) & phân quyền RBAC
    - Yêu cầu chức năng (Functional Requirements: FR-01 đến FR-12)
    - Yêu cầu phi chức năng (Non-Functional Requirements: NFR-01 đến NFR-05)
 2. **File Sơ đồ Use Case**:
-   - File thiết kế gốc DrawIO: [docs/use-case-member2.drawio](file:///c:/Users/lenovo/Desktop/Group9_24162035_24162053_24162065-feature-core-admin/docs/use-case-member2.drawio)
-   - File ảnh PNG sơ đồ: [docs/use-case-member2.png](file:///c:/Users/lenovo/Desktop/Group9_24162035_24162053_24162065-feature-core-admin/docs/use-case-member2.png)
+   - File thiết kế gốc DrawIO: [use-case-member2.drawio](use-case-member2.drawio)
+   - File ảnh PNG sơ đồ: [use-case-member2.png](use-case-member2.png)
 3. **Bộ Ảnh chụp Giao diện Module Thành viên 2**:
-   - Giao diện Danh sách Đề tài: [docs/member2_topics_list.png](file:///c:/Users/lenovo/Desktop/Group9_24162035_24162053_24162065-feature-core-admin/docs/member2_topics_list.png)
-   - Giao diện Chi tiết Đề tài: [docs/member2_topic_detail.png](file:///c:/Users/lenovo/Desktop/Group9_24162035_24162053_24162065-feature-core-admin/docs/member2_topic_detail.png)
-   - Giao diện Nhóm Sinh viên: [docs/member2_student_group.png](file:///c:/Users/lenovo/Desktop/Group9_24162035_24162053_24162065-feature-core-admin/docs/member2_student_group.png)
-   - Giao diện Nộp Báo cáo & Phiên bản: [docs/member2_report_submission.png](file:///c:/Users/lenovo/Desktop/Group9_24162035_24162053_24162065-feature-core-admin/docs/member2_report_submission.png)
+   - Giao diện Danh sách Đề tài: [member2_topics_list.png](member2_topics_list.png)
+   - Giao diện Đề xuất Đề tài: [member2_topic_detail.png](member2_topic_detail.png)
+   - Giao diện Nhóm Sinh viên: [member2_student_group.png](member2_student_group.png)
+   - Giao diện Nộp Báo cáo & Phiên bản: [member2_report_submission.png](member2_report_submission.png)
 
 ---
 
