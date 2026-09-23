@@ -281,6 +281,39 @@ class Member2BusinessRulesTest {
 
         // Sinh viên truy cập đường dẫn duyệt đăng ký của Khoa -> 403 Forbidden
         mvc.perform(post("/registrations/approve/1")).andExpect(status().isForbidden());
+
+        // Sinh viên truy cập đường dẫn duyệt đề tài của Khoa -> 403 Forbidden
+        mvc.perform(post("/topics/approve/1")).andExpect(status().isForbidden());
+
+        // Sinh viên truy cập đường dẫn từ chối đề tài của Khoa -> 403 Forbidden
+        mvc.perform(post("/topics/reject/1")).andExpect(status().isForbidden());
+
+        // Sinh viên truy cập đường dẫn công bố đề tài của Khoa -> 403 Forbidden
+        mvc.perform(post("/topics/publish/1")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    @WithMockUser(username = "lecturer1", roles = "LECTURER")
+    void testLecturer403ForbiddenAccessToFacultyAndStudentEndpoints() throws Exception {
+        // Giảng viên truy cập tạo nhóm sinh viên -> 403 Forbidden
+        mvc.perform(post("/groups/create").param("periodId", "1")).andExpect(status().isForbidden());
+
+        // Giảng viên truy cập nộp báo cáo -> 403 Forbidden
+        mvc.perform(get("/reports/submit").param("registrationId", "1")).andExpect(status().isForbidden());
+
+        // Giảng viên truy cập duyệt đăng ký đề tài -> 403 Forbidden
+        mvc.perform(post("/registrations/approve/1")).andExpect(status().isForbidden());
+    }
+
+    @Test
+    void testReportDownloadEndpoint() throws Exception {
+        TopicRegistration registration = createApprovedRegistration();
+        ReportSubmission sub = reportService.submitReport(
+                reportForm(registration.getId(), "baocao_final.pdf", "application/pdf"), student1.getUsername());
+
+        mvc.perform(get("/reports/download/" + sub.getId())
+                        .with(user(student1.getUsername()).roles("STUDENT")))
+                .andExpect(status().isOk());
     }
 
     @Test

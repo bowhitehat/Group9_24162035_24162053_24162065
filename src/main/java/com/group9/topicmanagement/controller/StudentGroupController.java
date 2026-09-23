@@ -3,6 +3,7 @@ package com.group9.topicmanagement.controller;
 import com.group9.topicmanagement.domain.RegistrationPeriod;
 import com.group9.topicmanagement.domain.User;
 import com.group9.topicmanagement.domain.studentgroup.StudentGroup;
+import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.service.RegistrationPeriodService;
 import com.group9.topicmanagement.service.StudentGroupService;
 import com.group9.topicmanagement.service.UserService;
@@ -68,7 +69,7 @@ public class StudentGroupController {
             StudentGroup group = groupService.createGroup(periodId, principal.getName());
             redirectAttributes.addFlashAttribute("successMessage", "Tạo nhóm sinh viên thành công!");
             return "redirect:/groups/my-group?periodId=" + periodId;
-        } catch (Exception e) {
+        } catch (BusinessRuleException | IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
             return "redirect:/groups/my-group?periodId=" + periodId;
         }
@@ -82,7 +83,7 @@ public class StudentGroupController {
         try {
             groupService.addMember(groupId, memberUsername, principal.getName());
             redirectAttributes.addFlashAttribute("successMessage", "Thêm thành viên thành công!");
-        } catch (Exception e) {
+        } catch (BusinessRuleException | IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         StudentGroup group = groupService.getGroupById(groupId);
@@ -97,7 +98,7 @@ public class StudentGroupController {
         try {
             groupService.removeMember(groupId, memberId, principal.getName());
             redirectAttributes.addFlashAttribute("successMessage", "Đã xóa thành viên khỏi nhóm!");
-        } catch (Exception e) {
+        } catch (BusinessRuleException | IllegalArgumentException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         StudentGroup group = groupService.getGroupById(groupId);
