@@ -11,5 +11,5 @@ Tên ZIP bắt buộc: `Group9_24162035_24162053_24162065.zip`
 - [x] Test module JUnit: 44 test đạt khi chạy `mvn package`
 - [x] Screenshot Chương 5 từ app chạy thật với MySQL
 - [x] File Word `BaoCao_DoAn.docx` ghép chương 1–6
-- [ ] URL hosting thật
-- [x] ZIP đúng tên, không chứa `.env`, `target`, `uploads`, mật khẩu hoặc token
+- [ ] URL hosting thật — đang bị chặn vì workspace chưa có tài khoản/credential của nhà cung cấp hosting; không ghi URL giả
+- [x] ZIP đúng tên, không chứa `.env`, `.git`, `.m2`, `target`, `uploads`, `artifacts`, mật khẩu hoặc token; có thể tạo lại bằng `tools/package_submission.ps1`

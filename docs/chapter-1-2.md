@@ -19,8 +19,8 @@ Phạm vi gồm đề tài môn học, nghiên cứu khoa học, tiểu luận c
 | Thành viên | MSSV | Nhiệm vụ |
 |---|---:|---|
 | Trang Sĩ Hoàng | 24162035 | Nền tảng kỹ thuật, tích hợp, tài khoản–phân quyền, bộ môn, đợt đăng ký, MySQL Workbench, Chương 1–2 |
-| Vũ Trọng Hưng | 24162053 | Module đề tài, giảng viên hướng dẫn, nhóm sinh viên và đăng ký đề tài |
-| Trần Hào Kiệt | 24162065 | Module báo cáo, phản biện, hội đồng, chấm điểm và kết quả |
+| Vũ Trọng Hưng | 24162053 | Module đề tài, giảng viên hướng dẫn, nhóm sinh viên, đăng ký đề tài và nộp báo cáo |
+| Trần Hào Kiệt | 24162065 | Module phản biện, hội đồng, chấm điểm, công bố kết quả, thông báo, dashboard và triển khai |
 
 ## Chương 2. Cơ sở lý thuyết áp dụng
 

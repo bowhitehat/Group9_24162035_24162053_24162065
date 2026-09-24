@@ -54,6 +54,25 @@ def add_page_number(paragraph) -> None:
     run._r.extend([fld_char1, instr_text, fld_char2])
 
 
+def add_toc(paragraph) -> None:
+    run = paragraph.add_run()
+    begin = OxmlElement("w:fldChar")
+    begin.set(qn("w:fldCharType"), "begin")
+    begin.set(qn("w:dirty"), "true")
+    instruction = OxmlElement("w:instrText")
+    instruction.set(qn("xml:space"), "preserve")
+    instruction.text = 'TOC \\o "1-3" \\h \\z \\u'
+    separate = OxmlElement("w:fldChar")
+    separate.set(qn("w:fldCharType"), "separate")
+    placeholder = OxmlElement("w:t")
+    placeholder.text = "Mục lục sẽ được cập nhật khi mở tài liệu trong Microsoft Word."
+    result_run = OxmlElement("w:r")
+    result_run.append(placeholder)
+    end = OxmlElement("w:fldChar")
+    end.set(qn("w:fldCharType"), "end")
+    run._r.extend([begin, instruction, separate, result_run, end])
+
+
 def configure_document(doc: Document) -> None:
     section = doc.sections[0]
     section.top_margin = Cm(2.1)
@@ -360,7 +379,7 @@ def add_cover(doc: Document) -> None:
         ["Thành viên", "MSSV", "Phụ trách"],
         ["Trang Sĩ Hoàng", "24162035", "Core, Admin, tích hợp"],
         ["Vũ Trọng Hưng", "24162053", "Đề tài, nhóm, đăng ký, báo cáo"],
-        ["Trần Hào Kiệt", "24162065", "Phản biện, hội đồng, điểm, thông báo"],
+        ["Trần Hào Kiệt", "24162065", "Phản biện, hội đồng, điểm, công bố, thông báo, dashboard, triển khai"],
     ]
     for i, row in enumerate(data):
         for j, value in enumerate(row):
@@ -397,20 +416,10 @@ def add_front_matter(doc: Document) -> None:
     p = doc.add_paragraph(text)
     p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
 
-    p = doc.add_paragraph("MỤC LỤC TÓM TẮT", style="Heading 1")
+    p = doc.add_paragraph("MỤC LỤC", style="Heading 1")
     p.alignment = WD_ALIGN_PARAGRAPH.CENTER
-    for idx, item in enumerate([
-        "Chương 1. Giới thiệu đề tài",
-        "Chương 2. Cơ sở lý thuyết áp dụng",
-        "Chương 3. Thiết kế và mô tả module quản lý đề tài và nhóm sinh viên",
-        "Chương 4. Thiết kế cơ sở dữ liệu",
-        "Chương 5. Giao diện người dùng",
-        "Chương 6. Kết luận",
-    ], start=1):
-        p = doc.add_paragraph()
-        p.paragraph_format.left_indent = Cm(0.7)
-        p.paragraph_format.first_line_indent = Cm(-0.5)
-        p.add_run(f"{idx}. {item}")
+    toc = doc.add_paragraph()
+    add_toc(toc)
 
 
 def add_test_appendix(doc: Document) -> None:
@@ -454,6 +463,9 @@ def main() -> None:
     doc.core_properties.subject = "Báo cáo Chương 1–6 và kết quả kiểm thử E2E"
     doc.core_properties.author = "Nhóm 9 – 24162035, 24162053, 24162065"
     doc.core_properties.keywords = "Spring Boot, MySQL, quản lý đề tài, Nhóm 9"
+    update_fields = OxmlElement("w:updateFields")
+    update_fields.set(qn("w:val"), "true")
+    doc.settings._element.append(update_fields)
     doc.save(OUTPUT)
     print(OUTPUT)
 
