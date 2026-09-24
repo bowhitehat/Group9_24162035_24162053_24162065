@@ -3,6 +3,7 @@ package com.group9.topicmanagement.repository;
 import com.group9.topicmanagement.domain.council.CouncilAssignment;
 import com.group9.topicmanagement.domain.enums.CouncilStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -26,6 +27,7 @@ public interface CouncilAssignmentRepository extends JpaRepository<CouncilAssign
     List<CouncilAssignment> findByTopicIdAndCouncilStatusIn(@Param("topicId") Long topicId,
                                                             @Param("statuses") List<CouncilStatus> statuses);
 
+    @EntityGraph(attributePaths = {"topic", "council"})
     Optional<CouncilAssignment> findFirstByTopicIdOrderByIdDesc(Long topicId);
 
     @Query("SELECT a FROM CouncilAssignment a JOIN FETCH a.topic JOIN FETCH a.council")

@@ -81,7 +81,7 @@ public class TopicResultService {
         BigDecimal finalScore = averageOfValidEvaluations(topicId)
                 .orElseThrow(() -> new BusinessRuleException("Chưa có đủ phiếu chấm hợp lệ"));
 
-        TopicResult result = resultRepository.findByTopicId(topicId)
+        TopicResult result = resultRepository.findByTopicIdWithDetail(topicId)
                 .orElseGet(() -> {
                     TopicResult r = new TopicResult();
                     r.setTopic(topic);
@@ -156,7 +156,7 @@ public class TopicResultService {
         if (!topicRegistrationService.isStudentOnApprovedTopic(topicId, student.getId())) {
             throw new AccessDeniedException("Sinh viên chỉ xem kết quả đề tài của nhóm mình");
         }
-        TopicResult result = resultRepository.findByTopicId(topicId)
+        TopicResult result = resultRepository.findByTopicIdWithDetail(topicId)
                 .orElseThrow(() -> new AccessDeniedException("Sinh viên không xem được điểm chưa công bố"));
         if (result.getStatus() != TopicResultStatus.PUBLISHED) {
             throw new AccessDeniedException("Sinh viên không xem được điểm chưa công bố");
@@ -171,7 +171,7 @@ public class TopicResultService {
         if (!topicRegistrationService.isStudentOnApprovedTopic(topicId, student.getId())) {
             return Optional.empty();
         }
-        return resultRepository.findByTopicId(topicId)
+        return resultRepository.findByTopicIdWithDetail(topicId)
                 .filter(r -> r.getStatus() == TopicResultStatus.PUBLISHED);
     }
 
@@ -211,7 +211,7 @@ public class TopicResultService {
             throw new AccessDeniedException("Không có quyền xem kết quả đề tài này");
         }
         
-        return resultRepository.findByTopicId(topicId).orElseGet(() -> {
+        return resultRepository.findByTopicIdWithDetail(topicId).orElseGet(() -> {
             TopicResult dummy = new TopicResult();
             dummy.setTopic(assignment.getTopic());
             dummy.setCouncilAssignment(assignment);

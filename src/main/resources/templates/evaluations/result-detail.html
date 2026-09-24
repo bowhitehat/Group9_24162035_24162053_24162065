@@ -5,7 +5,7 @@
 <div th:fragment="content">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <div>
-            <h4 th:text="'Chi tiết điểm: ' + ${result.topic.code} + ' - ' + ${result.topic.title}"></h4>
+            <h4 th:text="${'Chi tiết điểm: ' + result.topic.code + ' - ' + result.topic.title}"></h4>
             <a th:href="@{/evaluations/results}" class="text-decoration-none">&laquo; Quay lại kết quả</a>
         </div>
         <div class="d-flex gap-2">
@@ -53,17 +53,16 @@
                     <td th:text="${eval.evaluator.fullName}"></td>
                     <td th:text="${eval.evaluationType}"></td>
                     <td>
-                        <span th:class="${eval.status.name() == 'SUBMITTED' ? 'badge bg-success' : (eval.status.name() == 'LOCKED' ? 'badge bg-dark' : 'badge bg-warning')}" 
-                              th:text="${eval.status}"></span>
+                        <span class="badge bg-secondary" th:text="${eval.status}"></span>
                     </td>
                     <td th:text="${eval.submissionTime != null ? #temporals.format(eval.submissionTime, 'dd/MM/yyyy HH:mm') : ''}"></td>
                     <td>
-                        <div th:if="${not #lists.isEmpty(eval.scores)}">
+                        <div th:if="${!#lists.isEmpty(eval.scores)}">
                             <div th:each="s : ${eval.scores}">
                                 <small><span th:text="${s.criterion.name}"></span>: <strong th:text="${s.score}"></strong></small>
                             </div>
                         </div>
-                        <div th:if="${eval.comments != null and not #strings.isEmpty(eval.comments)}">
+                        <div th:if="${eval.comments != null and !#strings.isEmpty(eval.comments)}">
                             <small class="text-muted" th:text="${eval.comments}"></small>
                         </div>
                     </td>
