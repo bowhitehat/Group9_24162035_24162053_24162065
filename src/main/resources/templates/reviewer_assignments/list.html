@@ -61,14 +61,14 @@
                 <td th:text="${#temporals.format(a.deadline, 'dd/MM/yyyy HH:mm')}"></td>
                 <td th:text="${a.status}"></td>
                 <td>
-                    <form th:if="${a.status.name() != 'SUBMITTED' and a.status.name() != 'CANCELLED'}" class="d-flex gap-1"
+                    <form th:if="${modifiableAssignmentIds.contains(a.id)}" class="d-flex gap-1"
                           th:action="@{/reviewer-assignments/{id}/change(id=${a.id})}" method="post">
                         <select name="reviewerId" class="form-select form-select-sm">
                             <option th:each="gv : ${lecturers}" th:value="${gv.id}" th:text="${gv.fullName}" th:selected="${gv.id == a.reviewer.id}"></option>
                         </select>
                         <button class="btn btn-sm btn-outline-primary">Đổi GV</button>
                     </form>
-                    <form th:if="${a.status.name() != 'SUBMITTED' and a.status.name() != 'CANCELLED'}" th:action="@{/reviewer-assignments/{id}/cancel(id=${a.id})}" method="post" class="mt-1">
+                    <form th:if="${modifiableAssignmentIds.contains(a.id)}" th:action="@{/reviewer-assignments/{id}/cancel(id=${a.id})}" method="post" class="mt-1">
                         <button class="btn btn-sm btn-danger" type="submit" onclick="return confirm('Bạn có chắc muốn hủy?')">Hủy</button>
                     </form>
                 </td>

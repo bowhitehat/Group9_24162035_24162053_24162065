@@ -5,6 +5,7 @@ import com.group9.topicmanagement.domain.RegistrationPeriod;
 import com.group9.topicmanagement.domain.topic.Topic;
 import com.group9.topicmanagement.domain.topic.TopicStatus;
 import com.group9.topicmanagement.domain.User;
+import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.service.DepartmentService;
 import com.group9.topicmanagement.service.RegistrationPeriodService;
 import com.group9.topicmanagement.service.TopicService;

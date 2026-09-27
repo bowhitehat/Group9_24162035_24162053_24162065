@@ -8,11 +8,13 @@ import com.group9.topicmanagement.domain.council.CouncilMember;
 import com.group9.topicmanagement.domain.enums.CouncilMemberRole;
 import com.group9.topicmanagement.domain.enums.CouncilStatus;
 import com.group9.topicmanagement.domain.enums.PeriodType;
+import com.group9.topicmanagement.domain.enums.RoleName;
 import com.group9.topicmanagement.domain.topic.Topic;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.exception.NotFoundException;
 import com.group9.topicmanagement.repository.*;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -53,15 +55,37 @@ public class CouncilService {
     }
 
     @Transactional(readOnly = true)
+    public List<Council> listCouncilsForUser(Long userId) {
+        return councilRepository.findAllWithPeriod().stream()
+                .filter(c -> memberRepository.findByCouncilIdAndMemberId(c.getId(), userId).isPresent())
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public Council getCouncil(Long id) {
-        return councilRepository.findById(id)
+        return councilRepository.findByIdWithPeriod(id)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy hội đồng"));
+    }
+
+    @Transactional(readOnly = true)
+    public Council getCouncilForViewer(Long id, String username, boolean manager) {
+        Council council = getCouncil(id);
+        if (manager) {
+            return council;
+        }
+        User viewer = userRepository.findByUsernameIgnoreCase(username)
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy người dùng"));
+        if (!isMemberOfCouncil(id, viewer.getId())) {
+            throw new AccessDeniedException("Bạn không được phân công vào hội đồng này");
+        }
+        return council;
     }
 
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
     public Council createCouncil(String name, Long periodId, LocalDateTime reportDate, String location) {
         RegistrationPeriod period = periodRepository.findById(periodId)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy đợt đăng ký"));
+        validateCouncilDetails(name, location, reportDate);
         validateReportDate(period, reportDate);
         Council council = new Council();
         council.setName(name);
@@ -76,6 +100,7 @@ public class CouncilService {
     public Council updateCouncil(Long councilId, String name, LocalDateTime reportDate, String location) {
         Council council = getCouncil(councilId);
         checkEditable(council);
+        validateCouncilDetails(name, location, reportDate);
         validateReportDate(council.getRegistrationPeriod(), reportDate);
         council.setName(name);
         council.setReportDate(reportDate);
@@ -86,10 +111,14 @@ public class CouncilService {
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
     public void addMember(Long councilId, Long userId, CouncilMemberRole role) {
         Council council = getCouncil(councilId);
-        checkEditable(council);
+        checkDraftForMemberAndTopic(council);
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy giảng viên"));
+
+        if (!user.getRoles().stream().anyMatch(r -> r.getName() == RoleName.LECTURER)) {
+            throw new BusinessRuleException("Người được thêm phải có vai trò Giảng viên");
+        }
 
         if (memberRepository.existsByCouncilIdAndMemberId(councilId, userId)) {
             throw new BusinessRuleException("Giảng viên đã có trong hội đồng");
@@ -123,7 +152,7 @@ public class CouncilService {
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
     public void removeMember(Long councilId, Long memberRowId) {
         Council council = getCouncil(councilId);
-        checkEditable(council);
+        checkDraftForMemberAndTopic(council);
         CouncilMember member = memberRepository.findById(memberRowId)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy thành viên hội đồng"));
         if (!member.getCouncil().getId().equals(councilId)) {
@@ -135,10 +164,14 @@ public class CouncilService {
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
     public void assignTopic(Long councilId, Long topicId) {
         Council council = getCouncil(councilId);
-        checkEditable(council);
+        checkDraftForMemberAndTopic(council);
 
         Topic topic = topicRepository.findById(topicId)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy đề tài"));
+
+        if (!topic.getRegistrationPeriod().getId().equals(council.getRegistrationPeriod().getId())) {
+            throw new BusinessRuleException("Đề tài không thuộc đợt đăng ký của hội đồng");
+        }
 
         topicRegistrationService.findApprovedForTopic(topicId)
                 .orElseThrow(() -> new BusinessRuleException("Đề tài chưa được duyệt đăng ký"));
@@ -171,7 +204,7 @@ public class CouncilService {
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
     public void removeTopic(Long councilId, Long assignmentId) {
         Council council = getCouncil(councilId);
-        checkEditable(council);
+        checkDraftForMemberAndTopic(council);
         CouncilAssignment assignment = assignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy phân công đề tài"));
         if (!assignment.getCouncil().getId().equals(councilId)) {
@@ -186,6 +219,8 @@ public class CouncilService {
         if (council.getStatus() != CouncilStatus.DRAFT) {
             throw new BusinessRuleException("Chỉ hội đồng nháp mới được kích hoạt");
         }
+        validateCouncilDetails(council.getName(), council.getLocation(), council.getReportDate());
+        validateReportDate(council.getRegistrationPeriod(), council.getReportDate());
         List<CouncilMember> members = memberRepository.findByCouncilId(councilId);
         if (members.size() < 3) {
             throw new BusinessRuleException("Hội đồng phải có từ 3 đến 5 thành viên");
@@ -239,11 +274,53 @@ public class CouncilService {
     @Transactional(readOnly = true)
     public boolean isChairOfTopic(Long topicId, Long userId) {
         return assignmentRepository.findByTopicIdWithCouncil(topicId).stream()
-                .filter(a -> EnumSet.of(CouncilStatus.ACTIVE, CouncilStatus.COMPLETED, CouncilStatus.DRAFT)
+                .filter(a -> EnumSet.of(CouncilStatus.ACTIVE, CouncilStatus.COMPLETED)
                         .contains(a.getCouncil().getStatus()))
                 .anyMatch(a -> memberRepository.findByCouncilIdAndMemberId(a.getCouncil().getId(), userId)
                         .filter(m -> m.getRole() == CouncilMemberRole.CHAIR)
                         .isPresent());
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isMemberOfCouncil(Long councilId, Long userId) {
+        return memberRepository.findByCouncilIdAndMemberId(councilId, userId).isPresent();
+    }
+
+    @Transactional(readOnly = true)
+    public boolean canGradeCouncil(Long councilId, String username) {
+        Council council = getCouncil(councilId);
+        if (council.getStatus() != CouncilStatus.ACTIVE) {
+            return false;
+        }
+        User user = userRepository.findByUsernameIgnoreCase(username)
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy người dùng"));
+        if (!isMemberOfCouncil(councilId, user.getId())) {
+            return false;
+        }
+        return council.getReportDate() == null
+                || !LocalDateTime.now().isAfter(council.getReportDate().toLocalDate().atTime(23, 59, 59));
+    }
+
+    public boolean canEditCouncil(Council council, boolean manager) {
+        return manager && council.getStatus() != CouncilStatus.COMPLETED
+                && council.getStatus() != CouncilStatus.CANCELLED;
+    }
+
+    public boolean canEditStructure(Council council, boolean manager) {
+        return manager && council.getStatus() == CouncilStatus.DRAFT;
+    }
+
+    public boolean canActivate(Council council, boolean manager) {
+        return manager && council.getStatus() == CouncilStatus.DRAFT;
+    }
+
+    public boolean canComplete(Council council, boolean manager) {
+        return manager && council.getStatus() == CouncilStatus.ACTIVE;
+    }
+
+    public boolean canCancel(Council council, boolean manager) {
+        return manager && council.getStatus() != CouncilStatus.COMPLETED
+                && council.getStatus() != CouncilStatus.CANCELLED;
     }
 
     private void validateReportDate(RegistrationPeriod period, LocalDateTime reportDate) {
@@ -253,12 +330,31 @@ public class CouncilService {
         }
     }
 
+    private void validateCouncilDetails(String name, String location, LocalDateTime reportDate) {
+        if (name == null || name.isBlank()) {
+            throw new BusinessRuleException("Tên hội đồng không được để trống");
+        }
+        if (reportDate == null) {
+            throw new BusinessRuleException("Phải nhập ngày báo cáo");
+        }
+        if (location == null || location.isBlank()) {
+            throw new BusinessRuleException("Địa điểm không được để trống");
+        }
+    }
+
     private void checkEditable(Council council) {
         if (council.getStatus() == CouncilStatus.COMPLETED) {
             throw new BusinessRuleException("Không thể thay đổi hội đồng đã hoàn tất");
         }
         if (council.getStatus() == CouncilStatus.CANCELLED) {
             throw new BusinessRuleException("Không thể thay đổi hội đồng đã hủy");
+        }
+    }
+
+    private void checkDraftForMemberAndTopic(Council council) {
+        checkEditable(council);
+        if (council.getStatus() == CouncilStatus.ACTIVE) {
+            throw new BusinessRuleException("Không thể thay đổi thành viên hoặc đề tài sau khi hội đồng đã kích hoạt");
         }
     }
 }

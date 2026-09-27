@@ -21,4 +21,5 @@ public interface EvaluationRepository extends JpaRepository<Evaluation, Long> {
     List<Evaluation> findByTopicIdWithEvaluator(@Param("topicId") Long topicId);
 
     long countByTopicIdAndStatusIn(Long topicId, List<EvaluationStatus> statuses);
+    List<Evaluation> findByTopicIdAndEvaluationType(Long topicId, EvaluationType evaluationType);
 }

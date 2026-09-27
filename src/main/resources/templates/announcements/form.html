@@ -8,25 +8,38 @@
     </div>
     <div class="card shadow-sm max-w-md">
         <div class="card-body p-4">
-            <form th:action="@{/announcements/create}" method="post">
+            <form th:action="@{/announcements/create}" th:object="${announcementForm}" method="post">
                 <div class="mb-3">
                     <label class="form-label">Tiêu đề</label>
-                    <input type="text" name="title" class="form-control" required>
+                    <input type="text" th:field="*{title}" class="form-control" required>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Nội dung</label>
-                    <textarea name="content" class="form-control" rows="5" required></textarea>
+                    <textarea th:field="*{content}" class="form-control" rows="5" required></textarea>
                 </div>
                 <div class="mb-3">
-                    <label class="form-label">Đối tượng nhận (Bỏ trống = Tất cả)</label>
-                    <input type="text" name="targetRoles" class="form-control" placeholder="VD: STUDENT,LECTURER">
+                    <label class="form-label">Đối tượng nhận (bắt buộc khi công bố)</label>
+                    <div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" th:field="*{targetRoles}" id="roleStudent" value="STUDENT">
+                            <label class="form-check-label" for="roleStudent">Sinh viên</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" th:field="*{targetRoles}" id="roleLecturer" value="LECTURER">
+                            <label class="form-check-label" for="roleLecturer">Giảng viên</label>
+                        </div>
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" th:field="*{targetRoles}" id="roleManager" value="FACULTY_MANAGER">
+                            <label class="form-check-label" for="roleManager">Giáo vụ</label>
+                        </div>
+                    </div>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Ngày hết hạn (Tuỳ chọn)</label>
-                    <input type="datetime-local" name="expirationTime" class="form-control">
+                    <input type="datetime-local" th:field="*{expirationTime}" class="form-control">
                 </div>
                 <div class="mb-3 form-check">
-                    <input type="checkbox" name="publish" class="form-check-input" id="publishCheck" value="true">
+                    <input type="checkbox" th:field="*{publish}" class="form-check-input" id="publishCheck">
                     <label class="form-check-label" for="publishCheck">Công bố ngay</label>
                 </div>
                 <button type="submit" class="btn btn-primary">Lưu thông báo</button>

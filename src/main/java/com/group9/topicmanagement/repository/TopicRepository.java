@@ -17,12 +17,20 @@ public interface TopicRepository extends JpaRepository<Topic, Long> {
     @Override
     @EntityGraph(attributePaths = {"department", "registrationPeriod", "proposer", "advisors"})
     Optional<Topic> findById(Long id);
+
+    @EntityGraph(attributePaths = {"department", "registrationPeriod", "proposer", "advisors"})
+    @Query("SELECT t FROM Topic t WHERE t.id = :id")
+    Optional<Topic> findByIdWithDetails(@Param("id") Long id);
     
     @EntityGraph(attributePaths = {"department", "registrationPeriod", "proposer"})
     Page<Topic> findByProposerId(Long proposerId, Pageable pageable);
 
     @EntityGraph(attributePaths = {"department", "registrationPeriod", "proposer"})
-    @Query("SELECT t FROM Topic t WHERE t.proposer.id = :proposerId " +
+    @Query("SELECT DISTINCT t FROM Topic t LEFT JOIN t.advisors advisor WHERE " +
+           "(t.proposer.id = :proposerId OR advisor.id = :proposerId " +
+           "OR EXISTS (SELECT ra.id FROM ReviewerAssignment ra WHERE ra.topic.id = t.id AND ra.reviewer.id = :proposerId AND ra.status <> com.group9.topicmanagement.domain.enums.ReviewerAssignmentStatus.CANCELLED) " +
+           "OR EXISTS (SELECT cm.id FROM CouncilMember cm WHERE cm.member.id = :proposerId AND cm.council.status <> com.group9.topicmanagement.domain.enums.CouncilStatus.CANCELLED " +
+           "AND cm.council.id IN (SELECT ca.council.id FROM CouncilAssignment ca WHERE ca.topic.id = t.id))) " +
            "AND (:periodId IS NULL OR t.registrationPeriod.id = :periodId) " +
            "AND (:departmentId IS NULL OR t.department.id = :departmentId) " +
            "AND (:status IS NULL OR t.status = :status) " +
@@ -33,6 +41,13 @@ public interface TopicRepository extends JpaRepository<Topic, Long> {
                                           @Param("status") TopicStatus status,
                                           @Param("keyword") String keyword,
                                           Pageable pageable);
+
+    @Query("SELECT CASE WHEN COUNT(DISTINCT t.id) > 0 THEN true ELSE false END FROM Topic t LEFT JOIN t.advisors advisor WHERE t.id = :topicId AND " +
+           "(t.proposer.id = :lecturerId OR advisor.id = :lecturerId " +
+           "OR EXISTS (SELECT ra.id FROM ReviewerAssignment ra WHERE ra.topic.id = t.id AND ra.reviewer.id = :lecturerId AND ra.status <> com.group9.topicmanagement.domain.enums.ReviewerAssignmentStatus.CANCELLED) " +
+           "OR EXISTS (SELECT cm.id FROM CouncilMember cm WHERE cm.member.id = :lecturerId AND cm.council.status <> com.group9.topicmanagement.domain.enums.CouncilStatus.CANCELLED " +
+           "AND cm.council.id IN (SELECT ca.council.id FROM CouncilAssignment ca WHERE ca.topic.id = t.id)))")
+    boolean existsAccessibleToLecturer(@Param("topicId") Long topicId, @Param("lecturerId") Long lecturerId);
 
     @EntityGraph(attributePaths = {"department", "registrationPeriod", "proposer"})
     @Query("SELECT t FROM Topic t JOIN t.advisors a WHERE a.id = :advisorId")

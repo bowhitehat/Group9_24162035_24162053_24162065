@@ -31,4 +31,8 @@ Cần kiểm tra tại thời điểm deploy: hỗ trợ Java 21 hoặc Docker, 
 
 Không hard-code secret. Nếu máy chủ không có persistent disk, file upload có thể mất khi restart; nên dùng object storage.
 
-URL production: chưa gắn hosting công khai trong commit này vì bước đăng nhập nhà cung cấp cần tài khoản của nhóm.
+## Trạng thái production
+
+URL production: **chưa có**. Việc triển khai đang bị chặn vì workspace chưa có tài khoản/credential của nhà cung cấp hosting; báo cáo và checklist không sử dụng URL giả.
+
+Khi nhóm cung cấp tài khoản, cần kiểm tra lại health check, kết nối database, đăng nhập, phân quyền, static resources và upload. Nếu hosting không có persistent disk, upload local chỉ phù hợp để demo vì file có thể mất sau restart hoặc redeploy.

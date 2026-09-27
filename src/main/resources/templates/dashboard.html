@@ -78,7 +78,7 @@
         <ul class="list-group list-group-flush">
             <li class="list-group-item" th:each="a : ${announcements}">
                 <strong th:text="${a.title}"></strong>
-                <p class="mb-0" th:text="${a.content}"></p>
+                <p class="mb-0" th:utext="${a.content}"></p>
             </li>
         </ul>
     </div>

@@ -12,6 +12,7 @@ import com.group9.topicmanagement.domain.enums.EvaluationType;
 import com.group9.topicmanagement.domain.enums.PeriodStatus;
 import com.group9.topicmanagement.domain.enums.PeriodType;
 import com.group9.topicmanagement.domain.enums.RoleName;
+import com.group9.topicmanagement.domain.enums.ReviewerAssignmentStatus;
 import com.group9.topicmanagement.domain.enums.TopicResultStatus;
 import com.group9.topicmanagement.domain.evaluation.Evaluation;
 import com.group9.topicmanagement.domain.evaluation.EvaluationCriterion;
@@ -239,6 +240,18 @@ class Member3BusinessRulesTest {
                 .toList();
         Evaluation submitted = evaluationService.saveDraft(topic.getId(), lecturer2.getUsername(), EvaluationType.REVIEWER, full, "đủ");
         evaluationService.submitEvaluation(submitted.getId());
+        
+        // Need to submit for council members too to allow publishing
+        Evaluation c1Eval = evaluationService.saveDraft(topic.getId(), lecturer2.getUsername(), EvaluationType.COUNCIL_MEMBER, full, "ok");
+        evaluationService.submitEvaluation(c1Eval.getId());
+        
+        authenticate(lecturer3.getUsername(), "LECTURER");
+        Evaluation c2Eval = evaluationService.saveDraft(topic.getId(), lecturer3.getUsername(), EvaluationType.COUNCIL_MEMBER, full, "ok");
+        evaluationService.submitEvaluation(c2Eval.getId());
+        
+        authenticate(lecturer4.getUsername(), "LECTURER");
+        Evaluation c3Eval = evaluationService.saveDraft(topic.getId(), lecturer4.getUsername(), EvaluationType.COUNCIL_MEMBER, full, "ok");
+        evaluationService.submitEvaluation(c3Eval.getId());
 
         authenticate(facultyManager.getUsername(), "FACULTY_MANAGER");
         evaluationService.lockEvaluation(submitted.getId());
@@ -287,8 +300,8 @@ class Member3BusinessRulesTest {
     @Test
     void announcementIsRoleFilteredAndDraftHidden() {
         authenticate(facultyManager.getUsername(), "FACULTY_MANAGER");
-        announcementService.saveAnnouncement("Cho SV", "<script>x</script>hello", "STUDENT", facultyManager.getUsername(), true, null);
-        announcementService.saveAnnouncement("Nháp", "draft", "LECTURER", facultyManager.getUsername(), false, null);
+        announcementService.saveAnnouncement("Cho SV", "<script>x</script>hello", List.of("STUDENT"), facultyManager.getUsername(), true, null);
+        announcementService.saveAnnouncement("Nháp", "draft", List.of("LECTURER"), facultyManager.getUsername(), false, null);
 
         assertThat(announcementService.getActiveAnnouncementsForRole("STUDENT"))
                 .extracting(a -> a.getTitle())
@@ -300,6 +313,244 @@ class Member3BusinessRulesTest {
         assertThat(announcementService.getActiveAnnouncementsForRole("STUDENT").get(0).getContent())
                 .contains("&lt;script&gt;");
         assertThat(announcementService.listForManager().stream().anyMatch(a -> a.getStatus() == AnnouncementStatus.DRAFT)).isTrue();
+    }
+
+    @Test
+    void lecturerCannotOpenUnassignedCouncilOrEvaluationForm() throws Exception {
+        Topic topic = preparedApprovedTopic();
+        User outsider = userService.create("lecturer-outside", "GV ngoài", "outside@test.local", null,
+                dept.getId(), Set.of(RoleName.LECTURER), "Password@123");
+        authenticate(facultyManager.getUsername(), "FACULTY_MANAGER");
+        Council council = councilService.createCouncil("HĐ bảo mật", period.getId(), LocalDateTime.now().plusDays(3), "B2");
+        councilService.addMember(council.getId(), lecturer2.getId(), CouncilMemberRole.CHAIR);
+        councilService.addMember(council.getId(), lecturer3.getId(), CouncilMemberRole.SECRETARY);
+        councilService.addMember(council.getId(), lecturer4.getId(), CouncilMemberRole.MEMBER);
+        councilService.assignTopic(council.getId(), topic.getId());
+        reviewerAssignmentService.assignReviewer(topic.getId(), lecturer2.getId(),
+                facultyManager.getUsername(), LocalDateTime.now().plusDays(2));
+
+        mvc.perform(get("/councils/{id}", council.getId())
+                        .with(user(lecturer1.getUsername()).roles("LECTURER")))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/evaluations/topic/{id}", topic.getId())
+                        .param("type", "REVIEWER")
+                        .with(user(lecturer3.getUsername()).roles("LECTURER")))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/topics/detail/{id}", topic.getId())
+                        .with(user(outsider.getUsername()).roles("LECTURER")))
+                .andExpect(status().isForbidden());
+        mvc.perform(get("/topics/detail/{id}", topic.getId())
+                        .with(user(lecturer3.getUsername()).roles("LECTURER")))
+                .andExpect(status().isOk());
+        assertThat(topicService.findTopicsForLecturer(lecturer3.getId(), period.getId(), null,
+                null, null, org.springframework.data.domain.PageRequest.of(0, 10)).getContent())
+                .extracting(Topic::getId).contains(topic.getId());
+        mvc.perform(get("/councils/{id}", council.getId())
+                        .with(user(lecturer2.getUsername()).roles("LECTURER")))
+                .andExpect(status().isOk());
+        mvc.perform(get("/evaluations/topic/{id}", topic.getId())
+                        .param("type", "REVIEWER")
+                        .with(user(lecturer2.getUsername()).roles("LECTURER")))
+                .andExpect(status().isOk());
+        assertThat(reviewerAssignments.findByTopicIdAndReviewerId(topic.getId(), lecturer2.getId())
+                .orElseThrow().getStatus()).isEqualTo(ReviewerAssignmentStatus.IN_PROGRESS);
+    }
+
+    @Test
+    void lecturerCannotSubmitAnotherLecturersEvaluation() {
+        Topic topic = preparedApprovedTopic();
+        seedCriteria();
+        authenticate(facultyManager.getUsername(), "FACULTY_MANAGER");
+        reviewerAssignmentService.assignReviewer(topic.getId(), lecturer2.getId(),
+                facultyManager.getUsername(), LocalDateTime.now().plusDays(2));
+        authenticate(lecturer2.getUsername(), "LECTURER");
+        Evaluation draft = evaluationService.saveDraft(topic.getId(), lecturer2.getUsername(),
+                EvaluationType.REVIEWER, fullScores("7.50"), "draft");
+
+        authenticate(lecturer3.getUsername(), "LECTURER");
+        assertThatThrownBy(() -> evaluationService.submitEvaluation(draft.getId()))
+                .isInstanceOf(AccessDeniedException.class)
+                .hasMessageContaining("phiếu chấm của mình");
+    }
+
+    @Test
+    void submitIsBlockedAfterReviewerDeadline() {
+        Topic topic = preparedApprovedTopic();
+        seedCriteria();
+        authenticate(facultyManager.getUsername(), "FACULTY_MANAGER");
+        var assignment = reviewerAssignmentService.assignReviewer(topic.getId(), lecturer2.getId(),
+                facultyManager.getUsername(), LocalDateTime.now().plusDays(2));
+        authenticate(lecturer2.getUsername(), "LECTURER");
+        Evaluation draft = evaluationService.saveDraft(topic.getId(), lecturer2.getUsername(),
+                EvaluationType.REVIEWER, fullScores("8.00"), "draft");
+        assignment.setDeadline(LocalDateTime.now().minusMinutes(1));
+        assignment.setStatus(ReviewerAssignmentStatus.IN_PROGRESS);
+        reviewerAssignments.save(assignment);
+
+        assertThatThrownBy(() -> evaluationService.submitEvaluation(draft.getId()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("quá hạn");
+    }
+
+    @Test
+    void editingSubmittedEvaluationReturnsItToDraftUntilResubmitted() {
+        Topic topic = preparedApprovedTopic();
+        seedCriteria();
+        authenticate(facultyManager.getUsername(), "FACULTY_MANAGER");
+        reviewerAssignmentService.assignReviewer(topic.getId(), lecturer2.getId(),
+                facultyManager.getUsername(), LocalDateTime.now().plusDays(2));
+        authenticate(lecturer2.getUsername(), "LECTURER");
+        Evaluation evaluation = evaluationService.saveDraft(topic.getId(), lecturer2.getUsername(),
+                EvaluationType.REVIEWER, fullScores("8.00"), "lần đầu");
+        evaluationService.submitEvaluation(evaluation.getId());
+
+        Evaluation edited = evaluationService.saveDraft(topic.getId(), lecturer2.getUsername(),
+                EvaluationType.REVIEWER, fullScores("9.00"), "đã sửa");
+
+        assertThat(edited.getStatus()).isEqualTo(EvaluationStatus.DRAFT);
+        assertThat(edited.getSubmissionTime()).isNull();
+        assertThat(reviewerAssignments.findByTopicIdAndReviewerId(topic.getId(), lecturer2.getId())
+                .orElseThrow().getStatus()).isEqualTo(ReviewerAssignmentStatus.IN_PROGRESS);
+    }
+
+    @Test
+    void councilGradingRequiresActiveCouncilAndStopsWhenCompleted() {
+        Topic topic = preparedApprovedTopic();
+        seedCriteria();
+        authenticate(facultyManager.getUsername(), "FACULTY_MANAGER");
+        Council council = createCouncilWithMembersAndTopic(topic);
+        authenticate(lecturer2.getUsername(), "LECTURER");
+        assertThatThrownBy(() -> evaluationService.saveDraft(topic.getId(), lecturer2.getUsername(),
+                EvaluationType.COUNCIL_MEMBER, fullScores("8.00"), "draft council"))
+                .isInstanceOf(BusinessRuleException.class);
+
+        authenticate(facultyManager.getUsername(), "FACULTY_MANAGER");
+        councilService.activateCouncil(council.getId());
+        authenticate(lecturer2.getUsername(), "LECTURER");
+        evaluationService.saveDraft(topic.getId(), lecturer2.getUsername(),
+                EvaluationType.COUNCIL_MEMBER, fullScores("8.00"), "active council");
+        authenticate(facultyManager.getUsername(), "FACULTY_MANAGER");
+        councilService.completeCouncil(council.getId());
+        authenticate(lecturer2.getUsername(), "LECTURER");
+        assertThatThrownBy(() -> evaluationService.saveDraft(topic.getId(), lecturer2.getUsername(),
+                EvaluationType.COUNCIL_MEMBER, fullScores("9.00"), "late edit"))
+                .isInstanceOf(BusinessRuleException.class);
+    }
+
+    @Test
+    void councilRejectsNonLecturerAndCannotChangeStructureAfterActivation() {
+        Topic topic = preparedApprovedTopic();
+        authenticate(facultyManager.getUsername(), "FACULTY_MANAGER");
+        Council council = councilService.createCouncil("HĐ luật", period.getId(), LocalDateTime.now().plusDays(3), "B3");
+        assertThatThrownBy(() -> councilService.addMember(council.getId(), student1.getId(), CouncilMemberRole.MEMBER))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("vai trò Giảng viên");
+        councilService.addMember(council.getId(), lecturer2.getId(), CouncilMemberRole.CHAIR);
+        councilService.addMember(council.getId(), lecturer3.getId(), CouncilMemberRole.SECRETARY);
+        councilService.addMember(council.getId(), lecturer4.getId(), CouncilMemberRole.MEMBER);
+        councilService.assignTopic(council.getId(), topic.getId());
+        councilService.activateCouncil(council.getId());
+
+        assertThatThrownBy(() -> councilService.addMember(council.getId(), lecturer1.getId(), CouncilMemberRole.MEMBER))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("đã kích hoạt");
+        Long assignmentId = councilAssignments.findByCouncilId(council.getId()).get(0).getId();
+        assertThatThrownBy(() -> councilService.removeTopic(council.getId(), assignmentId))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("đã kích hoạt");
+    }
+
+    @Test
+    void wrongPeriodAndInactiveCriteriaAreRejected() {
+        Topic topic = preparedApprovedTopic();
+        authenticate(facultyManager.getUsername(), "FACULTY_MANAGER");
+        reviewerAssignmentService.assignReviewer(topic.getId(), lecturer2.getId(),
+                facultyManager.getUsername(), LocalDateTime.now().plusDays(2));
+
+        RegistrationPeriod anotherPeriod = new RegistrationPeriod();
+        anotherPeriod.setName("Đợt khác");
+        anotherPeriod.setType(PeriodType.MON_HOC);
+        anotherPeriod.setLecturerStart(LocalDateTime.now().minusDays(1));
+        anotherPeriod.setLecturerEnd(LocalDateTime.now().plusDays(1));
+        anotherPeriod.setStudentStart(LocalDateTime.now().minusDays(1));
+        anotherPeriod.setStudentEnd(LocalDateTime.now().plusDays(1));
+        anotherPeriod.setStatus(PeriodStatus.IN_PROGRESS);
+        anotherPeriod = periods.save(anotherPeriod);
+        EvaluationCriterion wrongPeriod = criterion("Sai đợt", anotherPeriod, true);
+        EvaluationCriterion inactive = criterion("Ngừng dùng", period, false);
+
+        authenticate(lecturer2.getUsername(), "LECTURER");
+        assertThatThrownBy(() -> evaluationService.saveDraft(topic.getId(), lecturer2.getUsername(),
+                EvaluationType.REVIEWER, List.of(score(wrongPeriod, BigDecimal.TEN)), "wrong"))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("không thuộc đợt");
+        assertThatThrownBy(() -> evaluationService.saveDraft(topic.getId(), lecturer2.getUsername(),
+                EvaluationType.REVIEWER, List.of(score(inactive, BigDecimal.TEN)), "inactive"))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("không còn hoạt động");
+    }
+
+    @Test
+    void draftCouncilCannotProduceResultAndAnnouncementsSupportMultipleRoles() {
+        Topic topic = preparedApprovedTopic();
+        authenticate(facultyManager.getUsername(), "FACULTY_MANAGER");
+        createCouncilWithMembersAndTopic(topic);
+        assertThatThrownBy(() -> topicResultService.calculateResult(topic.getId()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("chưa được gán vào hội đồng");
+
+        announcementService.saveAnnouncement("Cho SV", "sv", List.of("STUDENT"),
+                facultyManager.getUsername(), true, null);
+        announcementService.saveAnnouncement("Cho GV", "gv", List.of("LECTURER"),
+                facultyManager.getUsername(), true, null);
+        assertThat(announcementService.getActiveAnnouncementsForRoles(Set.of("STUDENT", "LECTURER")))
+                .extracting(a -> a.getTitle()).containsExactlyInAnyOrder("Cho SV", "Cho GV");
+        assertThatThrownBy(() -> announcementService.saveAnnouncement("Rỗng", "x", List.of(),
+                facultyManager.getUsername(), true, null))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("ít nhất một vai trò");
+    }
+
+    @Test
+    void resultCannotBeCalculatedByLecturerOrPublishedWithMissingCouncilBallots() {
+        Topic topic = preparedApprovedTopic();
+        seedCriteria();
+        authenticate(facultyManager.getUsername(), "FACULTY_MANAGER");
+        Council council = createCouncilWithMembersAndTopic(topic);
+        councilService.activateCouncil(council.getId());
+
+        authenticate(lecturer2.getUsername(), "LECTURER");
+        assertThatThrownBy(() -> topicResultService.calculateResult(topic.getId()))
+                .isInstanceOf(AccessDeniedException.class);
+        Evaluation oneBallot = evaluationService.saveDraft(topic.getId(), lecturer2.getUsername(),
+                EvaluationType.COUNCIL_MEMBER, fullScores("8.00"), "only one");
+        evaluationService.submitEvaluation(oneBallot.getId());
+
+        authenticate(facultyManager.getUsername(), "FACULTY_MANAGER");
+        TopicResult result = new TopicResult();
+        result.setTopic(topic);
+        result.setCouncilAssignment(councilAssignments.findByCouncilId(council.getId()).get(0));
+        result.setFinalScore(new BigDecimal("8.00"));
+        result.setStatus(TopicResultStatus.CONFIRMED);
+        results.save(result);
+        assertThatThrownBy(() -> topicResultService.publishResult(topic.getId(), facultyManager.getUsername()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("chưa nộp điểm");
+    }
+
+    @Test
+    void reviewerMustBeLecturerAndManagerFormsRender() throws Exception {
+        Topic topic = preparedApprovedTopic();
+        authenticate(facultyManager.getUsername(), "FACULTY_MANAGER");
+        assertThatThrownBy(() -> reviewerAssignmentService.assignReviewer(topic.getId(), student2.getId(),
+                facultyManager.getUsername(), LocalDateTime.now().plusDays(2)))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("vai trò Giảng viên");
+
+        mvc.perform(get("/announcements/create")
+                        .with(user(facultyManager.getUsername()).roles("FACULTY_MANAGER")))
+                .andExpect(status().isOk());
+        mvc.perform(get("/councils/create")
+                        .with(user(facultyManager.getUsername()).roles("FACULTY_MANAGER")))
+                .andExpect(status().isOk());
     }
 
     @Test
@@ -345,6 +596,31 @@ class Member3BusinessRulesTest {
         c2.setIsMandatory(true);
         c2.setIsActive(true);
         criteria.save(c2);
+    }
+
+    private List<EvaluationScore> fullScores(String value) {
+        return criteria.findByRegistrationPeriodIdAndIsActiveTrueOrderByDisplayOrderAsc(period.getId()).stream()
+                .map(c -> score(c, new BigDecimal(value)))
+                .toList();
+    }
+
+    private Council createCouncilWithMembersAndTopic(Topic topic) {
+        Council council = councilService.createCouncil("HĐ kiểm thử", period.getId(), LocalDateTime.now().plusDays(3), "B4");
+        councilService.addMember(council.getId(), lecturer2.getId(), CouncilMemberRole.CHAIR);
+        councilService.addMember(council.getId(), lecturer3.getId(), CouncilMemberRole.SECRETARY);
+        councilService.addMember(council.getId(), lecturer4.getId(), CouncilMemberRole.MEMBER);
+        councilService.assignTopic(council.getId(), topic.getId());
+        return council;
+    }
+
+    private EvaluationCriterion criterion(String name, RegistrationPeriod registrationPeriod, boolean active) {
+        EvaluationCriterion criterion = new EvaluationCriterion();
+        criterion.setName(name);
+        criterion.setRegistrationPeriod(registrationPeriod);
+        criterion.setDisplayOrder(99);
+        criterion.setIsMandatory(true);
+        criterion.setIsActive(active);
+        return criteria.save(criterion);
     }
 
     private EvaluationScore score(EvaluationCriterion criterion, BigDecimal value) {

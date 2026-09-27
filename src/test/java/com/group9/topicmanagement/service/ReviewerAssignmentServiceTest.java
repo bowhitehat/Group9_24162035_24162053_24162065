@@ -56,6 +56,9 @@ public class ReviewerAssignmentServiceTest {
         reviewer = new User();
         ReflectionTestUtils.setField(reviewer, "id", 10L);
         reviewer.setUsername("GV01");
+        com.group9.topicmanagement.domain.Role lecturerRole = new com.group9.topicmanagement.domain.Role();
+        lecturerRole.setName(com.group9.topicmanagement.domain.enums.RoleName.LECTURER);
+        reviewer.getRoles().add(lecturerRole);
 
         assigner = new User();
         assigner.setUsername("FMANAGER");

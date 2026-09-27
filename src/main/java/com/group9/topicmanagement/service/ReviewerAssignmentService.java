@@ -5,6 +5,7 @@ import com.group9.topicmanagement.domain.User;
 import com.group9.topicmanagement.domain.enums.PeriodStatus;
 import com.group9.topicmanagement.domain.enums.PeriodType;
 import com.group9.topicmanagement.domain.enums.ReviewerAssignmentStatus;
+import com.group9.topicmanagement.domain.enums.RoleName;
 import com.group9.topicmanagement.domain.evaluation.ReviewerAssignment;
 import com.group9.topicmanagement.domain.topic.Topic;
 import com.group9.topicmanagement.exception.BusinessRuleException;
@@ -19,6 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -44,6 +47,7 @@ public class ReviewerAssignmentService {
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy đề tài"));
         User reviewer = userRepository.findById(reviewerId)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy giảng viên"));
+        requireLecturer(reviewer);
         User assigner = userRepository.findByUsernameIgnoreCase(assignerUsername)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy người phân công"));
 
@@ -92,6 +96,7 @@ public class ReviewerAssignmentService {
         }
         User reviewer = userRepository.findById(newReviewerId)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy giảng viên"));
+        requireLecturer(reviewer);
         if (assignment.getTopic().getAdvisors().stream().anyMatch(a -> a.getId().equals(reviewer.getId()))) {
             throw new BusinessRuleException("Giảng viên không được phản biện đề tài mình đang hướng dẫn");
         }
@@ -129,6 +134,26 @@ public class ReviewerAssignmentService {
     }
 
     @Transactional(readOnly = true)
+    public Set<Long> gradableAssignmentIds(List<ReviewerAssignment> assignments) {
+        LocalDateTime now = LocalDateTime.now();
+        return assignments.stream()
+                .filter(a -> a.getStatus() != ReviewerAssignmentStatus.CANCELLED)
+                .filter(a -> a.getStatus() != ReviewerAssignmentStatus.OVERDUE)
+                .filter(a -> a.getDeadline() == null || !now.isAfter(a.getDeadline()))
+                .map(ReviewerAssignment::getId)
+                .collect(Collectors.toSet());
+    }
+
+    @Transactional(readOnly = true)
+    public Set<Long> modifiableAssignmentIds(List<ReviewerAssignment> assignments) {
+        return assignments.stream()
+                .filter(a -> a.getStatus() != ReviewerAssignmentStatus.SUBMITTED)
+                .filter(a -> a.getStatus() != ReviewerAssignmentStatus.CANCELLED)
+                .map(ReviewerAssignment::getId)
+                .collect(Collectors.toSet());
+    }
+
+    @Transactional(readOnly = true)
     public List<ReviewerAssignment> listAssignments(Long periodId, Long departmentId, Long reviewerId,
                                                     ReviewerAssignmentStatus status, boolean missingReviewer,
                                                     boolean pendingScore) {
@@ -160,6 +185,26 @@ public class ReviewerAssignmentService {
         });
     }
 
+    public void markInProgress(Long topicId, Long reviewerId) {
+        assignmentRepository.findByTopicIdAndReviewerId(topicId, reviewerId).ifPresent(a -> {
+            if (a.getStatus() == ReviewerAssignmentStatus.ASSIGNED) {
+                a.setStatus(ReviewerAssignmentStatus.IN_PROGRESS);
+                assignmentRepository.save(a);
+            }
+        });
+    }
+
+    public void markInProgressForEdit(Long topicId, Long reviewerId) {
+        assignmentRepository.findByTopicIdAndReviewerId(topicId, reviewerId).ifPresent(a -> {
+            if (a.getStatus() == ReviewerAssignmentStatus.ASSIGNED
+                    || a.getStatus() == ReviewerAssignmentStatus.SUBMITTED) {
+                a.setStatus(ReviewerAssignmentStatus.IN_PROGRESS);
+                a.setSubmissionTime(null);
+                assignmentRepository.save(a);
+            }
+        });
+    }
+
     @Transactional(readOnly = true)
     public ReviewerAssignment requireActiveAssignment(Long topicId, Long reviewerId) {
         ReviewerAssignment assignment = assignmentRepository.findByTopicIdAndReviewerId(topicId, reviewerId)
@@ -186,10 +231,19 @@ public class ReviewerAssignmentService {
         if (deadline == null) {
             throw new BusinessRuleException("Phải nhập hạn nộp điểm");
         }
+        if (!deadline.isAfter(LocalDateTime.now())) {
+            throw new BusinessRuleException("Hạn nộp điểm phải ở tương lai");
+        }
         if ((period.getType() == PeriodType.TLCN || period.getType() == PeriodType.KLTN)
                 && period.getReviewDeadline() != null
                 && deadline.isAfter(period.getReviewDeadline())) {
             throw new BusinessRuleException("Hạn nộp điểm không được sau hạn GVPB của đợt");
+        }
+    }
+
+    private void requireLecturer(User user) {
+        if (user.getRoles().stream().noneMatch(role -> role.getName() == RoleName.LECTURER)) {
+            throw new BusinessRuleException("Người được phân công phản biện phải có vai trò Giảng viên");
         }
     }
 }

@@ -36,7 +36,7 @@ public class AnnouncementService {
     }
 
     @PreAuthorize("hasAnyRole('ADMIN', 'FACULTY_MANAGER')")
-    public Announcement saveAnnouncement(String title, String content, String targetRolesCsv,
+    public Announcement saveAnnouncement(String title, String content, List<String> targetRoles,
                                          String creatorUsername, boolean publish, LocalDateTime expirationTime) {
         User creator = userRepository.findByUsernameIgnoreCase(creatorUsername)
                 .orElseThrow(() -> new NotFoundException("Người tạo không tồn tại"));
@@ -45,10 +45,12 @@ public class AnnouncementService {
         announcement.setTitle(title);
         announcement.setContent(HtmlUtils.htmlEscape(content == null ? "" : content));
         announcement.setCreator(creator);
-        announcement.setTargetRoles(resolveRoles(targetRolesCsv));
+        announcement.setTargetRoles(resolveRoles(targetRoles));
         announcement.setExpirationTime(expirationTime);
 
         if (publish) {
+            requireTargetRoles(announcement);
+            validateExpiration(expirationTime);
             announcement.setStatus(AnnouncementStatus.PUBLISHED);
             announcement.setPublishedTime(LocalDateTime.now());
         } else {
@@ -64,6 +66,8 @@ public class AnnouncementService {
         if (announcement.getStatus() == AnnouncementStatus.ARCHIVED) {
             throw new BusinessRuleException("Không công bố thông báo đã lưu trữ");
         }
+        requireTargetRoles(announcement);
+        validateExpiration(announcement.getExpirationTime());
         announcement.setStatus(AnnouncementStatus.PUBLISHED);
         announcement.setPublishedTime(LocalDateTime.now());
         announcementRepository.save(announcement);
@@ -79,11 +83,17 @@ public class AnnouncementService {
 
     @Transactional(readOnly = true)
     public List<Announcement> getActiveAnnouncementsForRole(String roleName) {
+        return getActiveAnnouncementsForRoles(Set.of(roleName));
+    }
+
+    @Transactional(readOnly = true)
+    public List<Announcement> getActiveAnnouncementsForRoles(Set<String> roleNames) {
         LocalDateTime now = LocalDateTime.now();
         return announcementRepository.findPublishedWithRoles(AnnouncementStatus.PUBLISHED).stream()
                 .filter(a -> a.getExpirationTime() == null || a.getExpirationTime().isAfter(now))
-                .filter(a -> a.getTargetRoles() == null || a.getTargetRoles().isEmpty()
-                        || a.getTargetRoles().stream().anyMatch(r -> r.getName().name().equalsIgnoreCase(roleName)))
+                .filter(a -> a.getTargetRoles() != null && !a.getTargetRoles().isEmpty())
+                .filter(a -> a.getTargetRoles().stream()
+                        .anyMatch(r -> roleNames.stream().anyMatch(name -> r.getName().name().equalsIgnoreCase(name))))
                 .toList();
     }
 
@@ -92,21 +102,45 @@ public class AnnouncementService {
         return announcementRepository.findAllWithRoles();
     }
 
-    private Set<Role> resolveRoles(String csv) {
+    public boolean canPublish(Announcement announcement) {
+        return announcement.getStatus() == AnnouncementStatus.DRAFT
+                && announcement.getTargetRoles() != null
+                && !announcement.getTargetRoles().isEmpty()
+                && (announcement.getExpirationTime() == null
+                    || announcement.getExpirationTime().isAfter(LocalDateTime.now()));
+    }
+
+    public boolean canArchive(Announcement announcement) {
+        return announcement.getStatus() != AnnouncementStatus.ARCHIVED;
+    }
+
+    private Set<Role> resolveRoles(List<String> roleNames) {
         Set<Role> roles = new LinkedHashSet<>();
-        if (csv == null || csv.isBlank()) {
+        if (roleNames == null || roleNames.isEmpty()) {
             return roles;
         }
-        for (String token : csv.split(",")) {
-            String value = token.trim();
-            if (value.isEmpty()) {
+        for (String value : roleNames) {
+            final String trimmedValue = value.trim();
+            if (trimmedValue.isEmpty()) {
                 continue;
             }
-            RoleName name = RoleName.valueOf(value.toUpperCase());
+            RoleName name = RoleName.valueOf(trimmedValue.toUpperCase());
             Role role = roleRepository.findByName(name)
-                    .orElseThrow(() -> new NotFoundException("Không tìm thấy vai trò " + value));
+                    .orElseThrow(() -> new NotFoundException("Không tìm thấy vai trò " + trimmedValue));
             roles.add(role);
         }
         return roles;
+    }
+
+    private void requireTargetRoles(Announcement announcement) {
+        if (announcement.getTargetRoles() == null || announcement.getTargetRoles().isEmpty()) {
+            throw new BusinessRuleException("Phải chọn ít nhất một vai trò nhận thông báo trước khi công bố");
+        }
+    }
+
+    private void validateExpiration(LocalDateTime expirationTime) {
+        if (expirationTime != null && !expirationTime.isAfter(LocalDateTime.now())) {
+            throw new BusinessRuleException("Thời gian hết hạn phải ở tương lai");
+        }
     }
 }

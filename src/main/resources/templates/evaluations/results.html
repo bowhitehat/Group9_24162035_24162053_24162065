@@ -19,17 +19,14 @@
             <tbody>
             <tr th:each="r : ${results}">
                 <td th:text="${r.topic.code + ' - ' + r.topic.title}"></td>
-                <td th:text="${r.finalScore}"></td>
-                <td th:text="${r.status}"></td>
+                <td th:text="${r.finalScore != null ? r.finalScore : 'Chưa có'}"></td>
+                <td th:text="${r.status != null ? r.status : 'Chưa tính điểm'}"></td>
                 <td>
-                    <form sec:authorize="hasRole('FACULTY_MANAGER')" th:action="@{/evaluations/topic/{id}/calculate(id=${r.topic.id})}" method="post" class="d-inline">
-                        <button type="submit" class="btn btn-sm btn-secondary">Tính/Cập nhật điểm</button>
-                    </form>
-                    <form sec:authorize="hasRole('LECTURER')" th:if="${r.status.name() == 'PENDING_CONFIRMATION'}" th:action="@{/evaluations/topic/{id}/confirm(id=${r.topic.id})}" method="post" class="d-inline">
-                        <button type="submit" class="btn btn-sm btn-info text-white" onclick="return confirm('Chủ tịch xác nhận kết quả?')">Xác nhận</button>
-                    </form>
-                    <form sec:authorize="hasRole('FACULTY_MANAGER')" th:if="${r.status.name() == 'CONFIRMED'}" th:action="@{/evaluations/topic/{id}/publish(id=${r.topic.id})}" method="post" class="d-inline">
-                        <button type="submit" class="btn btn-sm btn-success" onclick="return confirm('Công bố cho sinh viên?')">Công bố</button>
+                    <a th:href="@{/evaluations/topic/{id}/results(id=${r.topic.id})}" class="btn btn-sm btn-outline-primary">Chi tiết</a>
+                    <form sec:authorize="hasRole('FACULTY_MANAGER')" th:if="${calculableTopicIds.contains(r.topic.id)}"
+                          th:action="@{/evaluations/topic/{id}/calculate(id=${r.topic.id})}" method="post" class="d-inline">
+                        <button type="submit" class="btn btn-sm btn-primary"
+                                th:text="${r.finalScore == null ? 'Tính điểm' : 'Tính lại'}"></button>
                     </form>
                 </td>
             </tr>
