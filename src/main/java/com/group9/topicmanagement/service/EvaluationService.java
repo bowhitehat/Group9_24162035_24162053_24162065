@@ -249,7 +249,7 @@ public class EvaluationService {
 
     @Transactional(readOnly = true)
     public List<Evaluation> listByTopic(Long topicId) {
-        List<Evaluation> list = evaluationRepository.findByTopicIdWithEvaluator(topicId);
+        List<Evaluation> list = evaluationRepository.findByTopicId(topicId);
         for (Evaluation evaluation : list) {
             List<EvaluationScore> scores = scoreRepository.findByEvaluationId(evaluation.getId());
             scores.forEach(score -> score.getCriterion().getName());
@@ -270,7 +270,7 @@ public class EvaluationService {
 
     private CouncilMember requireCouncilMember(Long topicId, Long userId) {
         List<CouncilAssignment> assignments = councilAssignmentRepository
-                .findByTopicIdAndCouncilStatusIn(topicId, List.of(CouncilStatus.ACTIVE));
+                .findByTopicIdAndCouncil_StatusIn(topicId, List.of(CouncilStatus.ACTIVE));
         for (CouncilAssignment assignment : assignments) {
             Optional<CouncilMember> member = councilMemberRepository
                     .findByCouncilIdAndMemberId(assignment.getCouncil().getId(), userId);

@@ -51,19 +51,19 @@ public class CouncilService {
 
     @Transactional(readOnly = true)
     public List<Council> listCouncils() {
-        return councilRepository.findAllWithPeriod();
+        return councilRepository.findAllByOrderByIdAsc();
     }
 
     @Transactional(readOnly = true)
     public List<Council> listCouncilsForUser(Long userId) {
-        return councilRepository.findAllWithPeriod().stream()
+        return councilRepository.findAllByOrderByIdAsc().stream()
                 .filter(c -> memberRepository.findByCouncilIdAndMemberId(c.getId(), userId).isPresent())
                 .toList();
     }
 
     @Transactional(readOnly = true)
     public Council getCouncil(Long id) {
-        return councilRepository.findByIdWithPeriod(id)
+        return councilRepository.findById(id)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy hội đồng"));
     }
 
@@ -180,14 +180,14 @@ public class CouncilService {
             throw new BusinessRuleException("Đề tài đã có trong hội đồng");
         }
 
-        boolean assignedElsewhere = assignmentRepository.findByTopicIdAndCouncilStatusIn(
+        boolean assignedElsewhere = assignmentRepository.findByTopicIdAndCouncil_StatusIn(
                 topicId, List.of(CouncilStatus.DRAFT, CouncilStatus.ACTIVE)).stream()
                 .anyMatch(a -> !a.getCouncil().getId().equals(councilId));
         if (assignedElsewhere) {
             throw new BusinessRuleException("Đề tài đã được phân công vào hội đồng khác");
         }
 
-        List<CouncilMember> members = memberRepository.findByCouncilIdWithMember(councilId);
+        List<CouncilMember> members = memberRepository.findByCouncilId(councilId);
         for (CouncilMember m : members) {
             if (topic.getAdvisors().stream().anyMatch(a -> a.getId().equals(m.getMember().getId()))) {
                 throw new BusinessRuleException("Không thể thêm đề tài: Giảng viên " + m.getMember().getFullName()
@@ -263,17 +263,17 @@ public class CouncilService {
 
     @Transactional(readOnly = true)
     public List<CouncilMember> membersOf(Long councilId) {
-        return memberRepository.findByCouncilIdWithMember(councilId);
+        return memberRepository.findByCouncilId(councilId);
     }
 
     @Transactional(readOnly = true)
     public List<CouncilAssignment> assignmentsOf(Long councilId) {
-        return assignmentRepository.findByCouncilIdWithTopic(councilId);
+        return assignmentRepository.findByCouncilId(councilId);
     }
 
     @Transactional(readOnly = true)
     public boolean isChairOfTopic(Long topicId, Long userId) {
-        return assignmentRepository.findByTopicIdWithCouncil(topicId).stream()
+        return assignmentRepository.findByTopicId(topicId).stream()
                 .filter(a -> EnumSet.of(CouncilStatus.ACTIVE, CouncilStatus.COMPLETED)
                         .contains(a.getCouncil().getStatus()))
                 .anyMatch(a -> memberRepository.findByCouncilIdAndMemberId(a.getCouncil().getId(), userId)

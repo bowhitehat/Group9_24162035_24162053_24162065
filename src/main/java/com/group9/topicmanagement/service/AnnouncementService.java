@@ -89,7 +89,7 @@ public class AnnouncementService {
     @Transactional(readOnly = true)
     public List<Announcement> getActiveAnnouncementsForRoles(Set<String> roleNames) {
         LocalDateTime now = LocalDateTime.now();
-        return announcementRepository.findPublishedWithRoles(AnnouncementStatus.PUBLISHED).stream()
+        return announcementRepository.findByStatusOrderByPublishedTimeDesc(AnnouncementStatus.PUBLISHED).stream()
                 .filter(a -> a.getExpirationTime() == null || a.getExpirationTime().isAfter(now))
                 .filter(a -> a.getTargetRoles() != null && !a.getTargetRoles().isEmpty())
                 .filter(a -> a.getTargetRoles().stream()
@@ -99,7 +99,7 @@ public class AnnouncementService {
 
     @Transactional(readOnly = true)
     public List<Announcement> listForManager() {
-        return announcementRepository.findAllWithRoles();
+        return announcementRepository.findAllByOrderByCreatedAtDesc();
     }
 
     public boolean canPublish(Announcement announcement) {

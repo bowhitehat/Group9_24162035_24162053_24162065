@@ -22,7 +22,7 @@ public class TopicResult extends BaseEntity {
     private Topic topic;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "council_assignment_id", nullable = false)
+    @JoinColumn(name = "council_assignment_id", nullable = false, unique = true)
     private CouncilAssignment councilAssignment;
 
     @Column(precision = 4, scale = 2)

@@ -20,7 +20,8 @@ public class Announcement extends BaseEntity {
     @Column(nullable = false)
     private String title;
 
-    @Column(columnDefinition = "LONGTEXT", nullable = false)
+    @Lob
+    @Column(nullable = false)
     private String content;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -34,7 +35,9 @@ public class Announcement extends BaseEntity {
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "announcement_target_roles",
             joinColumns = @JoinColumn(name = "announcement_id"),
-            inverseJoinColumns = @JoinColumn(name = "role_id"))
+            inverseJoinColumns = @JoinColumn(name = "role_id"),
+            uniqueConstraints = @UniqueConstraint(name = "uk_announcement_role",
+                    columnNames = {"announcement_id", "role_id"}))
     private Set<Role> targetRoles = new LinkedHashSet<>();
 
     private LocalDateTime publishedTime;

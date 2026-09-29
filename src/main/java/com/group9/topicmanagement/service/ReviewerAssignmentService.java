@@ -128,7 +128,7 @@ public class ReviewerAssignmentService {
     public List<ReviewerAssignment> getMyAssignments(String username) {
         User reviewer = userRepository.findByUsernameIgnoreCase(username)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy người dùng"));
-        List<ReviewerAssignment> assignments = assignmentRepository.findByReviewerIdWithTopic(reviewer.getId());
+        List<ReviewerAssignment> assignments = assignmentRepository.findByReviewerId(reviewer.getId());
         markOverdue(assignments);
         return assignments;
     }
@@ -157,7 +157,7 @@ public class ReviewerAssignmentService {
     public List<ReviewerAssignment> listAssignments(Long periodId, Long departmentId, Long reviewerId,
                                                     ReviewerAssignmentStatus status, boolean missingReviewer,
                                                     boolean pendingScore) {
-        List<ReviewerAssignment> all = assignmentRepository.findAllWithDetails();
+        List<ReviewerAssignment> all = assignmentRepository.findAllByOrderByIdAsc();
         markOverdue(all);
         return all.stream()
                 .filter(a -> periodId == null || a.getTopic().getRegistrationPeriod().getId().equals(periodId))

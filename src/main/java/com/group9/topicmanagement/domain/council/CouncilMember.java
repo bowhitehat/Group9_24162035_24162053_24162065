@@ -5,7 +5,8 @@ import com.group9.topicmanagement.domain.enums.CouncilMemberRole;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "council_members")
+@Table(name = "council_members", uniqueConstraints = @UniqueConstraint(
+        name = "uk_council_member", columnNames = {"council_id", "member_id"}))
 public class CouncilMember extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

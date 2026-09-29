@@ -4,7 +4,8 @@ import jakarta.persistence.*;
 import java.math.BigDecimal;
 
 @Entity
-@Table(name = "evaluation_scores")
+@Table(name = "evaluation_scores", uniqueConstraints = @UniqueConstraint(
+        name = "uk_evaluation_criterion", columnNames = {"evaluation_id", "criterion_id"}))
 public class EvaluationScore extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

@@ -4,7 +4,8 @@ import com.group9.topicmanagement.domain.topic.Topic;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "council_assignments")
+@Table(name = "council_assignments", uniqueConstraints = @UniqueConstraint(
+        name = "uk_council_topic", columnNames = {"council_id", "topic_id"}))
 public class CouncilAssignment extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

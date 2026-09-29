@@ -57,7 +57,7 @@ public class StudentGroupService {
                 .anyMatch(role -> role.getName() == com.group9.topicmanagement.domain.enums.RoleName.STUDENT);
         if (!isStudent) throw new BusinessRuleException("Chỉ sinh viên mới được tạo nhóm");
 
-        if (groupMemberRepository.existsByStudentIdAndPeriodId(leader.getId(), periodId)) {
+        if (groupMemberRepository.existsByMember_IdAndGroup_RegistrationPeriod_Id(leader.getId(), periodId)) {
             throw new BusinessRuleException("Sinh viên đã thuộc một nhóm khác trong cùng đợt đăng ký");
         }
 
@@ -97,7 +97,7 @@ public class StudentGroupService {
             throw new BusinessRuleException("Tài khoản được thêm không có vai trò sinh viên");
         }
 
-        if (groupMemberRepository.existsByStudentIdAndPeriodId(newMember.getId(), group.getRegistrationPeriod().getId())) {
+        if (groupMemberRepository.existsByMember_IdAndGroup_RegistrationPeriod_Id(newMember.getId(), group.getRegistrationPeriod().getId())) {
             throw new BusinessRuleException("Sinh viên " + memberUsernameToAdd + " đã thuộc một nhóm khác trong cùng đợt");
         }
 
@@ -132,7 +132,7 @@ public class StudentGroupService {
     }
 
     public Optional<StudentGroup> findStudentGroupByStudentAndPeriod(Long studentId, Long periodId) {
-        return groupRepository.findByStudentIdAndPeriodId(studentId, periodId);
+        return groupRepository.findDistinctByMembers_Member_IdAndRegistrationPeriod_Id(studentId, periodId);
     }
 
     public StudentGroup getGroupById(Long groupId) {
@@ -147,7 +147,7 @@ public class StudentGroupService {
         if (student.isEmpty() || period.isEmpty()) return false;
         return period.get().getStatus() == PeriodStatus.STUDENT_REGISTRATION
                 && isInsideStudentWindow(period.get())
-                && !groupMemberRepository.existsByStudentIdAndPeriodId(student.get().getId(), periodId);
+                && !groupMemberRepository.existsByMember_IdAndGroup_RegistrationPeriod_Id(student.get().getId(), periodId);
     }
 
     public boolean canManageGroup(StudentGroup group, String username) {

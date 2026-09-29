@@ -71,7 +71,7 @@ public class TopicResultService {
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy đề tài"));
 
         CouncilAssignment assignment = councilAssignmentRepository
-                .findByTopicIdAndCouncilStatusIn(topicId, List.of(CouncilStatus.ACTIVE, CouncilStatus.COMPLETED))
+                .findByTopicIdAndCouncil_StatusIn(topicId, List.of(CouncilStatus.ACTIVE, CouncilStatus.COMPLETED))
                 .stream().findFirst()
                 .orElseThrow(() -> new BusinessRuleException("Đề tài chưa được gán vào hội đồng"));
 
@@ -81,7 +81,7 @@ public class TopicResultService {
         BigDecimal finalScore = averageOfValidEvaluations(topicId)
                 .orElseThrow(() -> new BusinessRuleException("Chưa có đủ phiếu chấm hợp lệ"));
 
-        TopicResult result = resultRepository.findByTopicIdWithDetail(topicId)
+        TopicResult result = resultRepository.findByTopicId(topicId)
                 .orElseGet(() -> {
                     TopicResult r = new TopicResult();
                     r.setTopic(topic);
@@ -156,7 +156,7 @@ public class TopicResultService {
         if (!topicRegistrationService.isStudentOnApprovedTopic(topicId, student.getId())) {
             throw new AccessDeniedException("Sinh viên chỉ xem kết quả đề tài của nhóm mình");
         }
-        TopicResult result = resultRepository.findByTopicIdWithDetail(topicId)
+        TopicResult result = resultRepository.findByTopicId(topicId)
                 .orElseThrow(() -> new AccessDeniedException("Sinh viên không xem được điểm chưa công bố"));
         if (result.getStatus() != TopicResultStatus.PUBLISHED) {
             throw new AccessDeniedException("Sinh viên không xem được điểm chưa công bố");
@@ -171,7 +171,7 @@ public class TopicResultService {
         if (!topicRegistrationService.isStudentOnApprovedTopic(topicId, student.getId())) {
             return Optional.empty();
         }
-        return resultRepository.findByTopicIdWithDetail(topicId)
+        return resultRepository.findByTopicId(topicId)
                 .filter(r -> r.getStatus() == TopicResultStatus.PUBLISHED);
     }
 
@@ -180,8 +180,8 @@ public class TopicResultService {
         boolean isManager = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_FACULTY_MANAGER"));
         Long userId = userRepository.findByUsernameIgnoreCase(auth.getName()).orElseThrow().getId();
         
-        List<TopicResult> dbResults = resultRepository.findAllWithTopic();
-        List<CouncilAssignment> assignments = councilAssignmentRepository.findAllWithTopicAndCouncil();
+        List<TopicResult> dbResults = resultRepository.findAllByOrderByIdAsc();
+        List<CouncilAssignment> assignments = councilAssignmentRepository.findAllByOrderByIdAsc();
         
         return assignments.stream()
             .filter(a -> isManager || councilService.isMemberOfCouncil(a.getCouncil().getId(), userId))
@@ -211,7 +211,7 @@ public class TopicResultService {
             throw new AccessDeniedException("Không có quyền xem kết quả đề tài này");
         }
         
-        return resultRepository.findByTopicIdWithDetail(topicId).orElseGet(() -> {
+        return resultRepository.findByTopicId(topicId).orElseGet(() -> {
             TopicResult dummy = new TopicResult();
             dummy.setTopic(assignment.getTopic());
             dummy.setCouncilAssignment(assignment);
@@ -246,7 +246,7 @@ public class TopicResultService {
                 .orElse(false)) {
             return false;
         }
-        boolean hasEligibleCouncil = !councilAssignmentRepository.findByTopicIdAndCouncilStatusIn(
+        boolean hasEligibleCouncil = !councilAssignmentRepository.findByTopicIdAndCouncil_StatusIn(
                 topicId, List.of(CouncilStatus.ACTIVE, CouncilStatus.COMPLETED)).isEmpty();
         return hasEligibleCouncil && areAllEvaluationsSubmitted(topicId) && !hasMissingMandatoryScores(topicId);
     }
@@ -290,7 +290,7 @@ public class TopicResultService {
         }
         
         // Check council members
-        Optional<CouncilAssignment> assignmentOpt = councilAssignmentRepository.findByTopicIdAndCouncilStatusIn(
+        Optional<CouncilAssignment> assignmentOpt = councilAssignmentRepository.findByTopicIdAndCouncil_StatusIn(
             topicId, List.of(CouncilStatus.ACTIVE, CouncilStatus.COMPLETED)).stream().findFirst();
             
         if (assignmentOpt.isEmpty()) return false;

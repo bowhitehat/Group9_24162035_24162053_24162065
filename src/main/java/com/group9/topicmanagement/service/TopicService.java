@@ -7,11 +7,15 @@ import com.group9.topicmanagement.domain.topic.Topic;
 import com.group9.topicmanagement.domain.topic.TopicStatus;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.repository.DepartmentRepository;
+import com.group9.topicmanagement.repository.CouncilAssignmentRepository;
+import com.group9.topicmanagement.repository.CouncilMemberRepository;
 import com.group9.topicmanagement.repository.RegistrationPeriodRepository;
+import com.group9.topicmanagement.repository.ReviewerAssignmentRepository;
 import com.group9.topicmanagement.repository.TopicRepository;
 import com.group9.topicmanagement.repository.UserRepository;
 import com.group9.topicmanagement.controller.form.TopicForm;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -22,6 +26,7 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Predicate;
 
 @Service
 @Transactional
@@ -31,17 +36,26 @@ public class TopicService {
     private final RegistrationPeriodRepository periodRepository;
     private final DepartmentRepository departmentRepository;
     private final UserRepository userRepository;
+    private final ReviewerAssignmentRepository reviewerAssignmentRepository;
+    private final CouncilAssignmentRepository councilAssignmentRepository;
+    private final CouncilMemberRepository councilMemberRepository;
     private final Clock clock;
 
     public TopicService(TopicRepository topicRepository, 
                         RegistrationPeriodRepository periodRepository,
                         DepartmentRepository departmentRepository,
                         UserRepository userRepository,
+                        ReviewerAssignmentRepository reviewerAssignmentRepository,
+                        CouncilAssignmentRepository councilAssignmentRepository,
+                        CouncilMemberRepository councilMemberRepository,
                         Clock clock) {
         this.topicRepository = topicRepository;
         this.periodRepository = periodRepository;
         this.departmentRepository = departmentRepository;
         this.userRepository = userRepository;
+        this.reviewerAssignmentRepository = reviewerAssignmentRepository;
+        this.councilAssignmentRepository = councilAssignmentRepository;
+        this.councilMemberRepository = councilMemberRepository;
         this.clock = clock;
     }
 
@@ -50,19 +64,20 @@ public class TopicService {
     }
     
     public Page<Topic> findTopicsWithFilters(Long periodId, Long departmentId, TopicStatus status, String keyword, Pageable pageable) {
-        return topicRepository.findWithFilters(periodId, departmentId, status, keyword, pageable);
+        return filterTopics(periodId, departmentId, status, keyword, topic -> true, pageable);
     }
 
     public Page<Topic> findTopicsForLecturer(Long proposerId, Long periodId, Long departmentId, TopicStatus status, String keyword, Pageable pageable) {
-        return topicRepository.findByProposerWithFilters(proposerId, periodId, departmentId, status, normalizeKeyword(keyword), pageable);
+        return filterTopics(periodId, departmentId, status, keyword,
+                topic -> isAccessibleToLecturer(topic, proposerId), pageable);
     }
     
     public Page<Topic> findAvailableTopicsForStudents(Long periodId, Long departmentId, String keyword, Pageable pageable) {
-        return topicRepository.findAvailableTopicsForStudents(periodId, departmentId, normalizeKeyword(keyword), pageable);
+        return filterTopics(periodId, departmentId, TopicStatus.PUBLISHED, keyword, topic -> true, pageable);
     }
 
     public Topic getTopicById(Long id) {
-        return topicRepository.findByIdWithDetails(id)
+        return topicRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đề tài"));
     }
 
@@ -181,7 +196,7 @@ public class TopicService {
         if (lecturer) {
             User viewer = userRepository.findByUsernameIgnoreCase(username)
                     .orElseThrow(() -> new AccessDeniedException("Bạn không có quyền xem đề tài này"));
-            if (topicRepository.existsAccessibleToLecturer(id, viewer.getId())) return topic;
+            if (isAccessibleToLecturer(topic, viewer.getId())) return topic;
         }
         if (student || lecturer) throw new AccessDeniedException("Bạn không có quyền xem đề tài này");
         throw new AccessDeniedException("Bạn không có quyền xem đề tài này");
@@ -228,6 +243,42 @@ public class TopicService {
 
     private String normalizeKeyword(String keyword) {
         return keyword == null || keyword.isBlank() ? null : keyword.trim();
+    }
+
+    private Page<Topic> filterTopics(Long periodId, Long departmentId, TopicStatus status, String keyword,
+                                     Predicate<Topic> accessRule, Pageable pageable) {
+        String normalized = normalizeKeyword(keyword);
+        List<Topic> matches = topicRepository.findAllByOrderByIdDesc().stream()
+                .filter(topic -> periodId == null || topic.getRegistrationPeriod().getId().equals(periodId))
+                .filter(topic -> departmentId == null || topic.getDepartment().getId().equals(departmentId))
+                .filter(topic -> status == null || topic.getStatus() == status)
+                .filter(topic -> normalized == null
+                        || topic.getTitle().toLowerCase().contains(normalized.toLowerCase())
+                        || topic.getCode().toLowerCase().contains(normalized.toLowerCase()))
+                .filter(accessRule)
+                .toList();
+        return page(matches, pageable);
+    }
+
+    private boolean isAccessibleToLecturer(Topic topic, Long lecturerId) {
+        if (topic.getProposer().getId().equals(lecturerId)
+                || topic.getAdvisors().stream().anyMatch(advisor -> advisor.getId().equals(lecturerId))) return true;
+        boolean reviewer = reviewerAssignmentRepository.findByTopicId(topic.getId()).stream()
+                .anyMatch(assignment -> assignment.getReviewer().getId().equals(lecturerId)
+                        && assignment.getStatus() != com.group9.topicmanagement.domain.enums.ReviewerAssignmentStatus.CANCELLED);
+        if (reviewer) return true;
+        return councilAssignmentRepository.findByTopicId(topic.getId()).stream()
+                .filter(assignment -> assignment.getCouncil().getStatus()
+                        != com.group9.topicmanagement.domain.enums.CouncilStatus.CANCELLED)
+                .anyMatch(assignment -> councilMemberRepository
+                        .existsByCouncilIdAndMemberId(assignment.getCouncil().getId(), lecturerId));
+    }
+
+    private Page<Topic> page(List<Topic> items, Pageable pageable) {
+        if (pageable.isUnpaged()) return new PageImpl<>(items);
+        int from = Math.min((int) pageable.getOffset(), items.size());
+        int to = Math.min(from + pageable.getPageSize(), items.size());
+        return new PageImpl<>(items.subList(from, to), pageable, items.size());
     }
 
     public void publishTopic(Long id) {

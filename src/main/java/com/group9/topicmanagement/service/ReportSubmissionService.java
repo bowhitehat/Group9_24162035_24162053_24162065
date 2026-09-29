@@ -63,7 +63,7 @@ public class ReportSubmissionService {
         validateFile(file);
 
         User submitter = getUser(submitterUsername);
-        Optional<ReportSubmission> latestOpt = reportRepository.findLatestByRegistrationId(registration.getId());
+        Optional<ReportSubmission> latestOpt = reportRepository.findFirstByTopicRegistration_IdOrderByVersionDesc(registration.getId());
         int nextVersion = latestOpt.map(report -> report.getVersion() + 1).orElse(1);
 
         String originalFileName = sanitizeOriginalFileName(file.getOriginalFilename());
@@ -119,7 +119,7 @@ public class ReportSubmissionService {
     @Transactional(readOnly = true)
     public List<ReportSubmission> getSubmissionHistoryForUser(Long registrationId, String username) {
         getRegistrationForUser(registrationId, username);
-        return reportRepository.findByRegistrationIdOrderByVersionDesc(registrationId);
+        return reportRepository.findByTopicRegistration_IdOrderByVersionDesc(registrationId);
     }
 
     @Transactional(readOnly = true)
@@ -141,7 +141,7 @@ public class ReportSubmissionService {
     @Transactional(readOnly = true)
     public List<ReportSubmission> getSubmissionHistoryForEvaluation(Long registrationId) {
         getRegistration(registrationId);
-        return reportRepository.findByRegistrationIdOrderByVersionDesc(registrationId);
+        return reportRepository.findByTopicRegistration_IdOrderByVersionDesc(registrationId);
     }
 
     private void ensureCanView(TopicRegistration registration, User viewer) {

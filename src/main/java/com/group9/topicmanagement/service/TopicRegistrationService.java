@@ -11,6 +11,7 @@ import com.group9.topicmanagement.domain.topic.TopicStatus;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.repository.*;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -77,7 +78,7 @@ public class TopicRegistrationService {
         }
 
         // Kiểm tra đề tài đã có nhóm khác đăng ký thành công (APPROVED) chưa
-        Optional<TopicRegistration> existingApproved = registrationRepository.findApprovedRegistrationForTopic(topicId);
+        Optional<TopicRegistration> existingApproved = registrationRepository.findFirstByTopic_IdAndStatus(topicId, RegistrationStatus.APPROVED);
         if (existingApproved.isPresent()) {
             throw new BusinessRuleException("Đề tài này đã được đăng ký thành công bởi một nhóm khác");
         }
@@ -115,7 +116,8 @@ public class TopicRegistrationService {
                 .orElseThrow(() -> new BusinessRuleException("Không tìm thấy người phê duyệt"));
 
         // Ngăn 2 nhóm đăng ký thành công cùng 1 đề tài
-        Optional<TopicRegistration> existingApproved = registrationRepository.findApprovedRegistrationForTopic(registration.getTopic().getId());
+        Optional<TopicRegistration> existingApproved = registrationRepository.findFirstByTopic_IdAndStatus(
+                registration.getTopic().getId(), RegistrationStatus.APPROVED);
         if (existingApproved.isPresent() && !existingApproved.get().getId().equals(registrationId)) {
             throw new BusinessRuleException("Đề tài này đã được phê duyệt cho nhóm khác");
         }
@@ -151,11 +153,11 @@ public class TopicRegistrationService {
     }
 
     public Page<TopicRegistration> findRegistrationsWithFilters(Long periodId, Long departmentId, RegistrationStatus status, String keyword, Pageable pageable) {
-        return registrationRepository.findWithFilters(periodId, departmentId, status, normalizeKeyword(keyword), pageable);
+        return filterRegistrations(null, periodId, departmentId, status, keyword, pageable);
     }
 
     public Page<TopicRegistration> findRegistrationsForStudent(String username, Long periodId, RegistrationStatus status, String keyword, Pageable pageable) {
-        return registrationRepository.findForStudent(username, periodId, status, normalizeKeyword(keyword), pageable);
+        return filterRegistrations(username, periodId, null, status, keyword, pageable);
     }
 
     public Set<Long> reviewableRegistrationIds(List<TopicRegistration> registrations, boolean manager) {
@@ -181,7 +183,7 @@ public class TopicRegistrationService {
                 || period.getStatus() != PeriodStatus.STUDENT_REGISTRATION
                 || now.isBefore(period.getStudentStart())
                 || now.isAfter(period.getStudentEnd())
-                || registrationRepository.findApprovedRegistrationForTopic(topicId).isPresent()) return false;
+                || registrationRepository.findFirstByTopic_IdAndStatus(topicId, RegistrationStatus.APPROVED).isPresent()) return false;
         Optional<TopicRegistration> existing = registrationRepository.findByStudentGroupIdAndRegistrationPeriodId(groupId, period.getId());
         return existing.isEmpty() || (existing.get().getStatus() != RegistrationStatus.PENDING
                 && existing.get().getStatus() != RegistrationStatus.APPROVED);
@@ -193,11 +195,11 @@ public class TopicRegistrationService {
     }
 
     public Optional<TopicRegistration> findApprovedForTopic(Long topicId) {
-        return registrationRepository.findApprovedRegistrationForTopic(topicId);
+        return registrationRepository.findFirstByTopic_IdAndStatus(topicId, RegistrationStatus.APPROVED);
     }
 
     public List<TopicRegistration> listApprovedRegistrations() {
-        return registrationRepository.findByStatusWithTopicAndGroup(RegistrationStatus.APPROVED);
+        return registrationRepository.findByStatusOrderByIdAsc(RegistrationStatus.APPROVED);
     }
 
     public long countApprovedRegistrations() {
@@ -213,5 +215,24 @@ public class TopicRegistrationService {
 
     private String normalizeKeyword(String keyword) {
         return keyword == null || keyword.isBlank() ? null : keyword.trim();
+    }
+
+    private Page<TopicRegistration> filterRegistrations(String username, Long periodId, Long departmentId,
+                                                         RegistrationStatus status, String keyword,
+                                                         Pageable pageable) {
+        String normalized = normalizeKeyword(keyword);
+        List<TopicRegistration> matches = registrationRepository.findAllByOrderByIdDesc().stream()
+                .filter(registration -> username == null || registration.getStudentGroup().getMembers().stream()
+                        .anyMatch(member -> member.getMember().getUsername().equalsIgnoreCase(username)))
+                .filter(registration -> periodId == null || registration.getRegistrationPeriod().getId().equals(periodId))
+                .filter(registration -> departmentId == null || registration.getTopic().getDepartment().getId().equals(departmentId))
+                .filter(registration -> status == null || registration.getStatus() == status)
+                .filter(registration -> normalized == null
+                        || registration.getTopic().getTitle().toLowerCase().contains(normalized.toLowerCase()))
+                .toList();
+        if (pageable.isUnpaged()) return new PageImpl<>(matches);
+        int from = Math.min((int) pageable.getOffset(), matches.size());
+        int to = Math.min(from + pageable.getPageSize(), matches.size());
+        return new PageImpl<>(matches.subList(from, to), pageable, matches.size());
     }
 }

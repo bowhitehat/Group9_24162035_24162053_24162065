@@ -7,7 +7,8 @@ import jakarta.persistence.*;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "reviewer_assignments")
+@Table(name = "reviewer_assignments", uniqueConstraints = @UniqueConstraint(
+        name = "uk_topic_reviewer", columnNames = {"topic_id", "reviewer_id"}))
 public class ReviewerAssignment extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;

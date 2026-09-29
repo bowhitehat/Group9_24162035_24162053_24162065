@@ -82,7 +82,11 @@ public class DashboardService {
         stats.put("pendingTopics", topicService.countByStatus(TopicStatus.PENDING));
         stats.put("approvedGroups", topicRegistrationService.countApprovedRegistrations());
         stats.put("submittedReports", reportSubmissionRepository.count());
-        stats.put("topicsWithoutReviewer", reviewerAssignmentRepository.countApprovedTopicsWithoutReviewer());
+        long topicsWithoutReviewer = topicRegistrationService.listApprovedRegistrations().stream()
+                .filter(registration -> reviewerAssignmentRepository.findByTopicId(registration.getTopic().getId()).stream()
+                        .noneMatch(assignment -> assignment.getStatus() != ReviewerAssignmentStatus.CANCELLED))
+                .count();
+        stats.put("topicsWithoutReviewer", topicsWithoutReviewer);
         stats.put("reviewersPendingScore", reviewerAssignmentRepository.countByStatusIn(
                 List.of(ReviewerAssignmentStatus.ASSIGNED, ReviewerAssignmentStatus.IN_PROGRESS, ReviewerAssignmentStatus.OVERDUE)));
         long missingScores = topicRegistrationService.listApprovedRegistrations().stream()
@@ -99,8 +103,8 @@ public class DashboardService {
     public Map<String, Object> lecturerStats(String username) {
         User lecturer = userService.getByUsername(username);
         Map<String, Object> stats = new HashMap<>();
-        List<Topic> advising = topicRepository.findByAdvisorsId(lecturer.getId(), Pageable.unpaged()).getContent();
-        List<ReviewerAssignment> assignments = reviewerAssignmentRepository.findByReviewerIdWithTopic(lecturer.getId());
+        List<Topic> advising = topicRepository.findDistinctByAdvisors_Id(lecturer.getId(), Pageable.unpaged()).getContent();
+        List<ReviewerAssignment> assignments = reviewerAssignmentRepository.findByReviewerId(lecturer.getId());
         stats.put("advisingTopics", advising);
         stats.put("reviewerAssignments", assignments);
         stats.put("gradingTasks", assignments.stream()
@@ -129,7 +133,7 @@ public class DashboardService {
         TopicResult publishedResult = null;
         if (registration != null) {
             List<ReportSubmission> history = reportSubmissionRepository
-                    .findByRegistrationIdOrderByVersionDesc(registration.getId());
+                    .findByTopicRegistration_IdOrderByVersionDesc(registration.getId());
             latestReport = history.isEmpty() ? null : history.get(0);
             publishedResult = topicResultService.findPublishedForStudent(registration.getTopic().getId(), username)
                     .orElse(null);

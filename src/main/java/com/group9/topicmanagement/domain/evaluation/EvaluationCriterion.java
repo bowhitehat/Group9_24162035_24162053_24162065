@@ -4,16 +4,20 @@ import com.group9.topicmanagement.domain.RegistrationPeriod;
 import jakarta.persistence.*;
 
 @Entity
-@Table(name = "evaluation_criteria")
+@Table(name = "evaluation_criteria", uniqueConstraints = {
+        @UniqueConstraint(name = "uk_criterion_period_name", columnNames = {"registration_period_id", "name"}),
+        @UniqueConstraint(name = "uk_criterion_period_order", columnNames = {"registration_period_id", "display_order"})
+})
 public class EvaluationCriterion extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     @Column(nullable = false)
     private String name;
-    @Column(columnDefinition = "TEXT")
+    @Lob
     private String description;
     @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "registration_period_id", nullable = false)
     private RegistrationPeriod registrationPeriod;
+    @Column(name = "display_order", nullable = false)
     private Integer displayOrder = 0;
     private Boolean isMandatory = true;
     private Boolean isActive = true;

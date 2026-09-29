@@ -13,7 +13,9 @@ import java.util.ArrayList;
 import java.util.List;
 
 @Entity
-@Table(name = "evaluations")
+@Table(name = "evaluations", uniqueConstraints = @UniqueConstraint(
+        name = "uk_evaluation_topic_evaluator_type",
+        columnNames = {"topic_id", "evaluator_id", "evaluation_type"}))
 public class Evaluation extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -43,7 +45,7 @@ public class Evaluation extends BaseEntity {
     @Column(nullable = false, length = 20)
     private EvaluationStatus status = EvaluationStatus.DRAFT;
 
-    @Column(columnDefinition = "TEXT")
+    @Lob
     private String comments;
 
     private LocalDateTime submissionTime;
