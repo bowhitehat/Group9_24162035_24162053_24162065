@@ -7,5 +7,6 @@ uploads/
 *.log
 *.mv.db
 *.trace.db
+*.py
 /artifacts/
 /Group9_24162035_24162053_24162065.zip
