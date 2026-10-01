@@ -5,6 +5,8 @@ import com.group9.topicmanagement.domain.RegistrationPeriod;
 import com.group9.topicmanagement.domain.User;
 import com.group9.topicmanagement.domain.enums.RegistrationStatus;
 import com.group9.topicmanagement.domain.enums.RoleName;
+import com.group9.topicmanagement.domain.enums.CouncilStatus;
+import com.group9.topicmanagement.domain.enums.ReviewerAssignmentStatus;
 import com.group9.topicmanagement.domain.registration.ReportSubmission;
 import com.group9.topicmanagement.domain.registration.TopicRegistration;
 import com.group9.topicmanagement.exception.BusinessRuleException;
@@ -12,6 +14,9 @@ import com.group9.topicmanagement.exception.NotFoundException;
 import com.group9.topicmanagement.repository.ReportSubmissionRepository;
 import com.group9.topicmanagement.repository.TopicRegistrationRepository;
 import com.group9.topicmanagement.repository.UserRepository;
+import com.group9.topicmanagement.repository.ReviewerAssignmentRepository;
+import com.group9.topicmanagement.repository.CouncilAssignmentRepository;
+import com.group9.topicmanagement.repository.CouncilMemberRepository;
 import com.group9.topicmanagement.controller.form.ReportSubmissionForm;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -42,17 +47,26 @@ public class ReportSubmissionService {
     private final ReportSubmissionRepository reportRepository;
     private final TopicRegistrationRepository registrationRepository;
     private final UserRepository userRepository;
+    private final ReviewerAssignmentRepository reviewerAssignmentRepository;
+    private final CouncilAssignmentRepository councilAssignmentRepository;
+    private final CouncilMemberRepository councilMemberRepository;
     private final UploadConfig uploadConfig;
     private final Clock clock;
 
     public ReportSubmissionService(ReportSubmissionRepository reportRepository,
                                    TopicRegistrationRepository registrationRepository,
                                    UserRepository userRepository,
+                                   ReviewerAssignmentRepository reviewerAssignmentRepository,
+                                   CouncilAssignmentRepository councilAssignmentRepository,
+                                   CouncilMemberRepository councilMemberRepository,
                                    UploadConfig uploadConfig,
                                    Clock clock) {
         this.reportRepository = reportRepository;
         this.registrationRepository = registrationRepository;
         this.userRepository = userRepository;
+        this.reviewerAssignmentRepository = reviewerAssignmentRepository;
+        this.councilAssignmentRepository = councilAssignmentRepository;
+        this.councilMemberRepository = councilMemberRepository;
         this.uploadConfig = uploadConfig;
         this.clock = clock;
     }
@@ -156,6 +170,20 @@ public class ReportSubmissionService {
             boolean relatedLecturer = registration.getTopic().getProposer().getId().equals(viewer.getId())
                     || registration.getTopic().getAdvisors().stream().anyMatch(advisor -> advisor.getId().equals(viewer.getId()));
             if (relatedLecturer) return;
+            // Reading reports remains allowed after submission/deadline, but not after cancellation.
+            boolean assignedReviewer = reviewerAssignmentRepository
+                    .findByTopicIdAndReviewerId(registration.getTopic().getId(), viewer.getId())
+                    .filter(assignment -> assignment.getStatus() != null
+                            && assignment.getStatus() != ReviewerAssignmentStatus.CANCELLED)
+                    .isPresent();
+            if (assignedReviewer) return;
+            boolean assignedCouncilMember = councilAssignmentRepository.findByTopicId(registration.getTopic().getId())
+                    .stream()
+                    .filter(assignment -> assignment.getCouncil().getStatus() == CouncilStatus.ACTIVE
+                            || assignment.getCouncil().getStatus() == CouncilStatus.COMPLETED)
+                    .anyMatch(assignment -> councilMemberRepository
+                            .existsByCouncilIdAndMemberId(assignment.getCouncil().getId(), viewer.getId()));
+            if (assignedCouncilMember) return;
         }
         throw new AccessDeniedException("Bạn không có quyền xem báo cáo của nhóm này");
     }

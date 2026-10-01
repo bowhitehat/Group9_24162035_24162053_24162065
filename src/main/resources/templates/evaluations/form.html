@@ -8,6 +8,8 @@
         <p class="text-muted" th:text="${topic.code + ' - ' + topic.title}"></p>
         <p>Vai trò: <span th:text="${evalType}" class="fw-bold"></span></p>
         <p>Trạng thái phiếu chấm: <span th:text="${evaluation.status != null ? evaluation.status : 'DRAFT'}" class="badge bg-info"></span></p>
+        <a th:if="${reportRegistrationId != null}" class="btn btn-outline-primary"
+           th:href="@{/reports/history/{id}(id=${reportRegistrationId})}">Xem / tải báo cáo của nhóm</a>
     </div>
     <div class="card shadow-sm">
         <div class="card-body p-4">

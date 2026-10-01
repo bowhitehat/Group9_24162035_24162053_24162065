@@ -10,6 +10,7 @@ import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.service.EvaluationService;
 import com.group9.topicmanagement.service.TopicResultService;
 import com.group9.topicmanagement.service.TopicService;
+import com.group9.topicmanagement.service.TopicRegistrationService;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
@@ -32,13 +33,16 @@ public class EvaluationController {
     private final EvaluationService evaluationService;
     private final TopicResultService topicResultService;
     private final TopicService topicService;
+    private final TopicRegistrationService registrationService;
 
     public EvaluationController(EvaluationService evaluationService,
                                 TopicResultService topicResultService,
-                                TopicService topicService) {
+                                TopicService topicService,
+                                TopicRegistrationService registrationService) {
         this.evaluationService = evaluationService;
         this.topicResultService = topicResultService;
         this.topicService = topicService;
+        this.registrationService = registrationService;
     }
 
     @GetMapping("/topic/{topicId}")
@@ -54,6 +58,8 @@ public class EvaluationController {
                 ? new ArrayList<>()
                 : evaluationService.getScores(evaluation.getId());
         model.addAttribute("topic", topic);
+        registrationService.findApprovedForTopic(topicId)
+                .ifPresent(registration -> model.addAttribute("reportRegistrationId", registration.getId()));
         model.addAttribute("criteria", evaluationService.getActiveCriteria(topic.getRegistrationPeriod().getId()));
         model.addAttribute("evaluation", evaluation.getId() == null ? new Evaluation() : evaluation);
         model.addAttribute("existingScores", scores);
