@@ -20,6 +20,7 @@
                 <li class="nav-item"><a class="nav-link" th:href="@{/dashboard}">Tổng quan</a></li>
                 <li class="nav-item"><a class="nav-link" th:href="@{/topics}">Đề tài</a></li>
                 <li class="nav-item" sec:authorize="hasRole('STUDENT')"><a class="nav-link" th:href="@{/groups/my-group}">Nhóm của tôi</a></li>
+                <li class="nav-item" sec:authorize="hasRole('STUDENT')"><a class="nav-link" th:href="@{/registrations}">Đăng ký đề tài</a></li>
                 <li class="nav-item" sec:authorize="hasAnyRole('FACULTY_MANAGER','ADMIN')"><a class="nav-link" th:href="@{/registrations}">Duyệt đăng ký</a></li>
                 <li class="nav-item" sec:authorize="hasAnyRole('FACULTY_MANAGER','LECTURER')"><a class="nav-link" th:href="@{/reviewer-assignments}">Phản biện</a></li>
                 <li class="nav-item" sec:authorize="hasAnyRole('FACULTY_MANAGER','LECTURER')"><a class="nav-link" th:href="@{/councils}">Hội đồng</a></li>
@@ -40,20 +41,21 @@
 <div class="container-fluid">
     <div class="row">
         <aside class="col-lg-2 d-none d-lg-block sidebar">
-            <p class="sidebar-title">NAVIGATION</p>
+            <p class="sidebar-title text-danger">NAVIGATION</p>
             <a th:href="@{/dashboard}">Dashboard</a>
             <a th:href="@{/topics}">Danh sách đề tài</a>
             <a sec:authorize="hasRole('LECTURER')" th:href="@{/topics/create}">Đề xuất đề tài</a>
             <a sec:authorize="hasRole('STUDENT')" th:href="@{/groups/my-group}">Nhóm sinh viên</a>
+            <a sec:authorize="hasRole('STUDENT')" th:href="@{/registrations}">Đăng ký đề tài</a>
             <a sec:authorize="hasAnyRole('FACULTY_MANAGER','ADMIN')" th:href="@{/registrations}">Quản lý đăng ký</a>
             <a sec:authorize="hasRole('STUDENT')" th:href="@{/reports/submit}">Nộp báo cáo</a>
-            <p class="sidebar-title mt-4">PHẢN BIỆN &amp; KẾT QUẢ</p>
+            <p class="sidebar-title text-danger mt-4">PHẢN BIỆN &amp; KẾT QUẢ</p>
             <a sec:authorize="hasRole('FACULTY_MANAGER')" th:href="@{/reviewer-assignments}">Phân công phản biện</a>
             <a sec:authorize="hasRole('LECTURER')" th:href="@{/reviewer-assignments/my-assignments}">Nhiệm vụ phản biện</a>
             <a sec:authorize="hasAnyRole('FACULTY_MANAGER','LECTURER')" th:href="@{/councils}">Hội đồng</a>
             <a sec:authorize="hasAnyRole('FACULTY_MANAGER','LECTURER')" th:href="@{/evaluations/results}">Kết quả chấm điểm</a>
             <a th:href="@{/announcements}">Thông báo</a>
-            <p class="sidebar-title mt-4">CORE &amp; ADMIN</p>
+            <p sec:authorize="hasAnyRole('FACULTY_MANAGER','ADMIN')" class="sidebar-title mt-4">CORE &amp; ADMIN</p>
             <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/users}">Quản lý tài khoản</a>
             <a sec:authorize="hasRole('ADMIN')" th:href="@{/admin/departments}">Quản lý bộ môn</a>
             <a sec:authorize="hasAnyRole('FACULTY_MANAGER','ADMIN')" th:href="@{/faculty/periods}">Quản lý đợt</a>

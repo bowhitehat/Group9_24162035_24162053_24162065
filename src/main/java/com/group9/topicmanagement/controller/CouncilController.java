@@ -1,16 +1,16 @@
 package com.group9.topicmanagement.controller;
 
-import com.group9.topicmanagement.domain.council.Council;
-import com.group9.topicmanagement.domain.enums.CouncilMemberRole;
+import com.group9.topicmanagement.model.council.Council;
+import com.group9.topicmanagement.model.enums.CouncilMemberRole;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.service.CouncilService;
 import com.group9.topicmanagement.service.RegistrationPeriodService;
 import com.group9.topicmanagement.service.TopicRegistrationService;
 import com.group9.topicmanagement.service.UserService;
-import com.group9.topicmanagement.controller.form.CouncilCreateForm;
-import com.group9.topicmanagement.controller.form.CouncilMemberForm;
-import com.group9.topicmanagement.controller.form.CouncilTopicForm;
-import com.group9.topicmanagement.controller.form.CouncilUpdateForm;
+import com.group9.topicmanagement.dto.CouncilCreateForm;
+import com.group9.topicmanagement.dto.CouncilMemberForm;
+import com.group9.topicmanagement.dto.CouncilTopicForm;
+import com.group9.topicmanagement.dto.CouncilUpdateForm;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;

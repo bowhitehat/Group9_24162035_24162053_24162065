@@ -1,9 +1,9 @@
 package com.group9.topicmanagement.service;
 
-import com.group9.topicmanagement.domain.Department;
-import com.group9.topicmanagement.domain.Role;
-import com.group9.topicmanagement.domain.User;
-import com.group9.topicmanagement.domain.enums.RoleName;
+import com.group9.topicmanagement.model.Department;
+import com.group9.topicmanagement.model.Role;
+import com.group9.topicmanagement.model.User;
+import com.group9.topicmanagement.model.enums.RoleName;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.exception.NotFoundException;
 import com.group9.topicmanagement.repository.DepartmentRepository;

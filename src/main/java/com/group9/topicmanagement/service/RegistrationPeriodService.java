@@ -1,9 +1,9 @@
 package com.group9.topicmanagement.service;
 
-import com.group9.topicmanagement.domain.RegistrationPeriod;
-import com.group9.topicmanagement.domain.enums.PeriodStatus;
-import com.group9.topicmanagement.domain.enums.PeriodType;
-import com.group9.topicmanagement.domain.evaluation.EvaluationCriterion;
+import com.group9.topicmanagement.model.RegistrationPeriod;
+import com.group9.topicmanagement.model.enums.PeriodStatus;
+import com.group9.topicmanagement.model.enums.PeriodType;
+import com.group9.topicmanagement.model.evaluation.EvaluationCriterion;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.exception.NotFoundException;
 import com.group9.topicmanagement.repository.EvaluationCriterionRepository;
@@ -11,6 +11,7 @@ import com.group9.topicmanagement.repository.RegistrationPeriodRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import java.time.Clock;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -55,6 +56,7 @@ public class RegistrationPeriodService {
     public RegistrationPeriod save(RegistrationPeriod period) {
         validate(period);
         boolean creating = period.getId() == null;
+        validateFutureDates(period, creating ? null : get(period.getId()));
         RegistrationPeriod saved = periods.save(period);
         if (creating) {
             seedDefaultCriteria(saved);
@@ -66,12 +68,13 @@ public class RegistrationPeriodService {
     public RegistrationPeriod update(Long id, RegistrationPeriod input) {
         RegistrationPeriod current = get(id);
         if (current.getStatus() != PeriodStatus.DRAFT) throw new BusinessRuleException("Chỉ được sửa đợt ở trạng thái nháp");
+        validate(input);
+        validateFutureDates(input, current);
         current.setName(input.getName()); current.setType(input.getType());
         current.setLecturerStart(input.getLecturerStart()); current.setLecturerEnd(input.getLecturerEnd());
         current.setStudentStart(input.getStudentStart()); current.setStudentEnd(input.getStudentEnd());
         current.setReportSubmissionDeadline(input.getReportSubmissionDeadline());
         current.setReviewDeadline(input.getReviewDeadline()); current.setCouncilDate(input.getCouncilDate());
-        validate(current);
         return current;
     }
 
@@ -109,6 +112,37 @@ public class RegistrationPeriodService {
             throw new BusinessRuleException("Chỉ KLTN được thiết lập ngày báo cáo hội đồng");
         if (period.getType() == PeriodType.KLTN && period.getCouncilDate() == null)
             throw new BusinessRuleException("KLTN phải có ngày báo cáo hội đồng");
+        // These milestones must fall on later calendar days, regardless of their hours.
+        if (period.getReportSubmissionDeadline() != null && period.getReviewDeadline() != null
+                && !period.getReviewDeadline().toLocalDate().isAfter(period.getReportSubmissionDeadline().toLocalDate()))
+            throw new BusinessRuleException("Hạn phản biện phải sau ngày hạn nộp báo cáo");
+        if (period.getType() == PeriodType.KLTN && period.getCouncilDate() != null && period.getReviewDeadline() != null
+                && !period.getCouncilDate().isAfter(period.getReviewDeadline().toLocalDate()))
+            throw new BusinessRuleException("Ngày hội đồng phải sau ngày hạn phản biện");
+    }
+
+    private void validateFutureDates(RegistrationPeriod input, RegistrationPeriod original) {
+        LocalDate now = LocalDate.now(clock);
+        requireNotPast("Giảng viên đăng ký từ", input.getLecturerStart(), original == null ? null : original.getLecturerStart(), now);
+        requireNotPast("Giảng viên đăng ký đến", input.getLecturerEnd(), original == null ? null : original.getLecturerEnd(), now);
+        requireNotPast("Sinh viên đăng ký từ", input.getStudentStart(), original == null ? null : original.getStudentStart(), now);
+        requireNotPast("Sinh viên đăng ký đến", input.getStudentEnd(), original == null ? null : original.getStudentEnd(), now);
+        requireNotPast("Hạn nộp báo cáo", input.getReportSubmissionDeadline(), original == null ? null : original.getReportSubmissionDeadline(), now);
+        requireNotPast("Hạn phản biện", input.getReviewDeadline(), original == null ? null : original.getReviewDeadline(), now);
+        LocalDate councilDate = input.getCouncilDate();
+        if (councilDate != null && councilDate.isBefore(now)
+                && (original == null || !councilDate.equals(original.getCouncilDate()))) {
+            throw new BusinessRuleException("Ngày hội đồng không được chọn ngày trong quá khứ");
+        }
+    }
+
+    private void requireNotPast(String label, LocalDateTime value, LocalDateTime original, LocalDate today) {
+        if (value == null) return;
+        LocalDate date = value.toLocalDate();
+        // Past-date validation deliberately ignores hours and minutes.
+        if (date.isBefore(today) && (original == null || !date.equals(original.toLocalDate()))) {
+            throw new BusinessRuleException(label + " không được chọn ngày trong quá khứ");
+        }
     }
 
     private void seedDefaultCriteria(RegistrationPeriod period) {

@@ -1,6 +1,6 @@
 package com.group9.topicmanagement.repository;
 
-import com.group9.topicmanagement.domain.topic.Topic;
+import com.group9.topicmanagement.model.topic.Topic;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

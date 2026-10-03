@@ -1,13 +1,13 @@
 package com.group9.topicmanagement.service;
 
-import com.group9.topicmanagement.domain.RegistrationPeriod;
-import com.group9.topicmanagement.domain.User;
-import com.group9.topicmanagement.domain.enums.PeriodStatus;
-import com.group9.topicmanagement.domain.enums.PeriodType;
-import com.group9.topicmanagement.domain.enums.ReviewerAssignmentStatus;
-import com.group9.topicmanagement.domain.enums.RoleName;
-import com.group9.topicmanagement.domain.evaluation.ReviewerAssignment;
-import com.group9.topicmanagement.domain.topic.Topic;
+import com.group9.topicmanagement.model.RegistrationPeriod;
+import com.group9.topicmanagement.model.User;
+import com.group9.topicmanagement.model.enums.PeriodStatus;
+import com.group9.topicmanagement.model.enums.PeriodType;
+import com.group9.topicmanagement.model.enums.ReviewerAssignmentStatus;
+import com.group9.topicmanagement.model.enums.RoleName;
+import com.group9.topicmanagement.model.evaluation.ReviewerAssignment;
+import com.group9.topicmanagement.model.topic.Topic;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.exception.NotFoundException;
 import com.group9.topicmanagement.repository.ReviewerAssignmentRepository;
@@ -170,7 +170,7 @@ public class ReviewerAssignmentService {
     }
 
     @Transactional(readOnly = true)
-    public List<com.group9.topicmanagement.domain.registration.TopicRegistration> topicsWithoutReviewer() {
+    public List<com.group9.topicmanagement.model.registration.TopicRegistration> topicsWithoutReviewer() {
         return topicRegistrationService.listApprovedRegistrations().stream()
                 .filter(reg -> assignmentRepository.findByTopicId(reg.getTopic().getId()).stream()
                         .noneMatch(a -> a.getStatus() != ReviewerAssignmentStatus.CANCELLED))

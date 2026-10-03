@@ -1,10 +1,10 @@
 package com.group9.topicmanagement.service;
 
-import com.group9.topicmanagement.domain.RegistrationPeriod;
-import com.group9.topicmanagement.domain.User;
-import com.group9.topicmanagement.domain.enums.PeriodStatus;
-import com.group9.topicmanagement.domain.studentgroup.GroupMember;
-import com.group9.topicmanagement.domain.studentgroup.StudentGroup;
+import com.group9.topicmanagement.model.RegistrationPeriod;
+import com.group9.topicmanagement.model.User;
+import com.group9.topicmanagement.model.enums.PeriodStatus;
+import com.group9.topicmanagement.model.studentgroup.GroupMember;
+import com.group9.topicmanagement.model.studentgroup.StudentGroup;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.repository.GroupMemberRepository;
 import com.group9.topicmanagement.repository.RegistrationPeriodRepository;
@@ -54,7 +54,7 @@ public class StudentGroupService {
         requireStudentWindow(period);
 
         boolean isStudent = leader.getRoles().stream()
-                .anyMatch(role -> role.getName() == com.group9.topicmanagement.domain.enums.RoleName.STUDENT);
+                .anyMatch(role -> role.getName() == com.group9.topicmanagement.model.enums.RoleName.STUDENT);
         if (!isStudent) throw new BusinessRuleException("Chỉ sinh viên mới được tạo nhóm");
 
         if (groupMemberRepository.existsByMember_IdAndGroup_RegistrationPeriod_Id(leader.getId(), periodId)) {
@@ -92,7 +92,7 @@ public class StudentGroupService {
                 .orElseThrow(() -> new BusinessRuleException("Không tìm thấy sinh viên có tên đăng nhập: " + memberUsernameToAdd));
 
         boolean isStudent = newMember.getRoles().stream()
-                .anyMatch(role -> role.getName() == com.group9.topicmanagement.domain.enums.RoleName.STUDENT);
+                .anyMatch(role -> role.getName() == com.group9.topicmanagement.model.enums.RoleName.STUDENT);
         if (!isStudent) {
             throw new BusinessRuleException("Tài khoản được thêm không có vai trò sinh viên");
         }

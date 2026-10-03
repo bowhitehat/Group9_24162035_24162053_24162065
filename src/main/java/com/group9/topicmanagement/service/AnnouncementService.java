@@ -1,10 +1,10 @@
 package com.group9.topicmanagement.service;
 
-import com.group9.topicmanagement.domain.Role;
-import com.group9.topicmanagement.domain.User;
-import com.group9.topicmanagement.domain.announcement.Announcement;
-import com.group9.topicmanagement.domain.enums.AnnouncementStatus;
-import com.group9.topicmanagement.domain.enums.RoleName;
+import com.group9.topicmanagement.model.Role;
+import com.group9.topicmanagement.model.User;
+import com.group9.topicmanagement.model.announcement.Announcement;
+import com.group9.topicmanagement.model.enums.AnnouncementStatus;
+import com.group9.topicmanagement.model.enums.RoleName;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.exception.NotFoundException;
 import com.group9.topicmanagement.repository.AnnouncementRepository;

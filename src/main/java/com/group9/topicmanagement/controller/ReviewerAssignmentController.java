@@ -1,13 +1,13 @@
 package com.group9.topicmanagement.controller;
 
-import com.group9.topicmanagement.domain.enums.ReviewerAssignmentStatus;
+import com.group9.topicmanagement.model.enums.ReviewerAssignmentStatus;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.service.RegistrationPeriodService;
 import com.group9.topicmanagement.service.ReviewerAssignmentService;
 import com.group9.topicmanagement.service.TopicRegistrationService;
 import com.group9.topicmanagement.service.UserService;
-import com.group9.topicmanagement.controller.form.ReviewerAssignmentForm;
-import com.group9.topicmanagement.controller.form.ReviewerChangeForm;
+import com.group9.topicmanagement.dto.ReviewerAssignmentForm;
+import com.group9.topicmanagement.dto.ReviewerChangeForm;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;

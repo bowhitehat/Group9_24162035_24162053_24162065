@@ -1,6 +1,6 @@
 package com.group9.topicmanagement.repository;
 
-import com.group9.topicmanagement.domain.User;
+import com.group9.topicmanagement.model.User;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;

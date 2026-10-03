@@ -2,8 +2,8 @@ package com.group9.topicmanagement.controller;
 
 import com.group9.topicmanagement.service.DepartmentService;
 import com.group9.topicmanagement.service.UserService;
-import com.group9.topicmanagement.controller.form.DepartmentForm;
-import com.group9.topicmanagement.controller.form.UserForm;
+import com.group9.topicmanagement.dto.DepartmentForm;
+import com.group9.topicmanagement.dto.UserForm;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;

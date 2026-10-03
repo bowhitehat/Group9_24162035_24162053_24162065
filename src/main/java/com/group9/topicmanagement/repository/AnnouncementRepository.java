@@ -1,7 +1,7 @@
 package com.group9.topicmanagement.repository;
 
-import com.group9.topicmanagement.domain.announcement.Announcement;
-import com.group9.topicmanagement.domain.enums.AnnouncementStatus;
+import com.group9.topicmanagement.model.announcement.Announcement;
+import com.group9.topicmanagement.model.enums.AnnouncementStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.stereotype.Repository;

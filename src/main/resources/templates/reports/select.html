@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: page(~{::main})}">
+<main>
+    <h1 class="page-title">Nộp báo cáo</h1>
+    <p>Chọn đề tài đã được duyệt của nhóm bạn làm trưởng nhóm.</p>
+    <div class="alert alert-info" th:if="${#lists.isEmpty(registrations)}">
+        Bạn chưa có đăng ký đề tài được duyệt với vai trò trưởng nhóm. Chỉ trưởng nhóm được nộp báo cáo.
+        <a th:href="@{/groups/my-group}">Xem nhóm của tôi</a>
+    </div>
+    <div class="card p-4 mb-3" th:each="registration : ${registrations}">
+        <h2 class="h5" th:text="${registration.topic.code + ' - ' + registration.topic.title}"></h2>
+        <p th:text="${registration.registrationPeriod.name}"></p>
+        <p class="text-muted" th:unless="${submittableIds.contains(registration.id)}">Đã hết hạn nộp báo cáo. Vui lòng liên hệ cán bộ khoa nếu cần gia hạn.</p>
+        <div class="d-flex gap-2">
+            <a class="btn btn-primary" th:if="${submittableIds.contains(registration.id)}"
+               th:href="@{/reports/submit(registrationId=${registration.id})}">Nộp báo cáo</a>
+            <a class="btn btn-outline-secondary" th:href="@{/reports/history/{id}(id=${registration.id})}">Lịch sử báo cáo</a>
+        </div>
+    </div>
+</main>
+</html>

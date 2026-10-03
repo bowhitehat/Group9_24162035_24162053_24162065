@@ -1,8 +1,8 @@
 package com.group9.topicmanagement.repository;
 
-import com.group9.topicmanagement.domain.RegistrationPeriod;
-import com.group9.topicmanagement.domain.enums.PeriodStatus;
-import com.group9.topicmanagement.domain.enums.PeriodType;
+import com.group9.topicmanagement.model.RegistrationPeriod;
+import com.group9.topicmanagement.model.enums.PeriodStatus;
+import com.group9.topicmanagement.model.enums.PeriodType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 

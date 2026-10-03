@@ -1,11 +1,11 @@
 package com.group9.topicmanagement.service;
 
-import com.group9.topicmanagement.domain.RegistrationPeriod;
-import com.group9.topicmanagement.domain.User;
-import com.group9.topicmanagement.domain.enums.PeriodStatus;
-import com.group9.topicmanagement.domain.enums.PeriodType;
-import com.group9.topicmanagement.domain.registration.TopicRegistration;
-import com.group9.topicmanagement.domain.topic.Topic;
+import com.group9.topicmanagement.model.RegistrationPeriod;
+import com.group9.topicmanagement.model.User;
+import com.group9.topicmanagement.model.enums.PeriodStatus;
+import com.group9.topicmanagement.model.enums.PeriodType;
+import com.group9.topicmanagement.model.registration.TopicRegistration;
+import com.group9.topicmanagement.model.topic.Topic;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.repository.ReviewerAssignmentRepository;
 import com.group9.topicmanagement.repository.TopicRepository;
@@ -56,8 +56,8 @@ public class ReviewerAssignmentServiceTest {
         reviewer = new User();
         ReflectionTestUtils.setField(reviewer, "id", 10L);
         reviewer.setUsername("GV01");
-        com.group9.topicmanagement.domain.Role lecturerRole = new com.group9.topicmanagement.domain.Role();
-        lecturerRole.setName(com.group9.topicmanagement.domain.enums.RoleName.LECTURER);
+        com.group9.topicmanagement.model.Role lecturerRole = new com.group9.topicmanagement.model.Role();
+        lecturerRole.setName(com.group9.topicmanagement.model.enums.RoleName.LECTURER);
         reviewer.getRoles().add(lecturerRole);
 
         assigner = new User();

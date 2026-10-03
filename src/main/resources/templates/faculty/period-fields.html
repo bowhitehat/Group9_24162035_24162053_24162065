@@ -1,0 +1,58 @@
+<!doctype html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body><div th:fragment="fields">
+    <div class="alert alert-danger" role="alert" th:if="${#fields.hasErrors('*')}">
+        <p class="mb-1">Chưa thể lưu đợt đăng ký. Vui lòng kiểm tra:</p>
+        <ul class="mb-0"><li th:each="error : ${#fields.allErrors()}" th:text="${error}"></li></ul>
+    </div>
+    <div class="mb-3">
+        <label class="form-label" for="name">Tên đợt</label>
+        <input class="form-control" th:field="*{name}" placeholder="Tên đợt" required>
+        <div class="invalid-feedback" id="name-error" aria-live="polite"></div>
+    </div>
+    <div class="mb-3">
+        <label class="form-label" for="type">Loại đợt</label>
+        <select class="form-select" th:field="*{type}" required>
+            <option value="">Chọn loại</option><option th:each="t:${types}" th:value="${t}" th:text="${t}"></option>
+        </select>
+        <div class="invalid-feedback" id="type-error" aria-live="polite"></div>
+    </div>
+    <div class="row g-3">
+        <div class="col-md-6">
+            <label class="form-label" for="lecturerStart">Giảng viên đăng ký từ</label>
+            <input class="form-control" type="datetime-local" th:field="*{lecturerStart}" th:attr="data-original-value=${period?.lecturerStart}" required>
+            <div class="invalid-feedback" id="lecturerStart-error" aria-live="polite"></div>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label" for="lecturerEnd">Giảng viên đăng ký đến</label>
+            <input class="form-control" type="datetime-local" th:field="*{lecturerEnd}" th:attr="data-original-value=${period?.lecturerEnd}" required>
+            <div class="invalid-feedback" id="lecturerEnd-error" aria-live="polite"></div>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label" for="studentStart">Sinh viên đăng ký từ</label>
+            <input class="form-control" type="datetime-local" th:field="*{studentStart}" th:attr="data-original-value=${period?.studentStart}" required>
+            <div class="invalid-feedback" id="studentStart-error" aria-live="polite"></div>
+        </div>
+        <div class="col-md-6">
+            <label class="form-label" for="studentEnd">Sinh viên đăng ký đến</label>
+            <input class="form-control" type="datetime-local" th:field="*{studentEnd}" th:attr="data-original-value=${period?.studentEnd}" required>
+            <div class="invalid-feedback" id="studentEnd-error" aria-live="polite"></div>
+        </div>
+        <div class="col-12">
+            <label class="form-label" for="reportSubmissionDeadline">Hạn nộp báo cáo</label>
+            <input class="form-control" type="datetime-local" th:field="*{reportSubmissionDeadline}" th:attr="data-original-value=${period?.reportSubmissionDeadline}">
+            <div class="invalid-feedback" id="reportSubmissionDeadline-error" aria-live="polite"></div>
+        </div>
+        <div class="col-12">
+            <label class="form-label" for="reviewDeadline">Hạn phản biện</label>
+            <input class="form-control" type="datetime-local" th:field="*{reviewDeadline}" th:attr="data-original-value=${period?.reviewDeadline}">
+            <div class="invalid-feedback" id="reviewDeadline-error" aria-live="polite"></div>
+        </div>
+        <div class="col-12">
+            <label class="form-label" for="councilDate">Ngày hội đồng (chỉ KLTN)</label>
+            <input class="form-control" type="date" th:field="*{councilDate}" th:attr="data-original-value=${period?.councilDate}">
+            <div class="invalid-feedback" id="councilDate-error" aria-live="polite"></div>
+        </div>
+    </div>
+</div></body>
+</html>

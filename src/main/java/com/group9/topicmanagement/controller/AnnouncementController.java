@@ -2,7 +2,7 @@ package com.group9.topicmanagement.controller;
 
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.service.AnnouncementService;
-import com.group9.topicmanagement.controller.form.AnnouncementForm;
+import com.group9.topicmanagement.dto.AnnouncementForm;
 import jakarta.validation.Valid;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;

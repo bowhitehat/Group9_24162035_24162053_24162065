@@ -1,6 +1,6 @@
 package com.group9.topicmanagement.service;
 
-import com.group9.topicmanagement.domain.Department;
+import com.group9.topicmanagement.model.Department;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.exception.NotFoundException;
 import com.group9.topicmanagement.repository.DepartmentRepository;

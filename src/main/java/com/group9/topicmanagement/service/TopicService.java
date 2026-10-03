@@ -1,10 +1,10 @@
 package com.group9.topicmanagement.service;
 
-import com.group9.topicmanagement.domain.Department;
-import com.group9.topicmanagement.domain.RegistrationPeriod;
-import com.group9.topicmanagement.domain.User;
-import com.group9.topicmanagement.domain.topic.Topic;
-import com.group9.topicmanagement.domain.topic.TopicStatus;
+import com.group9.topicmanagement.model.Department;
+import com.group9.topicmanagement.model.RegistrationPeriod;
+import com.group9.topicmanagement.model.User;
+import com.group9.topicmanagement.model.topic.Topic;
+import com.group9.topicmanagement.model.topic.TopicStatus;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.repository.DepartmentRepository;
 import com.group9.topicmanagement.repository.CouncilAssignmentRepository;
@@ -13,7 +13,7 @@ import com.group9.topicmanagement.repository.RegistrationPeriodRepository;
 import com.group9.topicmanagement.repository.ReviewerAssignmentRepository;
 import com.group9.topicmanagement.repository.TopicRepository;
 import com.group9.topicmanagement.repository.UserRepository;
-import com.group9.topicmanagement.controller.form.TopicForm;
+import com.group9.topicmanagement.dto.TopicForm;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -94,7 +94,7 @@ public class TopicService {
         User proposer = userRepository.findByUsernameIgnoreCase(proposerUsername)
                 .orElseThrow(() -> new BusinessRuleException("Không tìm thấy tài khoản giảng viên"));
         boolean isLecturer = proposer.getRoles().stream()
-                .anyMatch(role -> role.getName() == com.group9.topicmanagement.domain.enums.RoleName.LECTURER);
+                .anyMatch(role -> role.getName() == com.group9.topicmanagement.model.enums.RoleName.LECTURER);
         if (!isLecturer) throw new BusinessRuleException("Chỉ giảng viên mới được đề xuất đề tài");
                 
         RegistrationPeriod period = periodRepository.findById(form.getRegistrationPeriodId())
@@ -265,11 +265,11 @@ public class TopicService {
                 || topic.getAdvisors().stream().anyMatch(advisor -> advisor.getId().equals(lecturerId))) return true;
         boolean reviewer = reviewerAssignmentRepository.findByTopicId(topic.getId()).stream()
                 .anyMatch(assignment -> assignment.getReviewer().getId().equals(lecturerId)
-                        && assignment.getStatus() != com.group9.topicmanagement.domain.enums.ReviewerAssignmentStatus.CANCELLED);
+                        && assignment.getStatus() != com.group9.topicmanagement.model.enums.ReviewerAssignmentStatus.CANCELLED);
         if (reviewer) return true;
         return councilAssignmentRepository.findByTopicId(topic.getId()).stream()
                 .filter(assignment -> assignment.getCouncil().getStatus()
-                        != com.group9.topicmanagement.domain.enums.CouncilStatus.CANCELLED)
+                        != com.group9.topicmanagement.model.enums.CouncilStatus.CANCELLED)
                 .anyMatch(assignment -> councilMemberRepository
                         .existsByCouncilIdAndMemberId(assignment.getCouncil().getId(), lecturerId));
     }
@@ -302,7 +302,7 @@ public class TopicService {
                         .orElseThrow(() -> new BusinessRuleException("Không tìm thấy giảng viên hướng dẫn id: " + advisorId));
                 
                 boolean isLecturer = advisor.getRoles().stream()
-                        .anyMatch(role -> role.getName() == com.group9.topicmanagement.domain.enums.RoleName.LECTURER);
+                        .anyMatch(role -> role.getName() == com.group9.topicmanagement.model.enums.RoleName.LECTURER);
                         
                 if (!isLecturer) {
                     throw new BusinessRuleException("Tài khoản " + advisor.getUsername() + " không có vai trò giảng viên");

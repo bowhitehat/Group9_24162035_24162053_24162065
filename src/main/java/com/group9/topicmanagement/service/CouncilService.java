@@ -1,15 +1,15 @@
 package com.group9.topicmanagement.service;
 
-import com.group9.topicmanagement.domain.RegistrationPeriod;
-import com.group9.topicmanagement.domain.User;
-import com.group9.topicmanagement.domain.council.Council;
-import com.group9.topicmanagement.domain.council.CouncilAssignment;
-import com.group9.topicmanagement.domain.council.CouncilMember;
-import com.group9.topicmanagement.domain.enums.CouncilMemberRole;
-import com.group9.topicmanagement.domain.enums.CouncilStatus;
-import com.group9.topicmanagement.domain.enums.PeriodType;
-import com.group9.topicmanagement.domain.enums.RoleName;
-import com.group9.topicmanagement.domain.topic.Topic;
+import com.group9.topicmanagement.model.RegistrationPeriod;
+import com.group9.topicmanagement.model.User;
+import com.group9.topicmanagement.model.council.Council;
+import com.group9.topicmanagement.model.council.CouncilAssignment;
+import com.group9.topicmanagement.model.council.CouncilMember;
+import com.group9.topicmanagement.model.enums.CouncilMemberRole;
+import com.group9.topicmanagement.model.enums.CouncilStatus;
+import com.group9.topicmanagement.model.enums.PeriodType;
+import com.group9.topicmanagement.model.enums.RoleName;
+import com.group9.topicmanagement.model.topic.Topic;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.exception.NotFoundException;
 import com.group9.topicmanagement.repository.*;

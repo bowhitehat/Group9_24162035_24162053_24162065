@@ -1,14 +1,14 @@
 package com.group9.topicmanagement.service;
 
 import com.group9.topicmanagement.config.UploadConfig;
-import com.group9.topicmanagement.domain.RegistrationPeriod;
-import com.group9.topicmanagement.domain.User;
-import com.group9.topicmanagement.domain.enums.RegistrationStatus;
-import com.group9.topicmanagement.domain.enums.RoleName;
-import com.group9.topicmanagement.domain.enums.CouncilStatus;
-import com.group9.topicmanagement.domain.enums.ReviewerAssignmentStatus;
-import com.group9.topicmanagement.domain.registration.ReportSubmission;
-import com.group9.topicmanagement.domain.registration.TopicRegistration;
+import com.group9.topicmanagement.model.RegistrationPeriod;
+import com.group9.topicmanagement.model.User;
+import com.group9.topicmanagement.model.enums.RegistrationStatus;
+import com.group9.topicmanagement.model.enums.RoleName;
+import com.group9.topicmanagement.model.enums.CouncilStatus;
+import com.group9.topicmanagement.model.enums.ReviewerAssignmentStatus;
+import com.group9.topicmanagement.model.registration.ReportSubmission;
+import com.group9.topicmanagement.model.registration.TopicRegistration;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.exception.NotFoundException;
 import com.group9.topicmanagement.repository.ReportSubmissionRepository;
@@ -17,7 +17,7 @@ import com.group9.topicmanagement.repository.UserRepository;
 import com.group9.topicmanagement.repository.ReviewerAssignmentRepository;
 import com.group9.topicmanagement.repository.CouncilAssignmentRepository;
 import com.group9.topicmanagement.repository.CouncilMemberRepository;
-import com.group9.topicmanagement.controller.form.ReportSubmissionForm;
+import com.group9.topicmanagement.dto.ReportSubmissionForm;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
@@ -106,6 +106,12 @@ public class ReportSubmissionService {
         submission.setVersion(nextVersion);
         submission.setNote(form.getNote() == null || form.getNote().isBlank() ? null : form.getNote().trim());
         return reportRepository.save(submission);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TopicRegistration> getApprovedRegistrationsForLeader(String username) {
+        return registrationRepository.findByStudentGroup_Leader_UsernameIgnoreCaseAndStatusOrderByIdDesc(
+                username, RegistrationStatus.APPROVED);
     }
 
     @Transactional(readOnly = true)

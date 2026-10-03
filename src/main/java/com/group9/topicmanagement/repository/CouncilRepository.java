@@ -1,7 +1,7 @@
 package com.group9.topicmanagement.repository;
 
-import com.group9.topicmanagement.domain.council.Council;
-import com.group9.topicmanagement.domain.enums.CouncilStatus;
+import com.group9.topicmanagement.model.council.Council;
+import com.group9.topicmanagement.model.enums.CouncilStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.stereotype.Repository;

@@ -1,14 +1,14 @@
 package com.group9.topicmanagement.controller;
 
-import com.group9.topicmanagement.domain.RegistrationPeriod;
-import com.group9.topicmanagement.domain.enums.RegistrationStatus;
-import com.group9.topicmanagement.domain.registration.TopicRegistration;
+import com.group9.topicmanagement.model.RegistrationPeriod;
+import com.group9.topicmanagement.model.enums.RegistrationStatus;
+import com.group9.topicmanagement.model.registration.TopicRegistration;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.service.DepartmentService;
 import com.group9.topicmanagement.service.RegistrationPeriodService;
 import com.group9.topicmanagement.service.TopicRegistrationService;
 import com.group9.topicmanagement.service.ReportSubmissionService;
-import com.group9.topicmanagement.controller.form.RejectForm;
+import com.group9.topicmanagement.dto.RejectForm;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;

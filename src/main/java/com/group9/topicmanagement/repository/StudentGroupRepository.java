@@ -1,6 +1,6 @@
 package com.group9.topicmanagement.repository;
 
-import com.group9.topicmanagement.domain.studentgroup.StudentGroup;
+import com.group9.topicmanagement.model.studentgroup.StudentGroup;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 

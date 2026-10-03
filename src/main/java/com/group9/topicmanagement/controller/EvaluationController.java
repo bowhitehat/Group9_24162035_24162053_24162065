@@ -1,11 +1,11 @@
 package com.group9.topicmanagement.controller;
 
-import com.group9.topicmanagement.domain.enums.EvaluationType;
-import com.group9.topicmanagement.domain.evaluation.Evaluation;
-import com.group9.topicmanagement.domain.evaluation.EvaluationCriterion;
-import com.group9.topicmanagement.domain.evaluation.EvaluationScore;
-import com.group9.topicmanagement.domain.evaluation.TopicResult;
-import com.group9.topicmanagement.domain.topic.Topic;
+import com.group9.topicmanagement.model.enums.EvaluationType;
+import com.group9.topicmanagement.model.evaluation.Evaluation;
+import com.group9.topicmanagement.model.evaluation.EvaluationCriterion;
+import com.group9.topicmanagement.model.evaluation.EvaluationScore;
+import com.group9.topicmanagement.model.evaluation.TopicResult;
+import com.group9.topicmanagement.model.topic.Topic;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.service.EvaluationService;
 import com.group9.topicmanagement.service.TopicResultService;
@@ -65,7 +65,7 @@ public class EvaluationController {
         model.addAttribute("existingScores", scores);
         model.addAttribute("evalType", evaluationType.name());
         
-        com.group9.topicmanagement.controller.form.EvaluationSubmitDto form = new com.group9.topicmanagement.controller.form.EvaluationSubmitDto();
+        com.group9.topicmanagement.dto.EvaluationSubmitDto form = new com.group9.topicmanagement.dto.EvaluationSubmitDto();
         form.setType(evaluationType);
         form.setComments(evaluation.getComments());
         Map<Long, BigDecimal> scoreMap = new java.util.HashMap<>();
@@ -82,7 +82,7 @@ public class EvaluationController {
     @PostMapping("/topic/{topicId}")
     @PreAuthorize("hasRole('LECTURER')")
     public String saveEvaluation(@PathVariable Long topicId,
-                                 @jakarta.validation.Valid @org.springframework.web.bind.annotation.ModelAttribute("formDto") com.group9.topicmanagement.controller.form.EvaluationSubmitDto formDto,
+                                 @jakarta.validation.Valid @org.springframework.web.bind.annotation.ModelAttribute("formDto") com.group9.topicmanagement.dto.EvaluationSubmitDto formDto,
                                  org.springframework.validation.BindingResult bindingResult,
                                  Authentication auth,
                                  RedirectAttributes redirectAttributes) {
@@ -204,7 +204,7 @@ public class EvaluationController {
         boolean isManager = auth.getAuthorities().stream()
                 .anyMatch(authority -> authority.getAuthority().equals("ROLE_FACULTY_MANAGER"));
         model.addAttribute("lockableEvaluationIds", isManager ? evaluations.stream()
-                .filter(e -> e.getStatus() == com.group9.topicmanagement.domain.enums.EvaluationStatus.SUBMITTED)
+                .filter(e -> e.getStatus() == com.group9.topicmanagement.model.enums.EvaluationStatus.SUBMITTED)
                 .map(Evaluation::getId)
                 .collect(java.util.stream.Collectors.toSet()) : java.util.Set.of());
         

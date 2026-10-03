@@ -6,12 +6,15 @@ import com.group9.topicmanagement.service.RegistrationPeriodService;
 import com.group9.topicmanagement.service.UserService;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 @Controller
@@ -70,7 +73,9 @@ public class GlobalWebController {
         return "redirect:/profile";
     }
 
-    @GetMapping("/error/403")
+    // Security forwards using the original HTTP method, including POST after a denial.
+    @RequestMapping("/error/403")
+    @ResponseStatus(HttpStatus.FORBIDDEN)
     String forbidden() {
         return "error/403";
     }

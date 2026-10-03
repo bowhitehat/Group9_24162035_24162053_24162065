@@ -1,11 +1,11 @@
 package com.group9.topicmanagement;
 
-import com.group9.topicmanagement.domain.Department;
-import com.group9.topicmanagement.domain.RegistrationPeriod;
-import com.group9.topicmanagement.domain.Role;
-import com.group9.topicmanagement.domain.enums.PeriodStatus;
-import com.group9.topicmanagement.domain.enums.PeriodType;
-import com.group9.topicmanagement.domain.enums.RoleName;
+import com.group9.topicmanagement.model.Department;
+import com.group9.topicmanagement.model.RegistrationPeriod;
+import com.group9.topicmanagement.model.Role;
+import com.group9.topicmanagement.model.enums.PeriodStatus;
+import com.group9.topicmanagement.model.enums.PeriodType;
+import com.group9.topicmanagement.model.enums.RoleName;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.repository.DepartmentRepository;
 import com.group9.topicmanagement.repository.EvaluationCriterionRepository;
@@ -16,6 +16,8 @@ import com.group9.topicmanagement.service.RegistrationPeriodService;
 import com.group9.topicmanagement.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -29,6 +31,8 @@ import java.util.Set;
 import static org.assertj.core.api.Assertions.*;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestBuilders.formLogin;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @SpringBootTest
@@ -66,15 +70,211 @@ class CoreAdminRequirementsTest {
         assertThat(hash).startsWith("$2"); assertThat(hash).doesNotContain("Password@123"); assertThat(encoder.matches("Password@123", hash)).isTrue();
     }
 
+    @ParameterizedTest
+    @CsvSource({"STUDENT,false", "LECTURER,false", "FACULTY_MANAGER,true", "ADMIN,true"})
+    void coreAdminSidebarHeadingMatchesRole(String role, boolean visible) throws Exception {
+        String html = mvc.perform(get("/dashboard")
+                        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors
+                                .user("admin").roles(role)))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(html.contains("CORE &amp; ADMIN")).isEqualTo(visible);
+    }
+
     @Test void rejectsInvalidTimeOrder() {
         RegistrationPeriod period = validPeriod(PeriodType.MON_HOC);
         period.setLecturerEnd(period.getLecturerStart().minusHours(1));
         assertThatThrownBy(() -> periodService.save(period)).isInstanceOf(BusinessRuleException.class).hasMessageContaining("giảng viên");
     }
 
+    @Test @WithMockUser(roles="ADMIN")
+    void periodPagesRenderLiveValidationFields() throws Exception {
+        String html = mvc.perform(get("/faculty/periods")).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        assertThat(html).contains("data-period-form", "/js/period-form.js", "reportSubmissionDeadline-error", "aria-live=\"polite\"");
+        RegistrationPeriod period = periodService.save(validPeriod(PeriodType.MON_HOC));
+        mvc.perform(get("/faculty/periods/" + period.getId() + "/edit"))
+                .andExpect(status().isOk()).andExpect(content().string(org.hamcrest.Matchers.containsString("data-period-form")));
+        mvc.perform(get("/js/period-form.js")).andExpect(status().isOk());
+    }
+
+    @Test @WithMockUser(roles="ADMIN")
+    void invalidReportDeadlineReturnsCreateFormWithoutSaving() throws Exception {
+        long count = periods.count();
+        String html = mvc.perform(post("/faculty/periods").with(csrf())
+                        .param("name", "Đợt nhập sai").param("type", "TLCN")
+                        .param("lecturerStart", "2026-08-28T15:09").param("lecturerEnd", "2026-10-02T15:09")
+                        .param("studentStart", "2026-10-03T15:10").param("studentEnd", "2026-10-30T15:10")
+                        .param("reportSubmissionDeadline", "2026-09-18T15:10").param("reviewDeadline", "2026-11-10T15:10"))
+                .andExpect(status().isOk()).andExpect(view().name("faculty/periods"))
+                .andExpect(model().attributeHasErrors("periodForm"))
+                .andReturn().getResponse().getContentAsString();
+        assertThat(html).contains("Hạn nộp báo cáo phải sau", "Đợt nhập sai", "2026-09-18T15:10");
+        assertThat(periods.count()).isEqualTo(count);
+    }
+
+    @Test @WithMockUser(roles="ADMIN")
+    void invalidEditKeepsFormValuesAndDoesNotChangeSavedSchedule() throws Exception {
+        RegistrationPeriod period = periodService.save(validPeriod(PeriodType.MON_HOC));
+        LocalDateTime originalEnd = periods.findById(period.getId()).orElseThrow().getStudentEnd();
+        mvc.perform(post("/faculty/periods/" + period.getId() + "/edit").with(csrf())
+                        .param("name", "Lịch sửa sai").param("type", "MON_HOC")
+                        .param("lecturerStart", "2026-10-02T10:00").param("lecturerEnd", "2026-10-01T10:00")
+                        .param("studentStart", "2026-10-03T10:00").param("studentEnd", "2026-10-30T10:00"))
+                .andExpect(status().isOk()).andExpect(view().name("faculty/period-edit"))
+                .andExpect(model().attributeHasErrors("periodForm"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("Lịch sửa sai")));
+        assertThat(periods.findById(period.getId()).orElseThrow().getStudentEnd()).isEqualTo(originalEnd);
+    }
+
+    @Test @WithMockUser(roles="ADMIN")
+    void missingRequiredPeriodFieldIsShownOnForm() throws Exception {
+        mvc.perform(post("/faculty/periods").with(csrf()).param("name", "Đợt thiếu ngày").param("type", "TLCN"))
+                .andExpect(status().isOk()).andExpect(view().name("faculty/periods"))
+                .andExpect(model().attributeHasFieldErrors("periodForm", "lecturerStart", "lecturerEnd", "studentStart", "studentEnd"));
+        assertThat(periods.count()).isZero();
+    }
+
     @Test void thesisTypesRequireReviewDeadline() {
         RegistrationPeriod period = validPeriod(PeriodType.TLCN); period.setReviewDeadline(null);
         assertThatThrownBy(() -> periodService.save(period)).isInstanceOf(BusinessRuleException.class).hasMessageContaining("TLCN/KLTN");
+    }
+
+    @Test void rejectsPastLecturerStartEvenWhenScheduleOrderIsValid() {
+        RegistrationPeriod period = validPeriod(PeriodType.MON_HOC);
+        period.setLecturerStart(LocalDateTime.now().minusDays(1));
+        assertThatThrownBy(() -> periodService.save(period)).isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Giảng viên đăng ký từ").hasMessageContaining("quá khứ");
+        assertThat(periods.count()).isZero();
+    }
+
+    @Test void rejectsPastOptionalReviewDeadline() {
+        RegistrationPeriod period = validPeriod(PeriodType.MON_HOC);
+        period.setReviewDeadline(LocalDateTime.now().minusDays(1));
+        assertThatThrownBy(() -> periodService.save(period)).isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Hạn phản biện").hasMessageContaining("quá khứ");
+    }
+
+    @Test void todayIsAcceptedRegardlessOfSelectedHour() {
+        RegistrationPeriod period = validPeriod(PeriodType.MON_HOC);
+        period.setLecturerStart(LocalDate.now().atStartOfDay());
+        period.setReviewDeadline(LocalDate.now().atStartOfDay());
+        assertThat(periodService.save(period).getId()).isNotNull();
+    }
+
+    @Test void rejectsPastCouncilDateBeforeReviewDeadline() {
+        RegistrationPeriod period = validPeriod(PeriodType.KLTN);
+        period.setCouncilDate(LocalDate.now().minusDays(1));
+        assertThatThrownBy(() -> periodService.save(period)).isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Ngày hội đồng").hasMessageContaining("phải sau ngày hạn phản biện");
+    }
+
+    @ParameterizedTest
+    @CsvSource({"TLCN,-1", "TLCN,0", "KLTN,-1", "KLTN,0"})
+    void reviewMustBeOnALaterDayThanReportEvenIfTheHourIsLater(PeriodType type, int days) {
+        RegistrationPeriod period = validPeriod(type);
+        LocalDate reportDay = period.getStudentEnd().toLocalDate().plusDays(2);
+        period.setReportSubmissionDeadline(reportDay.atStartOfDay());
+        period.setReviewDeadline(reportDay.plusDays(days).atTime(23, 59));
+        assertThatThrownBy(() -> periodService.save(period)).isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Hạn phản biện phải sau ngày hạn nộp báo cáo");
+        assertThat(periods.count()).isZero();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"-1", "0"})
+    void councilMustBeOnALaterDayThanReview(int days) {
+        RegistrationPeriod period = validPeriod(PeriodType.KLTN);
+        period.setCouncilDate(period.getReviewDeadline().toLocalDate().plusDays(days));
+        assertThatThrownBy(() -> periodService.save(period)).isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Ngày hội đồng phải sau ngày hạn phản biện");
+        assertThat(periods.count()).isZero();
+    }
+
+    @Test void completeKltnScheduleAcceptsNextDaysRegardlessOfHours() {
+        RegistrationPeriod period = validPeriod(PeriodType.KLTN);
+        LocalDate reportDay = period.getStudentEnd().toLocalDate().plusDays(2);
+        period.setReportSubmissionDeadline(reportDay.atTime(23, 59));
+        period.setReviewDeadline(reportDay.plusDays(1).atStartOfDay());
+        period.setCouncilDate(reportDay.plusDays(2));
+        assertThat(periodService.save(period).getId()).isNotNull();
+    }
+
+    @ParameterizedTest
+    @CsvSource({"REVIEW", "COUNCIL"})
+    void invalidMilestoneEditDoesNotModifySavedPeriod(String milestone) {
+        RegistrationPeriod saved = validPeriod(PeriodType.KLTN);
+        saved.setReportSubmissionDeadline(saved.getStudentEnd().plusDays(2));
+        saved = periodService.save(saved);
+        Long id = saved.getId();
+        saved = periods.findById(id).orElseThrow();
+        LocalDateTime originalReport = saved.getReportSubmissionDeadline();
+        LocalDateTime originalReview = saved.getReviewDeadline();
+        LocalDate originalCouncil = saved.getCouncilDate();
+        RegistrationPeriod input = com.group9.topicmanagement.dto.PeriodForm.from(saved).toEntity();
+        if (milestone.equals("REVIEW")) input.setReviewDeadline(originalReport.minusDays(1));
+        else input.setCouncilDate(originalReview.toLocalDate());
+        assertThatThrownBy(() -> periodService.update(id, input)).isInstanceOf(BusinessRuleException.class);
+        RegistrationPeriod unchanged = periods.findById(id).orElseThrow();
+        assertThat(unchanged.getReportSubmissionDeadline()).isEqualTo(originalReport);
+        assertThat(unchanged.getReviewDeadline()).isEqualTo(originalReview);
+        assertThat(unchanged.getCouncilDate()).isEqualTo(originalCouncil);
+    }
+
+    @ParameterizedTest @WithMockUser(roles="ADMIN")
+    @CsvSource({"REVIEW", "COUNCIL"})
+    void invalidMilestonesReturnCreateFormWithoutSaving(String milestone) throws Exception {
+        RegistrationPeriod input = validPeriod(PeriodType.KLTN);
+        input.setReportSubmissionDeadline(input.getStudentEnd().plusDays(2));
+        if (milestone.equals("REVIEW")) input.setReviewDeadline(input.getReportSubmissionDeadline().minusDays(1));
+        else input.setCouncilDate(input.getReviewDeadline().toLocalDate());
+        java.time.format.DateTimeFormatter format = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
+        mvc.perform(post("/faculty/periods").with(csrf()).param("name", "Lịch KLTN sai").param("type", "KLTN")
+                        .param("lecturerStart", input.getLecturerStart().format(format))
+                        .param("lecturerEnd", input.getLecturerEnd().format(format))
+                        .param("studentStart", input.getStudentStart().format(format))
+                        .param("studentEnd", input.getStudentEnd().format(format))
+                        .param("reportSubmissionDeadline", input.getReportSubmissionDeadline().format(format))
+                        .param("reviewDeadline", input.getReviewDeadline().format(format))
+                        .param("councilDate", input.getCouncilDate().toString()))
+                .andExpect(status().isOk()).andExpect(view().name("faculty/periods"))
+                .andExpect(model().attributeHasErrors("periodForm"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString(milestone.equals("REVIEW")
+                        ? "Hạn phản biện phải sau ngày hạn nộp báo cáo" : "Ngày hội đồng phải sau ngày hạn phản biện")));
+        assertThat(periods.count()).isZero();
+    }
+
+    @Test @WithMockUser(roles="ADMIN")
+    void pastScheduleReturnsFormWithMessageAndDoesNotSave() throws Exception {
+        java.time.format.DateTimeFormatter format = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
+        LocalDateTime start = LocalDateTime.now().minusDays(20);
+        mvc.perform(post("/faculty/periods").with(csrf()).param("name", "Đợt ngày quá khứ").param("type", "MON_HOC")
+                        .param("lecturerStart", start.format(format)).param("lecturerEnd", start.plusDays(5).format(format))
+                        .param("studentStart", start.plusDays(6).format(format)).param("studentEnd", start.plusDays(12).format(format)))
+                .andExpect(status().isOk()).andExpect(view().name("faculty/periods"))
+                .andExpect(model().attributeHasErrors("periodForm"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("quá khứ")));
+        assertThat(periods.count()).isZero();
+    }
+
+    @Test @WithMockUser(roles="ADMIN")
+    void unchangedHistoricalMinuteDatesRemainEditableButNewPastDatesAreRejected() throws Exception {
+        RegistrationPeriod historical = validPeriod(PeriodType.MON_HOC);
+        historical.setLecturerStart(LocalDateTime.now().minusDays(20));
+        historical.setLecturerEnd(LocalDateTime.now().minusDays(10));
+        historical = periods.save(historical); // Existing historical record, not a new schedule via the service.
+        String html = mvc.perform(get("/faculty/periods/" + historical.getId() + "/edit"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(html).contains("data-original-value=");
+        RegistrationPeriod input = com.group9.topicmanagement.dto.PeriodForm.from(historical).toEntity();
+        input.setName("Giữ lịch cũ");
+        input.setLecturerStart(input.getLecturerStart().truncatedTo(java.time.temporal.ChronoUnit.MINUTES));
+        input.setLecturerEnd(input.getLecturerEnd().truncatedTo(java.time.temporal.ChronoUnit.MINUTES));
+        periodService.update(historical.getId(), input);
+        assertThat(periods.findById(historical.getId()).orElseThrow().getName()).isEqualTo("Giữ lịch cũ");
+        input.setLecturerStart(input.getLecturerStart().minusDays(1));
+        Long id = historical.getId();
+        assertThatThrownBy(() -> periodService.update(id, input)).isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("quá khứ");
     }
 
     @Test void nonKltnCannotHaveCouncilDate() {

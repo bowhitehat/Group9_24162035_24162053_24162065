@@ -1,11 +1,11 @@
 package com.group9.topicmanagement.controller;
 
 import com.group9.topicmanagement.config.UploadConfig;
-import com.group9.topicmanagement.domain.registration.ReportSubmission;
-import com.group9.topicmanagement.domain.registration.TopicRegistration;
+import com.group9.topicmanagement.model.registration.ReportSubmission;
+import com.group9.topicmanagement.model.registration.TopicRegistration;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.service.ReportSubmissionService;
-import com.group9.topicmanagement.controller.form.ReportSubmissionForm;
+import com.group9.topicmanagement.dto.ReportSubmissionForm;
 import jakarta.validation.Valid;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
@@ -42,7 +42,19 @@ public class ReportSubmissionController {
 
     @PreAuthorize("hasRole('STUDENT')")
     @GetMapping("/submit")
-    public String showSubmitForm(@RequestParam Long registrationId, Principal principal, Model model) {
+    public String showSubmitForm(@RequestParam(required = false) Long registrationId, Principal principal, Model model) {
+        if (registrationId == null) {
+            List<TopicRegistration> registrations = reportService.getApprovedRegistrationsForLeader(principal.getName());
+            java.util.Set<Long> submittableIds = registrations.stream()
+                    .filter(registration -> reportService.canSubmitReport(registration, principal.getName()))
+                    .map(TopicRegistration::getId).collect(java.util.stream.Collectors.toSet());
+            if (registrations.size() == 1 && submittableIds.contains(registrations.getFirst().getId())) {
+                return "redirect:/reports/submit?registrationId=" + registrations.getFirst().getId();
+            }
+            model.addAttribute("registrations", registrations);
+            model.addAttribute("submittableIds", submittableIds);
+            return "reports/select";
+        }
         TopicRegistration registration = reportService.getRegistrationForSubmission(registrationId, principal.getName());
         ReportSubmissionForm form = new ReportSubmissionForm();
         form.setTopicRegistrationId(registrationId);

@@ -1,6 +1,6 @@
 package com.group9.topicmanagement.repository;
 
-import com.group9.topicmanagement.domain.studentgroup.GroupMember;
+import com.group9.topicmanagement.model.studentgroup.GroupMember;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 public interface GroupMemberRepository extends JpaRepository<GroupMember, Long> {

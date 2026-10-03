@@ -1,23 +1,23 @@
 package com.group9.topicmanagement;
 
-import com.group9.topicmanagement.domain.Department;
-import com.group9.topicmanagement.domain.RegistrationPeriod;
-import com.group9.topicmanagement.domain.Role;
-import com.group9.topicmanagement.domain.User;
-import com.group9.topicmanagement.domain.enums.PeriodStatus;
-import com.group9.topicmanagement.domain.enums.PeriodType;
-import com.group9.topicmanagement.domain.enums.RegistrationStatus;
-import com.group9.topicmanagement.domain.enums.RoleName;
-import com.group9.topicmanagement.domain.registration.ReportSubmission;
-import com.group9.topicmanagement.domain.registration.TopicRegistration;
-import com.group9.topicmanagement.domain.studentgroup.StudentGroup;
-import com.group9.topicmanagement.domain.topic.Topic;
-import com.group9.topicmanagement.domain.topic.TopicStatus;
+import com.group9.topicmanagement.model.Department;
+import com.group9.topicmanagement.model.RegistrationPeriod;
+import com.group9.topicmanagement.model.Role;
+import com.group9.topicmanagement.model.User;
+import com.group9.topicmanagement.model.enums.PeriodStatus;
+import com.group9.topicmanagement.model.enums.PeriodType;
+import com.group9.topicmanagement.model.enums.RegistrationStatus;
+import com.group9.topicmanagement.model.enums.RoleName;
+import com.group9.topicmanagement.model.registration.ReportSubmission;
+import com.group9.topicmanagement.model.registration.TopicRegistration;
+import com.group9.topicmanagement.model.studentgroup.StudentGroup;
+import com.group9.topicmanagement.model.topic.Topic;
+import com.group9.topicmanagement.model.topic.TopicStatus;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.repository.*;
 import com.group9.topicmanagement.service.*;
-import com.group9.topicmanagement.controller.form.ReportSubmissionForm;
-import com.group9.topicmanagement.controller.form.TopicForm;
+import com.group9.topicmanagement.dto.ReportSubmissionForm;
+import com.group9.topicmanagement.dto.TopicForm;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -372,6 +372,43 @@ class Member2BusinessRulesTest {
         reportService.submitReport(reportForm(registration.getId(), "bao-cao.pdf", "application/pdf"), student1.getUsername());
 
         mvc.perform(get("/reports/history/" + registration.getId())
+                        .with(user(student4.getUsername()).roles("STUDENT")))
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void reportMenuAutomaticallySelectsLeadersApprovedRegistration() throws Exception {
+        TopicRegistration registration = createApprovedRegistration();
+        mvc.perform(get("/reports/submit").with(user(student1.getUsername()).roles("STUDENT")))
+                .andExpect(status().is3xxRedirection())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers
+                        .redirectedUrl("/reports/submit?registrationId=" + registration.getId()));
+        mvc.perform(get("/reports/submit").param("registrationId", registration.getId().toString())
+                        .with(user(student1.getUsername()).roles("STUDENT")))
+                .andExpect(status().isOk());
+    }
+
+    @Test
+    void reportMenuShowsEmptyStateRatherThan500ForStudentWithoutApprovedRegistration() throws Exception {
+        createApprovedRegistration();
+        mvc.perform(get("/reports/submit").with(user(student4.getUsername()).roles("STUDENT")))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.view().name("reports/select"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.model()
+                        .attribute("registrations", org.hamcrest.Matchers.empty()));
+    }
+
+    @Test
+    void reportMenuExplainsExpiredDeadlineWithoutBypassingIt() throws Exception {
+        TopicRegistration registration = createApprovedRegistration();
+        period.setReportSubmissionDeadline(LocalDateTime.now().minusDays(1));
+        periods.save(period);
+        mvc.perform(get("/reports/submit").with(user(student1.getUsername()).roles("STUDENT")))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.view().name("reports/select"))
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.model()
+                        .attribute("submittableIds", org.hamcrest.Matchers.empty()));
+        mvc.perform(get("/reports/submit").param("registrationId", registration.getId().toString())
                         .with(user(student4.getUsername()).roles("STUDENT")))
                 .andExpect(status().isForbidden());
     }

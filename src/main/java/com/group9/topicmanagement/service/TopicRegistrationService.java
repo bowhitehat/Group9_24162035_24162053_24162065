@@ -1,13 +1,13 @@
 package com.group9.topicmanagement.service;
 
-import com.group9.topicmanagement.domain.RegistrationPeriod;
-import com.group9.topicmanagement.domain.User;
-import com.group9.topicmanagement.domain.enums.PeriodStatus;
-import com.group9.topicmanagement.domain.enums.RegistrationStatus;
-import com.group9.topicmanagement.domain.registration.TopicRegistration;
-import com.group9.topicmanagement.domain.studentgroup.StudentGroup;
-import com.group9.topicmanagement.domain.topic.Topic;
-import com.group9.topicmanagement.domain.topic.TopicStatus;
+import com.group9.topicmanagement.model.RegistrationPeriod;
+import com.group9.topicmanagement.model.User;
+import com.group9.topicmanagement.model.enums.PeriodStatus;
+import com.group9.topicmanagement.model.enums.RegistrationStatus;
+import com.group9.topicmanagement.model.registration.TopicRegistration;
+import com.group9.topicmanagement.model.studentgroup.StudentGroup;
+import com.group9.topicmanagement.model.topic.Topic;
+import com.group9.topicmanagement.model.topic.TopicStatus;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.repository.*;
 import org.springframework.data.domain.Page;

@@ -1,7 +1,7 @@
 package com.group9.topicmanagement.repository;
 
-import com.group9.topicmanagement.domain.enums.RegistrationStatus;
-import com.group9.topicmanagement.domain.registration.TopicRegistration;
+import com.group9.topicmanagement.model.enums.RegistrationStatus;
+import com.group9.topicmanagement.model.registration.TopicRegistration;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -37,4 +37,8 @@ public interface TopicRegistrationRepository extends JpaRepository<TopicRegistra
     List<TopicRegistration> findByStatusOrderByIdAsc(RegistrationStatus status);
 
     long countByStatus(RegistrationStatus status);
+
+    @EntityGraph(attributePaths = {"topic", "studentGroup", "studentGroup.leader", "registrationPeriod"})
+    List<TopicRegistration> findByStudentGroup_Leader_UsernameIgnoreCaseAndStatusOrderByIdDesc(
+            String username, RegistrationStatus status);
 }

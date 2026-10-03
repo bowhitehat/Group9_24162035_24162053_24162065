@@ -1,17 +1,17 @@
 package com.group9.topicmanagement.service;
 
-import com.group9.topicmanagement.domain.User;
-import com.group9.topicmanagement.domain.council.CouncilAssignment;
-import com.group9.topicmanagement.domain.enums.CouncilStatus;
-import com.group9.topicmanagement.domain.enums.EvaluationStatus;
-import com.group9.topicmanagement.domain.enums.TopicResultStatus;
-import com.group9.topicmanagement.domain.enums.EvaluationType;
-import com.group9.topicmanagement.domain.enums.RoleName;
-import com.group9.topicmanagement.domain.evaluation.Evaluation;
-import com.group9.topicmanagement.domain.evaluation.EvaluationCriterion;
-import com.group9.topicmanagement.domain.evaluation.EvaluationScore;
-import com.group9.topicmanagement.domain.evaluation.TopicResult;
-import com.group9.topicmanagement.domain.topic.Topic;
+import com.group9.topicmanagement.model.User;
+import com.group9.topicmanagement.model.council.CouncilAssignment;
+import com.group9.topicmanagement.model.enums.CouncilStatus;
+import com.group9.topicmanagement.model.enums.EvaluationStatus;
+import com.group9.topicmanagement.model.enums.TopicResultStatus;
+import com.group9.topicmanagement.model.enums.EvaluationType;
+import com.group9.topicmanagement.model.enums.RoleName;
+import com.group9.topicmanagement.model.evaluation.Evaluation;
+import com.group9.topicmanagement.model.evaluation.EvaluationCriterion;
+import com.group9.topicmanagement.model.evaluation.EvaluationScore;
+import com.group9.topicmanagement.model.evaluation.TopicResult;
+import com.group9.topicmanagement.model.topic.Topic;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.exception.NotFoundException;
 import com.group9.topicmanagement.repository.*;
@@ -278,7 +278,7 @@ public class TopicResultService {
     @Transactional(readOnly = true)
     public boolean areAllEvaluationsSubmitted(Long topicId) {
         for (var reviewerAssignment : reviewerAssignmentRepository.findByTopicId(topicId)) {
-            if (reviewerAssignment.getStatus() == com.group9.topicmanagement.domain.enums.ReviewerAssignmentStatus.CANCELLED) {
+            if (reviewerAssignment.getStatus() == com.group9.topicmanagement.model.enums.ReviewerAssignmentStatus.CANCELLED) {
                 continue;
             }
             Optional<Evaluation> reviewerEvaluation = evaluationRepository

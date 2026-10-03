@@ -1,8 +1,8 @@
 package com.group9.topicmanagement.config;
 
-import com.group9.topicmanagement.domain.Department;
-import com.group9.topicmanagement.domain.Role;
-import com.group9.topicmanagement.domain.enums.RoleName;
+import com.group9.topicmanagement.model.Department;
+import com.group9.topicmanagement.model.Role;
+import com.group9.topicmanagement.model.enums.RoleName;
 import com.group9.topicmanagement.repository.DepartmentRepository;
 import com.group9.topicmanagement.repository.RoleRepository;
 import com.group9.topicmanagement.service.UserService;
@@ -40,13 +40,17 @@ public class DemoDataInitializer implements CommandLineRunner {
                 "Phụ trách đào tạo và nghiên cứu công nghệ phần mềm.");
         ensureDepartment("HTTT", "Hệ thống thông tin",
                 "Phụ trách hệ thống thông tin và dữ liệu.");
-        ensureDepartment("MMT", "An toàn thông tin",
+        ensureDepartment("ATTT", "An toàn thông tin",
                 "Phụ trách đào tạo và nghiên cứu an toàn thông tin.");
         users.ensureDemoUsers(demoPassword);
     }
 
     private void ensureDepartment(String code, String name, String description) {
-        Department department = departments.findByCodeIgnoreCase(code).orElseGet(Department::new);
+        Department department = departments.findByCodeIgnoreCase(code)
+                .or(() -> "ATTT".equals(code)
+                        ? departments.findByCodeIgnoreCase("MMT")
+                        : java.util.Optional.empty())
+                .orElseGet(Department::new);
         department.setCode(code);
         department.setName(name);
         department.setDescription(description);

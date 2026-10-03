@@ -1,8 +1,8 @@
 package com.group9.topicmanagement.repository;
 
-import com.group9.topicmanagement.domain.enums.EvaluationStatus;
-import com.group9.topicmanagement.domain.enums.EvaluationType;
-import com.group9.topicmanagement.domain.evaluation.Evaluation;
+import com.group9.topicmanagement.model.enums.EvaluationStatus;
+import com.group9.topicmanagement.model.enums.EvaluationType;
+import com.group9.topicmanagement.model.evaluation.Evaluation;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.stereotype.Repository;

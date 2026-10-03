@@ -1,6 +1,6 @@
 package com.group9.topicmanagement.repository;
 
-import com.group9.topicmanagement.domain.registration.ReportSubmission;
+import com.group9.topicmanagement.model.registration.ReportSubmission;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 

@@ -1,11 +1,11 @@
 package com.group9.topicmanagement.service;
 
-import com.group9.topicmanagement.domain.RegistrationPeriod;
-import com.group9.topicmanagement.domain.User;
-import com.group9.topicmanagement.domain.council.Council;
-import com.group9.topicmanagement.domain.council.CouncilMember;
-import com.group9.topicmanagement.domain.enums.CouncilMemberRole;
-import com.group9.topicmanagement.domain.enums.CouncilStatus;
+import com.group9.topicmanagement.model.RegistrationPeriod;
+import com.group9.topicmanagement.model.User;
+import com.group9.topicmanagement.model.council.Council;
+import com.group9.topicmanagement.model.council.CouncilMember;
+import com.group9.topicmanagement.model.enums.CouncilMemberRole;
+import com.group9.topicmanagement.model.enums.CouncilStatus;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.repository.*;
 import org.junit.jupiter.api.BeforeEach;
@@ -54,8 +54,8 @@ public class CouncilServiceTest {
 
         lecturer = new User();
         ReflectionTestUtils.setField(lecturer, "id", 10L);
-        com.group9.topicmanagement.domain.Role r = new com.group9.topicmanagement.domain.Role();
-        r.setName(com.group9.topicmanagement.domain.enums.RoleName.LECTURER);
+        com.group9.topicmanagement.model.Role r = new com.group9.topicmanagement.model.Role();
+        r.setName(com.group9.topicmanagement.model.enums.RoleName.LECTURER);
         lecturer.getRoles().add(r);
     }
 
