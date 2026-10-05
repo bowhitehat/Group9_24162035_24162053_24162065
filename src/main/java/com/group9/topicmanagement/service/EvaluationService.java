@@ -6,6 +6,7 @@ import com.group9.topicmanagement.model.council.CouncilMember;
 import com.group9.topicmanagement.model.enums.CouncilStatus;
 import com.group9.topicmanagement.model.enums.EvaluationStatus;
 import com.group9.topicmanagement.model.enums.EvaluationType;
+import com.group9.topicmanagement.model.enums.TopicResultStatus;
 import com.group9.topicmanagement.model.evaluation.Evaluation;
 import com.group9.topicmanagement.model.evaluation.EvaluationCriterion;
 import com.group9.topicmanagement.model.evaluation.EvaluationScore;
@@ -40,6 +41,7 @@ public class EvaluationService {
     private final ReviewerAssignmentService reviewerAssignmentService;
     private final CouncilAssignmentRepository councilAssignmentRepository;
     private final CouncilMemberRepository councilMemberRepository;
+    private final TopicResultRepository resultRepository;
 
     public EvaluationService(EvaluationRepository evaluationRepository,
                              EvaluationScoreRepository scoreRepository,
@@ -48,7 +50,8 @@ public class EvaluationService {
                              UserRepository userRepository,
                              ReviewerAssignmentService reviewerAssignmentService,
                              CouncilAssignmentRepository councilAssignmentRepository,
-                             CouncilMemberRepository councilMemberRepository) {
+                             CouncilMemberRepository councilMemberRepository,
+                             TopicResultRepository resultRepository) {
         this.evaluationRepository = evaluationRepository;
         this.scoreRepository = scoreRepository;
         this.criterionRepository = criterionRepository;
@@ -57,12 +60,13 @@ public class EvaluationService {
         this.reviewerAssignmentService = reviewerAssignmentService;
         this.councilAssignmentRepository = councilAssignmentRepository;
         this.councilMemberRepository = councilMemberRepository;
+        this.resultRepository = resultRepository;
     }
 
     @PreAuthorize("hasAnyRole('LECTURER', 'FACULTY_MANAGER')")
     public Evaluation saveDraft(Long topicId, String evaluatorUsername, EvaluationType type,
                                 List<EvaluationScore> scores, String comments) {
-        Topic topic = topicRepository.findById(topicId)
+        Topic topic = topicRepository.findLockedById(topicId)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy đề tài"));
         User evaluator = userRepository.findByUsernameIgnoreCase(evaluatorUsername)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy người đánh giá"));
@@ -152,6 +156,9 @@ public class EvaluationService {
         Evaluation evaluation = evaluationRepository.findById(evaluationId)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy phiếu chấm"));
 
+        topicRepository.findLockedById(evaluation.getTopic().getId())
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy đề tài"));
+
         String currentUsername = currentUsername();
         if (!evaluation.getEvaluator().getUsername().equalsIgnoreCase(currentUsername)) {
             throw new AccessDeniedException("Bạn chỉ được nộp phiếu chấm của mình");
@@ -191,6 +198,8 @@ public class EvaluationService {
     public Evaluation lockEvaluation(Long evaluationId) {
         Evaluation evaluation = evaluationRepository.findById(evaluationId)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy phiếu chấm"));
+        topicRepository.findLockedById(evaluation.getTopic().getId())
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy đề tài"));
         if (evaluation.getStatus() != EvaluationStatus.SUBMITTED) {
             throw new BusinessRuleException("Chỉ khóa phiếu đã nộp");
         }
@@ -282,6 +291,11 @@ public class EvaluationService {
     }
 
     private EvaluationContext requireEditableContext(Long topicId, User evaluator, EvaluationType type) {
+        if (resultRepository.findByTopicId(topicId)
+                .map(result -> result.getStatus() == TopicResultStatus.CONFIRMED
+                        || result.getStatus() == TopicResultStatus.PUBLISHED).orElse(false)) {
+            throw new BusinessRuleException("Kết quả đã xác nhận hoặc công bố, không thể sửa phiếu chấm");
+        }
         EvaluationContext context = requireAssignedContext(topicId, evaluator, type);
         if (type == EvaluationType.REVIEWER) {
             ReviewerAssignment assignment = context.reviewerAssignment();

@@ -6,6 +6,7 @@ import com.group9.topicmanagement.model.User;
 import com.group9.topicmanagement.model.topic.Topic;
 import com.group9.topicmanagement.model.topic.TopicStatus;
 import com.group9.topicmanagement.exception.BusinessRuleException;
+import com.group9.topicmanagement.exception.NotFoundException;
 import com.group9.topicmanagement.repository.DepartmentRepository;
 import com.group9.topicmanagement.repository.CouncilAssignmentRepository;
 import com.group9.topicmanagement.repository.CouncilMemberRepository;
@@ -78,7 +79,7 @@ public class TopicService {
 
     public Topic getTopicById(Long id) {
         return topicRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đề tài"));
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy đề tài"));
     }
 
     public boolean isAdvisor(Long topicId, Long userId) {
@@ -105,8 +106,10 @@ public class TopicService {
 
         requireLecturerWindow(period);
 
+        requireUniqueCode(form.getCode(), period.getId(), null);
+
         Topic topic = new Topic();
-        topic.setCode(form.getCode());
+        topic.setCode(form.getCode().trim());
         topic.setTitle(form.getTitle());
         topic.setDescription(form.getDescription());
         topic.setRequirement(form.getRequirement());
@@ -140,7 +143,9 @@ public class TopicService {
 
         requireLecturerWindow(period);
 
-        topic.setCode(form.getCode());
+        requireUniqueCode(form.getCode(), period.getId(), id);
+
+        topic.setCode(form.getCode().trim());
         topic.setTitle(form.getTitle());
         topic.setDescription(form.getDescription());
         topic.setRequirement(form.getRequirement());
@@ -234,6 +239,13 @@ public class TopicService {
         if (!isInsideLecturerWindow(period)) {
             throw new BusinessRuleException("Ngoài thời gian giảng viên đề xuất đề tài");
         }
+    }
+
+    private void requireUniqueCode(String code, Long periodId, Long topicId) {
+        boolean duplicate = topicId == null
+                ? topicRepository.existsByCodeIgnoreCaseAndRegistrationPeriodId(code.trim(), periodId)
+                : topicRepository.existsByCodeIgnoreCaseAndRegistrationPeriodIdAndIdNot(code.trim(), periodId, topicId);
+        if (duplicate) throw new BusinessRuleException("Mã đề tài đã tồn tại trong đợt đăng ký này");
     }
 
     private boolean isInsideLecturerWindow(RegistrationPeriod period) {

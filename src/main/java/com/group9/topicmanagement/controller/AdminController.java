@@ -2,6 +2,7 @@ package com.group9.topicmanagement.controller;
 
 import com.group9.topicmanagement.service.DepartmentService;
 import com.group9.topicmanagement.service.UserService;
+import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.dto.DepartmentForm;
 import com.group9.topicmanagement.dto.UserForm;
 import jakarta.validation.Valid;
@@ -19,10 +20,33 @@ public class AdminController {
     public AdminController(UserService users, DepartmentService departments) { this.users=users; this.departments=departments; }
 
     @GetMapping("/users") String users(@RequestParam(defaultValue="") String q, Model model) { model.addAttribute("users", users.search(q)); model.addAttribute("departments", departments.search("")); model.addAttribute("roleNames", users.allRoleNames()); model.addAttribute("userForm", new UserForm()); model.addAttribute("q", q); return "admin/users"; }
-    @PostMapping("/users") String createUser(@Valid @ModelAttribute UserForm userForm, BindingResult errors, Model model, RedirectAttributes redirect) { if(errors.hasErrors()){model.addAttribute("users",users.search(""));model.addAttribute("departments",departments.search(""));model.addAttribute("roleNames",users.allRoleNames());return "admin/users";} users.create(userForm.getUsername(),userForm.getFullName(),userForm.getEmail(),userForm.getStudentCode(),userForm.getDepartmentId(),userForm.getRoles(),userForm.getPassword()); redirect.addFlashAttribute("success","Đã tạo tài khoản"); return "redirect:/admin/users"; }
-    @PostMapping("/users/{id}/toggle") String toggleUser(@PathVariable Long id, Authentication authentication, RedirectAttributes redirect) { users.toggle(id, authentication.getName()); redirect.addFlashAttribute("success","Đã cập nhật trạng thái tài khoản"); return "redirect:/admin/users"; }
+    @PostMapping("/users") String createUser(@Valid @ModelAttribute UserForm userForm, BindingResult errors, Model model, RedirectAttributes redirect) {
+        if (!errors.hasErrors()) {
+            try {
+                users.create(userForm.getUsername(), userForm.getFullName(), userForm.getEmail(), userForm.getStudentCode(), userForm.getDepartmentId(), userForm.getRoles(), userForm.getPassword());
+                redirect.addFlashAttribute("successMessage", "Đã tạo tài khoản");
+                return "redirect:/admin/users";
+            } catch (BusinessRuleException error) { errors.reject("user.invalid", error.getMessage()); }
+        }
+        userForm.setPassword("");
+        model.addAttribute("users", users.search(""));
+        model.addAttribute("departments", departments.search(""));
+        model.addAttribute("roleNames", users.allRoleNames());
+        return "admin/users";
+    }
+    @PostMapping("/users/{id}/toggle") String toggleUser(@PathVariable Long id, Authentication authentication, RedirectAttributes redirect) { users.toggle(id, authentication.getName()); redirect.addFlashAttribute("successMessage","Đã cập nhật trạng thái tài khoản"); return "redirect:/admin/users"; }
 
     @GetMapping("/departments") String departments(@RequestParam(defaultValue="") String q, Model model) { model.addAttribute("departments", departments.search(q)); model.addAttribute("departmentForm", new DepartmentForm()); model.addAttribute("q", q); return "admin/departments"; }
-    @PostMapping("/departments") String createDepartment(@Valid @ModelAttribute DepartmentForm departmentForm, BindingResult errors, Model model, RedirectAttributes redirect) { if(errors.hasErrors()){model.addAttribute("departments",departments.search(""));return "admin/departments";} departments.create(departmentForm.getCode(),departmentForm.getName(),departmentForm.getDescription()); redirect.addFlashAttribute("success","Đã tạo bộ môn"); return "redirect:/admin/departments"; }
-    @PostMapping("/departments/{id}/toggle") String toggleDepartment(@PathVariable Long id, RedirectAttributes redirect) { departments.toggle(id); redirect.addFlashAttribute("success","Đã cập nhật trạng thái bộ môn"); return "redirect:/admin/departments"; }
+    @PostMapping("/departments") String createDepartment(@Valid @ModelAttribute DepartmentForm departmentForm, BindingResult errors, Model model, RedirectAttributes redirect) {
+        if (!errors.hasErrors()) {
+            try {
+                departments.create(departmentForm.getCode(), departmentForm.getName(), departmentForm.getDescription());
+                redirect.addFlashAttribute("successMessage", "Đã tạo bộ môn");
+                return "redirect:/admin/departments";
+            } catch (BusinessRuleException error) { errors.reject("department.invalid", error.getMessage()); }
+        }
+        model.addAttribute("departments", departments.search(""));
+        return "admin/departments";
+    }
+    @PostMapping("/departments/{id}/toggle") String toggleDepartment(@PathVariable Long id, RedirectAttributes redirect) { departments.toggle(id); redirect.addFlashAttribute("successMessage","Đã cập nhật trạng thái bộ môn"); return "redirect:/admin/departments"; }
 }

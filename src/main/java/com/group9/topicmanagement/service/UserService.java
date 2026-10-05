@@ -79,6 +79,10 @@ public class UserService {
 
     @Transactional
     public void changePassword(String username, String currentPassword, String newPassword) {
+        if (newPassword == null || newPassword.isBlank() || newPassword.length() < 8
+                || newPassword.getBytes(java.nio.charset.StandardCharsets.UTF_8).length > 72) {
+            throw new BusinessRuleException("Mật khẩu mới phải có ít nhất 8 ký tự và không vượt quá 72 byte");
+        }
         User user = getByUsername(username);
         if (!encoder.matches(currentPassword, user.getPasswordHash())) throw new BusinessRuleException("Mật khẩu hiện tại không đúng");
         user.setPasswordHash(encoder.encode(newPassword));

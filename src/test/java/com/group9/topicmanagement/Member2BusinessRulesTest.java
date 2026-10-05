@@ -413,6 +413,45 @@ class Member2BusinessRulesTest {
                 .andExpect(status().isForbidden());
     }
 
+    @Test void duplicateTopicCodeIsRejectedOnCreateAndEditWithoutChangingExistingData() throws Exception {
+        Topic first = topicService.createTopic(topicForm("SAME", "Bản đầu"), lecturer1.getUsername());
+        assertThatThrownBy(() -> topicService.createTopic(topicForm(" same ", "Trùng"), lecturer1.getUsername()))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("Mã đề tài đã tồn tại");
+        topicService.updateTopic(first.getId(), topicForm("SAME", "Sửa cùng mã"), lecturer1.getUsername());
+        Topic second = topicService.createTopic(topicForm("OTHER", "Bản khác"), lecturer1.getUsername());
+        assertThatThrownBy(() -> topicService.updateTopic(second.getId(), topicForm("SAME", "Trùng mã sửa"), lecturer1.getUsername()))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("Mã đề tài đã tồn tại");
+        assertThat(topics.findById(second.getId()).orElseThrow().getCode()).isEqualTo("OTHER");
+        mvc.perform(post("/topics/create").with(user(lecturer1.getUsername()).roles("LECTURER"))
+                .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
+                .param("code", "SAME").param("title", "Giữ nội dung form")
+                .param("departmentId", dept.getId().toString()).param("registrationPeriodId", period.getId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(
+                        org.hamcrest.Matchers.allOf(org.hamcrest.Matchers.containsString("Mã đề tài đã tồn tại"),
+                                org.hamcrest.Matchers.containsString("Giữ nội dung form"))));
+    }
+
+    @Test void legacyReportWithoutPhysicalFileIsClearlyMarkedAndDownloadReturns404() throws Exception {
+        TopicRegistration registration = createApprovedRegistration();
+        ReportSubmission missing = new ReportSubmission();
+        missing.setTopicRegistration(registration); missing.setStudentGroup(registration.getStudentGroup());
+        missing.setSubmitter(student1); missing.setOriginalFileName("BaoCaoCu.pdf");
+        missing.setStoredFileName("qa-missing-" + java.util.UUID.randomUUID() + ".pdf");
+        missing.setContentType("application/pdf"); missing.setFileSize(1024L); missing.setVersion(1);
+        missing = reports.save(missing);
+        mvc.perform(get("/reports/history/" + registration.getId()).with(user(student1.getUsername()).roles("STUDENT")))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(
+                        org.hamcrest.Matchers.containsString("File không còn trên máy chủ")));
+        mvc.perform(get("/reports/download/" + missing.getId()).with(user(student1.getUsername()).roles("STUDENT")))
+                .andExpect(status().isNotFound())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content().string(
+                        org.hamcrest.Matchers.containsString("nộp lại file gốc")));
+        mvc.perform(get("/reports/download/" + missing.getId()).with(user(student4.getUsername()).roles("STUDENT")))
+                .andExpect(status().isForbidden());
+    }
+
     private TopicRegistration createApprovedRegistration() {
         Topic topic = topicService.createTopic(topicForm("DT-HELPER", "Đề tài kiểm thử báo cáo"), lecturer1.getUsername());
         topicService.submitTopic(topic.getId(), lecturer1.getUsername());

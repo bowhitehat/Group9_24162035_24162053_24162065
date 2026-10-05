@@ -41,7 +41,8 @@
                         <td th:text="${sub.note}"></td>
                         <td th:text="${#temporals.format(sub.createdAt, 'dd/MM/yyyy HH:mm')}"></td>
                         <td>
-                            <a th:href="@{/reports/download/{id}(id=${sub.id})}" class="btn btn-sm btn-primary">Tải báo cáo</a>
+                            <a th:if="${availableFileIds.contains(sub.id)}" th:href="@{/reports/download/{id}(id=${sub.id})}" class="btn btn-sm btn-primary">Tải báo cáo</a>
+                            <span th:unless="${availableFileIds.contains(sub.id)}" class="text-danger small">File không còn trên máy chủ. Cần nộp lại file gốc.</span>
                         </td>
                     </tr>
                     <tr th:if="${#lists.isEmpty(submissions)}">

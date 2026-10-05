@@ -19,6 +19,9 @@
 
             <form th:action="@{/reports/submit}" th:object="${reportForm}" method="post" enctype="multipart/form-data" class="mt-4 border-top pt-3">
                 <input type="hidden" th:field="*{topicRegistrationId}">
+                <div th:if="${#fields.hasAnyErrors()}" class="alert alert-danger" role="alert">
+                    <p class="mb-0" th:each="err : ${#fields.allErrors()}" th:text="${err}"></p>
+                </div>
 
                 <div class="mb-3">
                     <label class="form-label">Chọn tệp báo cáo <span class="text-danger">*</span></label>
@@ -62,7 +65,8 @@
                         <td th:text="${sub.note}"></td>
                         <td th:text="${#temporals.format(sub.createdAt, 'dd/MM/yyyy HH:mm')}"></td>
                         <td>
-                            <a th:href="@{/reports/download/{id}(id=${sub.id})}" class="btn btn-sm btn-outline-primary">Tải tệp</a>
+                            <a th:if="${availableFileIds.contains(sub.id)}" th:href="@{/reports/download/{id}(id=${sub.id})}" class="btn btn-sm btn-outline-primary">Tải tệp</a>
+                            <span th:unless="${availableFileIds.contains(sub.id)}" class="text-danger small">File không còn trên máy chủ. Cần nộp lại file gốc.</span>
                         </td>
                     </tr>
                     <tr th:if="${#lists.isEmpty(submissions)}">

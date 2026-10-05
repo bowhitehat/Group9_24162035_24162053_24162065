@@ -270,6 +270,28 @@ class Member3BusinessRulesTest {
                 .isInstanceOf(AccessDeniedException.class);
 
         authenticate(lecturer2.getUsername(), "LECTURER");
+        assertThatThrownBy(() -> topicResultService.confirmResult(topic.getId(), lecturer2.getUsername()))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("khóa tất cả phiếu");
+
+        // Regression: a confirmed legacy result must not bypass the publication lock rule.
+        result.setStatus(TopicResultStatus.CONFIRMED);
+        results.save(result);
+        authenticate(facultyManager.getUsername(), "FACULTY_MANAGER");
+        assertThatThrownBy(() -> topicResultService.publishResult(topic.getId(), facultyManager.getUsername()))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("khóa tất cả phiếu");
+        result.setStatus(TopicResultStatus.PENDING_CONFIRMATION);
+        results.save(result);
+        evaluationService.lockEvaluation(c1Eval.getId());
+        evaluationService.lockEvaluation(c2Eval.getId());
+        evaluationService.lockEvaluation(c3Eval.getId());
+        result.setFinalScore(new BigDecimal("1.00"));
+        results.save(result);
+        authenticate(lecturer2.getUsername(), "LECTURER");
+        assertThatThrownBy(() -> topicResultService.confirmResult(topic.getId(), lecturer2.getUsername()))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("tính lại điểm đúng");
+        authenticate(facultyManager.getUsername(), "FACULTY_MANAGER");
+        topicResultService.calculateResult(topic.getId());
+        authenticate(lecturer2.getUsername(), "LECTURER");
         topicResultService.confirmResult(topic.getId(), lecturer2.getUsername());
 
         authenticate(facultyManager.getUsername(), "FACULTY_MANAGER");
@@ -285,6 +307,19 @@ class Member3BusinessRulesTest {
         authenticate(student2.getUsername(), "STUDENT");
         assertThatThrownBy(() -> topicResultService.getPublishedResultForStudent(topic.getId(), student2.getUsername()))
                 .isInstanceOf(AccessDeniedException.class);
+
+        // Even a legacy unlocked ballot must remain immutable once its result is published.
+        Evaluation legacy = evaluations.findById(submitted.getId()).orElseThrow();
+        legacy.setStatus(EvaluationStatus.SUBMITTED);
+        evaluations.save(legacy);
+        authenticate(lecturer2.getUsername(), "LECTURER");
+        assertThatThrownBy(() -> evaluationService.saveDraft(topic.getId(), lecturer2.getUsername(),
+                EvaluationType.REVIEWER, full, "sửa sau công bố"))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("đã xác nhận hoặc công bố");
+        assertThatThrownBy(() -> evaluationService.submitEvaluation(legacy.getId()))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("đã xác nhận hoặc công bố");
+        assertThat(evaluationService.canEdit(topic.getId(), lecturer2.getUsername(), EvaluationType.REVIEWER, legacy)).isFalse();
+        assertThat(results.findByTopicId(topic.getId()).orElseThrow().getFinalScore()).isEqualByComparingTo("8.13");
     }
 
     @Test

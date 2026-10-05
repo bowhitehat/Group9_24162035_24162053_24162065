@@ -22,7 +22,7 @@ public class FacultyController {
         if (!errors.hasErrors()) {
             try {
                 periods.save(periodForm.toEntity());
-                redirect.addFlashAttribute("success", "Đã tạo đợt đăng ký");
+                redirect.addFlashAttribute("successMessage", "Đã tạo đợt đăng ký");
                 return "redirect:/faculty/periods";
             } catch (BusinessRuleException error) {
                 errors.reject("period.invalidSchedule", error.getMessage());
@@ -40,7 +40,7 @@ public class FacultyController {
         if (!errors.hasErrors()) {
             try {
                 periods.update(id, periodForm.toEntity());
-                redirect.addFlashAttribute("success", "Đã cập nhật đợt");
+                redirect.addFlashAttribute("successMessage", "Đã cập nhật đợt");
                 return "redirect:/faculty/periods/" + id;
             } catch (BusinessRuleException error) {
                 errors.reject("period.invalidSchedule", error.getMessage());
@@ -50,5 +50,5 @@ public class FacultyController {
         model.addAttribute("types", PeriodType.values());
         return "faculty/period-edit";
     }
-    @PostMapping("/{id}/status") String transition(@PathVariable Long id, @RequestParam PeriodStatus status, RedirectAttributes redirect) { periods.transition(id,status); redirect.addFlashAttribute("success","Đã chuyển trạng thái"); return "redirect:/faculty/periods/"+id; }
+    @PostMapping("/{id}/status") String transition(@PathVariable Long id, @RequestParam PeriodStatus status, RedirectAttributes redirect) { periods.transition(id,status); redirect.addFlashAttribute("successMessage","Đã chuyển trạng thái"); return "redirect:/faculty/periods/"+id; }
 }

@@ -66,10 +66,10 @@ public class GlobalWebController {
     @PostMapping("/profile/password")
     String changePassword(Authentication authentication,
                           @RequestParam @NotBlank String currentPassword,
-                          @RequestParam @Size(min = 8) String newPassword,
+                          @RequestParam @NotBlank @Size(min = 8, max = 72) String newPassword,
                           RedirectAttributes redirect) {
         userService.changePassword(authentication.getName(), currentPassword, newPassword);
-        redirect.addFlashAttribute("success", "Đã đổi mật khẩu");
+        redirect.addFlashAttribute("successMessage", "Đã đổi mật khẩu");
         return "redirect:/profile";
     }
 

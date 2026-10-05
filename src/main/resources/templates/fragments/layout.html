@@ -22,7 +22,8 @@
                 <li class="nav-item" sec:authorize="hasRole('STUDENT')"><a class="nav-link" th:href="@{/groups/my-group}">Nhóm của tôi</a></li>
                 <li class="nav-item" sec:authorize="hasRole('STUDENT')"><a class="nav-link" th:href="@{/registrations}">Đăng ký đề tài</a></li>
                 <li class="nav-item" sec:authorize="hasAnyRole('FACULTY_MANAGER','ADMIN')"><a class="nav-link" th:href="@{/registrations}">Duyệt đăng ký</a></li>
-                <li class="nav-item" sec:authorize="hasAnyRole('FACULTY_MANAGER','LECTURER')"><a class="nav-link" th:href="@{/reviewer-assignments}">Phản biện</a></li>
+                <li class="nav-item" sec:authorize="hasRole('FACULTY_MANAGER')"><a class="nav-link" th:href="@{/reviewer-assignments}">Phản biện</a></li>
+                <li class="nav-item" sec:authorize="hasRole('LECTURER') and !hasRole('FACULTY_MANAGER')"><a class="nav-link" th:href="@{/reviewer-assignments/my-assignments}">Phản biện</a></li>
                 <li class="nav-item" sec:authorize="hasAnyRole('FACULTY_MANAGER','LECTURER')"><a class="nav-link" th:href="@{/councils}">Hội đồng</a></li>
                 <li class="nav-item" sec:authorize="hasAnyRole('FACULTY_MANAGER','LECTURER')"><a class="nav-link" th:href="@{/evaluations/results}">Kết quả</a></li>
                 <li class="nav-item"><a class="nav-link" th:href="@{/announcements}">Thông báo</a></li>

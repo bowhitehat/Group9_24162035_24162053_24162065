@@ -64,6 +64,7 @@ public class TopicController {
                              @RequestParam(defaultValue = "10") int size,
                              Authentication authentication,
                              Model model) {
+        if (page < 0 || size < 1 || size > 100) throw new BusinessRuleException("Trang phải từ 0 và kích thước trang từ 1 đến 100");
         Pageable pageable = PageRequest.of(page, size);
         
         List<RegistrationPeriod> periods = periodService.findAllPeriods();

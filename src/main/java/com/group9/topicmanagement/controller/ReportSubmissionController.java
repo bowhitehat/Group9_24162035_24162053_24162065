@@ -4,6 +4,7 @@ import com.group9.topicmanagement.config.UploadConfig;
 import com.group9.topicmanagement.model.registration.ReportSubmission;
 import com.group9.topicmanagement.model.registration.TopicRegistration;
 import com.group9.topicmanagement.exception.BusinessRuleException;
+import com.group9.topicmanagement.exception.NotFoundException;
 import com.group9.topicmanagement.service.ReportSubmissionService;
 import com.group9.topicmanagement.dto.ReportSubmissionForm;
 import jakarta.validation.Valid;
@@ -64,6 +65,7 @@ public class ReportSubmissionController {
         model.addAttribute("reportForm", form);
         model.addAttribute("registration", registration);
         model.addAttribute("submissions", submissions);
+        model.addAttribute("availableFileIds", reportService.availableFileIds(submissions));
         return "reports/submit";
     }
 
@@ -74,10 +76,14 @@ public class ReportSubmissionController {
                                Principal principal,
                                Model model,
                                RedirectAttributes redirectAttributes) {
+        if (form.getTopicRegistrationId() == null) {
+            throw new BusinessRuleException("Vui lòng chọn đăng ký đề tài trước khi nộp báo cáo");
+        }
         if (bindingResult.hasErrors()) {
             TopicRegistration registration = reportService.getRegistrationForSubmission(form.getTopicRegistrationId(), principal.getName());
             model.addAttribute("registration", registration);
             model.addAttribute("submissions", reportService.getSubmissionHistoryForUser(form.getTopicRegistrationId(), principal.getName()));
+            model.addAttribute("availableFileIds", reportService.availableFileIds(reportService.getSubmissionHistoryForUser(form.getTopicRegistrationId(), principal.getName())));
             return "reports/submit";
         }
 
@@ -92,6 +98,7 @@ public class ReportSubmissionController {
             model.addAttribute("errorMessage", e.getMessage());
             model.addAttribute("registration", registration);
             model.addAttribute("submissions", reportService.getSubmissionHistoryForUser(form.getTopicRegistrationId(), principal.getName()));
+            model.addAttribute("availableFileIds", reportService.availableFileIds(reportService.getSubmissionHistoryForUser(form.getTopicRegistrationId(), principal.getName())));
             return "reports/submit";
         }
     }
@@ -103,6 +110,7 @@ public class ReportSubmissionController {
 
         model.addAttribute("registration", registration);
         model.addAttribute("submissions", submissions);
+        model.addAttribute("availableFileIds", reportService.availableFileIds(submissions));
         return "reports/history";
     }
 
@@ -116,7 +124,7 @@ public class ReportSubmissionController {
         try {
             Resource resource = new UrlResource(filePath.toUri());
             if (!resource.exists() || !resource.isReadable()) {
-                throw new RuntimeException("Không tìm thấy tệp báo cáo");
+                throw new NotFoundException("Tệp báo cáo không còn trên máy chủ. Vui lòng liên hệ nhóm trưởng nộp lại file gốc.");
             }
 
             return ResponseEntity.ok()
@@ -125,7 +133,7 @@ public class ReportSubmissionController {
                             .filename(submission.getOriginalFileName(), StandardCharsets.UTF_8).build().toString())
                     .body(resource);
         } catch (MalformedURLException e) {
-            throw new RuntimeException("Lỗi tải tệp báo cáo", e);
+            throw new NotFoundException("Không tìm thấy tệp báo cáo hợp lệ");
         }
     }
 }

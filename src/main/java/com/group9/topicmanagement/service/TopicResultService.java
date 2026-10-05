@@ -67,7 +67,7 @@ public class TopicResultService {
 
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
     public TopicResult calculateResult(Long topicId) {
-        Topic topic = topicRepository.findById(topicId)
+        Topic topic = topicRepository.findLockedById(topicId)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy đề tài"));
 
         CouncilAssignment assignment = councilAssignmentRepository
@@ -106,6 +106,8 @@ public class TopicResultService {
 
     @PreAuthorize("hasRole('LECTURER')")
     public void confirmResult(Long topicId, String confirmerUsername) {
+        topicRepository.findLockedById(topicId)
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy đề tài"));
         TopicResult result = resultRepository.findByTopicId(topicId)
                 .orElseThrow(() -> new NotFoundException("Chưa có kết quả để xác nhận"));
         if (result.getFinalScore() == null) {
@@ -122,6 +124,7 @@ public class TopicResultService {
         if (result.getStatus() == TopicResultStatus.PUBLISHED) {
             throw new BusinessRuleException("Kết quả đã công bố không thể sửa");
         }
+        requireLockedAndCurrentResult(topicId, result);
         result.setStatus(TopicResultStatus.CONFIRMED);
         result.setConfirmer(confirmer);
         result.setConfirmedTime(LocalDateTime.now());
@@ -130,6 +133,8 @@ public class TopicResultService {
 
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
     public void publishResult(Long topicId, String publisherUsername) {
+        topicRepository.findLockedById(topicId)
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy đề tài"));
         TopicResult result = resultRepository.findByTopicId(topicId)
                 .orElseThrow(() -> new NotFoundException("Chưa có kết quả để công bố"));
         if (result.getStatus() != TopicResultStatus.CONFIRMED) {
@@ -141,6 +146,7 @@ public class TopicResultService {
         if (!areAllEvaluationsSubmitted(topicId)) {
             throw new BusinessRuleException("Chưa thể công bố vì còn phản biện hoặc thành viên hội đồng chưa nộp điểm");
         }
+        requireLockedAndCurrentResult(topicId, result);
         User publisher = userRepository.findByUsernameIgnoreCase(publisherUsername)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy người dùng"));
         result.setStatus(TopicResultStatus.PUBLISHED);
@@ -224,7 +230,7 @@ public class TopicResultService {
         Long userId = userRepository.findByUsernameIgnoreCase(username).orElseThrow().getId();
         if (!councilService.isChairOfTopic(topicId, userId)) return false;
         return resultRepository.findByTopicId(topicId)
-            .map(r -> r.getStatus() == TopicResultStatus.PENDING_CONFIRMATION && r.getFinalScore() != null)
+            .map(r -> r.getStatus() == TopicResultStatus.PENDING_CONFIRMATION && isLockedAndCurrentResult(topicId, r))
             .orElse(false);
     }
     
@@ -233,7 +239,7 @@ public class TopicResultService {
         User user = userRepository.findByUsernameIgnoreCase(username).orElseThrow();
         if (!hasRole(user, RoleName.FACULTY_MANAGER)) return false;
         return resultRepository.findByTopicId(topicId)
-            .map(r -> r.getStatus() == TopicResultStatus.CONFIRMED && !hasMissingMandatoryScores(topicId) && areAllEvaluationsSubmitted(topicId))
+            .map(r -> r.getStatus() == TopicResultStatus.CONFIRMED && isLockedAndCurrentResult(topicId, r))
             .orElse(false);
     }
 
@@ -355,6 +361,19 @@ public class TopicResultService {
     private boolean isSubmittedOrLocked(Evaluation evaluation) {
         return evaluation.getStatus() == EvaluationStatus.SUBMITTED
                 || evaluation.getStatus() == EvaluationStatus.LOCKED;
+    }
+
+    private boolean isLockedAndCurrentResult(Long topicId, TopicResult result) {
+        return areAllEvaluationsSubmitted(topicId) && !hasMissingMandatoryScores(topicId)
+                && evaluationRepository.findByTopicId(topicId).stream().allMatch(e -> e.getStatus() == EvaluationStatus.LOCKED)
+                && averageOfValidEvaluations(topicId)
+                    .map(score -> result.getFinalScore() != null && score.compareTo(result.getFinalScore()) == 0).orElse(false);
+    }
+
+    private void requireLockedAndCurrentResult(Long topicId, TopicResult result) {
+        if (!isLockedAndCurrentResult(topicId, result)) {
+            throw new BusinessRuleException("Phải khóa tất cả phiếu chấm và tính lại điểm đúng trước khi xác nhận hoặc công bố");
+        }
     }
 
     private boolean hasRole(User user, RoleName roleName) {

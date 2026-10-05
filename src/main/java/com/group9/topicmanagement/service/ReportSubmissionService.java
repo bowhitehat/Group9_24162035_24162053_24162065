@@ -109,6 +109,16 @@ public class ReportSubmissionService {
     }
 
     @Transactional(readOnly = true)
+    public Set<Long> availableFileIds(List<ReportSubmission> submissions) {
+        Path root = uploadConfig.getUploadDirectory().toAbsolutePath().normalize();
+        return submissions.stream().filter(report -> {
+            if (report.getStoredFileName() == null) return false;
+            Path path = root.resolve(report.getStoredFileName()).normalize();
+            return path.startsWith(root) && Files.isRegularFile(path) && Files.isReadable(path);
+        }).map(ReportSubmission::getId).collect(java.util.stream.Collectors.toSet());
+    }
+
+    @Transactional(readOnly = true)
     public List<TopicRegistration> getApprovedRegistrationsForLeader(String username) {
         return registrationRepository.findByStudentGroup_Leader_UsernameIgnoreCaseAndStatusOrderByIdDesc(
                 username, RegistrationStatus.APPROVED);
