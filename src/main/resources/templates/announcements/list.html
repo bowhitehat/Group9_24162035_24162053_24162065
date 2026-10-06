@@ -14,17 +14,16 @@
             <h6 class="card-subtitle mb-2 text-muted">
                 Đăng ngày: <span th:text="${#temporals.format(a.publishedTime, 'dd/MM/yyyy HH:mm')}"></span>
                 <span th:if="${a.status.name() == 'DRAFT'}" class="badge bg-secondary ms-2">Nháp</span>
-                <span th:if="${a.status.name() == 'ARCHIVED'}" class="badge bg-dark ms-2">Lưu trữ</span>
+                <span th:if="${a.status.name() == 'ARCHIVED'}" class="badge bg-dark ms-2">Đã ẩn</span>
             </h6>
-            <!-- Nội dung đã được HtmlUtils.htmlEscape trước khi lưu, vì vậy dùng utext
-                 để giải mã entity đúng một lần mà không cho phép thực thi HTML. -->
             <p class="card-text" th:utext="${a.content}"></p>
             <div sec:authorize="hasAnyRole('ADMIN', 'FACULTY_MANAGER')" class="d-flex gap-2">
+                <a th:if="${archivableAnnouncementIds.contains(a.id)}" th:href="@{/announcements/{id}/edit(id=${a.id})}" class="btn btn-sm btn-outline-primary">Sửa</a>
                 <form th:if="${publishableAnnouncementIds.contains(a.id)}" th:action="@{/announcements/{id}/publish(id=${a.id})}" method="post">
                     <button class="btn btn-sm btn-success">Công bố</button>
                 </form>
                 <form th:if="${archivableAnnouncementIds.contains(a.id)}" th:action="@{/announcements/{id}/archive(id=${a.id})}" method="post">
-                    <button class="btn btn-sm btn-outline-secondary">Lưu trữ</button>
+                    <button class="btn btn-sm btn-outline-secondary">Ẩn</button>
                 </form>
             </div>
         </div>

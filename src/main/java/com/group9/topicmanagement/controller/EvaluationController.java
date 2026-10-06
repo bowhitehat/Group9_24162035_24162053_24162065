@@ -34,15 +34,17 @@ public class EvaluationController {
     private final TopicResultService topicResultService;
     private final TopicService topicService;
     private final TopicRegistrationService registrationService;
+    private final com.group9.topicmanagement.service.TopicResultExportService exportService;
 
     public EvaluationController(EvaluationService evaluationService,
                                 TopicResultService topicResultService,
                                 TopicService topicService,
-                                TopicRegistrationService registrationService) {
+                                TopicRegistrationService registrationService, com.group9.topicmanagement.service.TopicResultExportService exportService) {
         this.evaluationService = evaluationService;
         this.topicResultService = topicResultService;
         this.topicService = topicService;
         this.registrationService = registrationService;
+        this.exportService = exportService;
     }
 
     @GetMapping("/topic/{topicId}")
@@ -64,7 +66,7 @@ public class EvaluationController {
         model.addAttribute("evaluation", evaluation.getId() == null ? new Evaluation() : evaluation);
         model.addAttribute("existingScores", scores);
         model.addAttribute("evalType", evaluationType.name());
-        
+
         com.group9.topicmanagement.dto.EvaluationSubmitDto form = new com.group9.topicmanagement.dto.EvaluationSubmitDto();
         form.setType(evaluationType);
         form.setComments(evaluation.getComments());
@@ -74,7 +76,7 @@ public class EvaluationController {
         }
         form.setScores(scoreMap);
         model.addAttribute("formDto", form);
-        
+
         model.addAttribute("canEdit", evaluationService.canEdit(topicId, auth.getName(), evaluationType, evaluation));
         return "evaluations/form";
     }
@@ -132,10 +134,43 @@ public class EvaluationController {
 
     @GetMapping("/my-result")
     @PreAuthorize("hasRole('STUDENT')")
-    public String myResult(@RequestParam Long topicId, Authentication auth, Model model) {
-        TopicResult result = topicResultService.getPublishedResultForStudent(topicId, auth.getName());
+    public String myResult(@RequestParam(required = false) Long periodId,
+                           @RequestParam(required = false) Long topicId, Authentication auth, Model model) {
+        var studentPeriods = registrationService.listStudentPeriods(auth.getName());
+        model.addAttribute("studentPeriods", studentPeriods);
+        // Keep old dashboard/bookmark URLs working, with the same ownership checks.
+        if (topicId != null) {
+            var legacyResult = topicResultService.getPublishedResultForStudent(topicId, auth.getName());
+            Long legacyPeriodId = legacyResult.getTopic().getRegistrationPeriod().getId();
+            if (periodId != null && !periodId.equals(legacyPeriodId)) {
+                throw new org.springframework.security.access.AccessDeniedException("Đề tài không thuộc đợt được chọn");
+            }
+            periodId = legacyPeriodId;
+        }
+        if (periodId != null) {
+            final Long requestedPeriodId = periodId;
+            if (studentPeriods.stream().noneMatch(p -> p.id().equals(requestedPeriodId))) {
+                throw new org.springframework.security.access.AccessDeniedException("Chỉ xem đợt nhóm mình đã đăng ký");
+            }
+        } else if (!studentPeriods.isEmpty()) {
+            periodId = studentPeriods.get(0).id();
+        }
+        List<TopicResult> allResults = topicResultService.listStudentResults(auth.getName());
+        model.addAttribute("selectedPeriodId", periodId);
+
+        TopicResult result = null;
+        if (periodId != null) {
+            final Long selectedPeriod = periodId;
+            result = allResults.stream()
+                .filter(r -> r.getTopic().getRegistrationPeriod().getId().equals(selectedPeriod))
+                .findFirst().orElse(null);
+        }
         model.addAttribute("result", result);
-        model.addAttribute("evaluations", evaluationService.listByTopic(topicId));
+
+        if (result != null) {
+            model.addAttribute("evaluations", evaluationService.listByTopic(result.getTopic().getId()));
+            model.addAttribute("selectedPeriodId", result.getTopic().getRegistrationPeriod().getId());
+        }
         return "evaluations/student-result";
     }
 
@@ -197,7 +232,7 @@ public class EvaluationController {
         List<Evaluation> evaluations = evaluationService.listByTopic(topicId);
         model.addAttribute("result", result);
         model.addAttribute("evaluations", evaluations);
-        
+
         model.addAttribute("canConfirm", topicResultService.canConfirm(topicId, auth.getName()));
         model.addAttribute("canPublish", topicResultService.canPublish(topicId, auth.getName()));
         model.addAttribute("canCalculate", topicResultService.canCalculate(topicId, auth.getName()));
@@ -207,7 +242,26 @@ public class EvaluationController {
                 .filter(e -> e.getStatus() == com.group9.topicmanagement.model.enums.EvaluationStatus.SUBMITTED)
                 .map(Evaluation::getId)
                 .collect(java.util.stream.Collectors.toSet()) : java.util.Set.of());
-        
+
         return "evaluations/result-detail";
+    }
+    @GetMapping("/results/export/excel")
+    @PreAuthorize("hasAnyRole('FACULTY_MANAGER', 'LECTURER')")
+    public void exportExcel(Authentication auth, jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+        List<TopicResult> results = topicResultService.listResults(auth);
+        byte[] data = exportService.exportToExcel(results);
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition", "attachment; filename=\"results.xlsx\"");
+        response.getOutputStream().write(data);
+    }
+
+    @GetMapping("/results/export/pdf")
+    @PreAuthorize("hasAnyRole('FACULTY_MANAGER', 'LECTURER')")
+    public void exportPdf(Authentication auth, jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+        List<TopicResult> results = topicResultService.listResults(auth);
+        byte[] data = exportService.exportToPdf(results);
+        response.setContentType("application/pdf");
+        response.setHeader("Content-Disposition", "attachment; filename=\"results.pdf\"");
+        response.getOutputStream().write(data);
     }
 }

@@ -1,5 +1,6 @@
 param(
-    [string]$Repository = (Split-Path -Parent $PSScriptRoot)
+    [string]$Repository = (Split-Path -Parent $PSScriptRoot),
+    [string]$ReportFile = 'BaoCao_DoAn.docx'
 )
 
 $ErrorActionPreference = 'Stop'
@@ -42,7 +43,11 @@ function Copy-RequiredDirectory {
 try {
     New-Item -ItemType Directory -Path $packageRoot -Force | Out-Null
 
-    Copy-RequiredFile 'BaoCao_DoAn.docx' $packageRoot
+    $reportSource = Join-Path $repo $ReportFile
+    if (-not (Test-Path -LiteralPath $reportSource -PathType Leaf)) {
+        throw "Thiếu báo cáo Word: $ReportFile. Chỉ định -ReportFile để chọn bản báo cáo đã duyệt."
+    }
+    Copy-Item -LiteralPath $reportSource -Destination (Join-Path $packageRoot 'BaoCao_DoAn.docx')
     Copy-RequiredFile 'README.md' $packageRoot
     Copy-RequiredFile 'SUBMISSION_CHECKLIST.md' $packageRoot
     Copy-RequiredDirectory 'diagrams' $packageRoot
@@ -63,7 +68,6 @@ try {
 
     @(
         'docs',
-        'sql',
         'src',
         'tools'
     ) | ForEach-Object { Copy-RequiredDirectory $_ $sourceCodeRoot }
@@ -111,6 +115,15 @@ try {
     Write-Output "SHA256: $($hash.Hash)"
 }
 finally {
+    # Resolve and verify exact disposable targets before recursive deletion.
+    $resolvedTemp = [IO.Path]::GetFullPath($env:TEMP).TrimEnd('\') + '\'
+    foreach ($cleanupTarget in @($temporaryRoot, $temporaryZip)) {
+        $resolvedTarget = [IO.Path]::GetFullPath($cleanupTarget)
+        if (-not $resolvedTarget.StartsWith($resolvedTemp, [StringComparison]::OrdinalIgnoreCase) -or
+            -not ([IO.Path]::GetFileName($resolvedTarget) -match '^group9-submit-[a-f0-9]{32}(\.zip)?$')) {
+            throw "Từ chối dọn đường dẫn không an toàn: $resolvedTarget"
+        }
+    }
     if (Test-Path -LiteralPath $temporaryRoot) {
         Remove-Item -LiteralPath $temporaryRoot -Recurse -Force
     }

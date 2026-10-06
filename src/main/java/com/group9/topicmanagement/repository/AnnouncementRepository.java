@@ -10,6 +10,10 @@ import java.util.List;
 
 @Repository
 public interface AnnouncementRepository extends JpaRepository<Announcement, Long> {
+    @Override
+    @EntityGraph(attributePaths = {"targetRoles", "creator"})
+    java.util.Optional<Announcement> findById(Long id);
+
     @EntityGraph(attributePaths = {"targetRoles", "creator"})
     List<Announcement> findByStatusOrderByPublishedTimeDesc(AnnouncementStatus status);
 

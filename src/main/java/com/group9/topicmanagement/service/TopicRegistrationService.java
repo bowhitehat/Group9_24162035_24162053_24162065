@@ -202,6 +202,14 @@ public class TopicRegistrationService {
         return registrationRepository.findByStatusOrderByIdAsc(RegistrationStatus.APPROVED);
     }
 
+    @Transactional(readOnly = true)
+    public List<com.group9.topicmanagement.dto.StudentPeriodOption> listStudentPeriods(String username) {
+        return registrationRepository.findDistinctByStudentGroup_Members_Member_UsernameIgnoreCaseOrderByIdDesc(username)
+                .stream().map(registration -> new com.group9.topicmanagement.dto.StudentPeriodOption(
+                        registration.getRegistrationPeriod().getId(), registration.getRegistrationPeriod().getName()))
+                .distinct().toList();
+    }
+
     public long countApprovedRegistrations() {
         return registrationRepository.countByStatus(RegistrationStatus.APPROVED);
     }

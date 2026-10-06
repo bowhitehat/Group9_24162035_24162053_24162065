@@ -143,4 +143,35 @@ public class AnnouncementService {
             throw new BusinessRuleException("Thời gian hết hạn phải ở tương lai");
         }
     }
+    @PreAuthorize("hasAnyRole('ADMIN', 'FACULTY_MANAGER')")
+    public Announcement updateAnnouncement(Long id, String title, String content, List<String> targetRoles,
+                                           boolean publish, LocalDateTime expirationTime) {
+        Announcement announcement = announcementRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy thông báo"));
+        if (announcement.getStatus() == AnnouncementStatus.ARCHIVED) {
+            throw new BusinessRuleException("Không thể sửa thông báo đã lưu trữ");
+        }
+
+        announcement.setTitle(title);
+        announcement.setContent(HtmlUtils.htmlEscape(content == null ? "" : content));
+        announcement.setTargetRoles(resolveRoles(targetRoles));
+        announcement.setExpirationTime(expirationTime);
+
+        if (publish && announcement.getStatus() == AnnouncementStatus.DRAFT) {
+            requireTargetRoles(announcement);
+            validateExpiration(expirationTime);
+            announcement.setStatus(AnnouncementStatus.PUBLISHED);
+            announcement.setPublishedTime(LocalDateTime.now());
+        } else if (announcement.getStatus() == AnnouncementStatus.PUBLISHED) {
+            requireTargetRoles(announcement);
+            validateExpiration(expirationTime);
+        }
+
+        return announcementRepository.save(announcement);
+    }
+    @Transactional(readOnly = true)
+    public Announcement getAnnouncementById(Long id) {
+        return announcementRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy thông báo"));
+    }
 }

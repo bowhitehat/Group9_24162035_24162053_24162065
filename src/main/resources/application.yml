@@ -43,6 +43,7 @@ management:
     health:
       show-details: never
 app:
+  base-url: ${APP_BASE_URL:http://localhost:8090}
   upload-dir: ${UPLOAD_DIR:./uploads}
   demo-password: ${DEMO_PASSWORD:}
   mail:

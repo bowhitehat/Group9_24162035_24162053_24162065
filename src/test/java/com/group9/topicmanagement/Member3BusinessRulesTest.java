@@ -595,7 +595,7 @@ class Member3BusinessRulesTest {
         assertThat(avg).isEqualTo(new BigDecimal("8.13"));
     }
 
-    private Topic preparedApprovedTopic() {
+    protected Topic preparedApprovedTopic() {
         TopicForm form = new TopicForm();
         form.setCode("DT99");
         form.setTitle("Đề tài chấm điểm");
@@ -616,7 +616,7 @@ class Member3BusinessRulesTest {
         return topicService.getTopicById(topic.getId());
     }
 
-    private void seedCriteria() {
+    protected void seedCriteria() {
         EvaluationCriterion c1 = new EvaluationCriterion();
         c1.setName("Nội dung");
         c1.setRegistrationPeriod(period);
@@ -633,13 +633,13 @@ class Member3BusinessRulesTest {
         criteria.save(c2);
     }
 
-    private List<EvaluationScore> fullScores(String value) {
+    protected List<EvaluationScore> fullScores(String value) {
         return criteria.findByRegistrationPeriodIdAndIsActiveTrueOrderByDisplayOrderAsc(period.getId()).stream()
                 .map(c -> score(c, new BigDecimal(value)))
                 .toList();
     }
 
-    private Council createCouncilWithMembersAndTopic(Topic topic) {
+    protected Council createCouncilWithMembersAndTopic(Topic topic) {
         Council council = councilService.createCouncil("HĐ kiểm thử", period.getId(), LocalDateTime.now().plusDays(3), "B4");
         councilService.addMember(council.getId(), lecturer2.getId(), CouncilMemberRole.CHAIR);
         councilService.addMember(council.getId(), lecturer3.getId(), CouncilMemberRole.SECRETARY);
@@ -665,7 +665,7 @@ class Member3BusinessRulesTest {
         return score;
     }
 
-    private void authenticate(String username, String role) {
+    protected void authenticate(String username, String role) {
         SecurityContextHolder.getContext().setAuthentication(
                 new UsernamePasswordAuthenticationToken(username, "n/a",
                         List.of(new SimpleGrantedAuthority("ROLE_" + role))));

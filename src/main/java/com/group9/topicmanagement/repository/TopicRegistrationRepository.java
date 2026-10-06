@@ -9,6 +9,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface TopicRegistrationRepository extends JpaRepository<TopicRegistration, Long> {
+    @EntityGraph(attributePaths = {"registrationPeriod"})
+    List<TopicRegistration> findDistinctByStudentGroup_Members_Member_UsernameIgnoreCaseOrderByIdDesc(String username);
 
     @Override
     @EntityGraph(attributePaths = {

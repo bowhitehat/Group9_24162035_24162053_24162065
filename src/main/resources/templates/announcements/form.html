@@ -1,14 +1,14 @@
 <!doctype html>
 <html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" th:replace="~{fragments/layout :: page(~{::content})}">
-<head><title>Tạo thông báo</title></head>
+<head><title th:text="${announcementId != null ? 'Sửa thông báo' : 'Tạo thông báo'}">Tạo thông báo</title></head>
 <body>
 <div th:fragment="content">
     <div class="mb-4">
-        <h4>Tạo thông báo mới</h4>
+        <h4 th:text="${announcementId != null ? 'Sửa thông báo' : 'Tạo thông báo mới'}">Tạo thông báo mới</h4>
     </div>
     <div class="card shadow-sm max-w-md">
         <div class="card-body p-4">
-            <form th:action="@{/announcements/create}" th:object="${announcementForm}" method="post">
+            <form th:action="@{${announcementId != null ? '/announcements/' + announcementId + '/edit' : '/announcements/create'}}" th:object="${announcementForm}" method="post">
                 <div class="mb-3">
                     <label class="form-label">Tiêu đề</label>
                     <input type="text" th:field="*{title}" class="form-control" required>
@@ -42,7 +42,7 @@
                     <input type="checkbox" th:field="*{publish}" class="form-check-input" id="publishCheck">
                     <label class="form-check-label" for="publishCheck">Công bố ngay</label>
                 </div>
-                <button type="submit" class="btn btn-primary">Lưu thông báo</button>
+                <button type="submit" class="btn btn-primary" th:text="${announcementId != null ? 'Cập nhật' : 'Lưu thông báo'}">Lưu thông báo</button>
             </form>
         </div>
     </div>

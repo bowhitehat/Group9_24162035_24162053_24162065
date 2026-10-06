@@ -30,15 +30,20 @@ public class ReviewerAssignmentService {
     private final TopicRepository topicRepository;
     private final UserRepository userRepository;
     private final TopicRegistrationService topicRegistrationService;
+    private final TransactionalNotificationService notifications;
+    @org.springframework.beans.factory.annotation.Value("${app.base-url:http://localhost:8090}")
+    private String baseUrl;
 
     public ReviewerAssignmentService(ReviewerAssignmentRepository assignmentRepository,
                                      TopicRepository topicRepository,
                                      UserRepository userRepository,
-                                     TopicRegistrationService topicRegistrationService) {
+                                     TopicRegistrationService topicRegistrationService,
+                                     TransactionalNotificationService notifications) {
         this.assignmentRepository = assignmentRepository;
         this.topicRepository = topicRepository;
         this.userRepository = userRepository;
         this.topicRegistrationService = topicRegistrationService;
+        this.notifications = notifications;
     }
 
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
@@ -81,7 +86,17 @@ public class ReviewerAssignmentService {
         assignment.setDeadline(deadline);
         assignment.setStatus(ReviewerAssignmentStatus.ASSIGNED);
         assignment.setSubmissionTime(null);
-        return assignmentRepository.save(assignment);
+        ReviewerAssignment saved = assignmentRepository.save(assignment);
+
+        if (reviewer.getEmail() != null) {
+            String subject = "Phân công phản biện đề tài " + topic.getCode();
+            String body = "Bạn được phân công phản biện đề tài: " + topic.getTitle() + "\n"
+                    + "Hạn nộp điểm: " + deadline + "\n"
+                    + "Link truy cập: " + baseUrl.replaceAll("/+$", "") + "/evaluations/topic/" + topic.getId() + "?type=REVIEWER";
+            notifications.sendAfterCommit(reviewer.getEmail(), subject, body);
+        }
+
+        return saved;
     }
 
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
@@ -110,7 +125,17 @@ public class ReviewerAssignmentService {
         }
         assignment.setReviewer(reviewer);
         assignment.setStatus(ReviewerAssignmentStatus.ASSIGNED);
-        return assignmentRepository.save(assignment);
+        ReviewerAssignment saved = assignmentRepository.save(assignment);
+
+        if (reviewer.getEmail() != null) {
+            String subject = "Phân công phản biện đề tài " + assignment.getTopic().getCode();
+            String body = "Bạn được phân công phản biện đề tài: " + assignment.getTopic().getTitle() + "\n"
+                    + "Hạn nộp điểm: " + assignment.getDeadline() + "\n"
+                    + "Link truy cập: " + baseUrl.replaceAll("/+$", "") + "/evaluations/topic/" + assignment.getTopic().getId() + "?type=REVIEWER";
+            notifications.sendAfterCommit(reviewer.getEmail(), subject, body);
+        }
+
+        return saved;
     }
 
     @PreAuthorize("hasRole('FACULTY_MANAGER')")

@@ -11,10 +11,10 @@ import java.util.Optional;
 
 @Repository
 public interface TopicResultRepository extends JpaRepository<TopicResult, Long> {
-    @EntityGraph(attributePaths = {"topic", "confirmer", "publisher"})
+    @EntityGraph(attributePaths = {"topic", "topic.registrationPeriod", "confirmer", "publisher"})
     Optional<TopicResult> findByTopicId(Long topicId);
 
-    @EntityGraph(attributePaths = {"topic"})
+    @EntityGraph(attributePaths = {"topic", "topic.registrationPeriod", "councilAssignment", "councilAssignment.council"})
     List<TopicResult> findAllByOrderByIdAsc();
 
     long countByStatus(TopicResultStatus status);

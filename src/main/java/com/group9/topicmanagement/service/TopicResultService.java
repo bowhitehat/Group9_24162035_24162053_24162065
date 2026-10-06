@@ -19,6 +19,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.group9.topicmanagement.model.studentgroup.GroupMember;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -40,6 +41,7 @@ public class TopicResultService {
     private final TopicRegistrationService topicRegistrationService;
     private final ReviewerAssignmentRepository reviewerAssignmentRepository;
     private final CouncilMemberRepository councilMemberRepository;
+    private final TransactionalNotificationService notifications;
 
     public TopicResultService(TopicResultRepository resultRepository,
                               TopicRepository topicRepository,
@@ -51,7 +53,8 @@ public class TopicResultService {
                               CouncilService councilService,
                               TopicRegistrationService topicRegistrationService,
                               ReviewerAssignmentRepository reviewerAssignmentRepository,
-                              CouncilMemberRepository councilMemberRepository) {
+                              CouncilMemberRepository councilMemberRepository,
+                              TransactionalNotificationService notifications) {
         this.resultRepository = resultRepository;
         this.topicRepository = topicRepository;
         this.evaluationRepository = evaluationRepository;
@@ -63,6 +66,7 @@ public class TopicResultService {
         this.topicRegistrationService = topicRegistrationService;
         this.reviewerAssignmentRepository = reviewerAssignmentRepository;
         this.councilMemberRepository = councilMemberRepository;
+        this.notifications = notifications;
     }
 
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
@@ -153,6 +157,16 @@ public class TopicResultService {
         result.setPublisher(publisher);
         result.setPublishedTime(LocalDateTime.now());
         resultRepository.save(result);
+
+        topicRegistrationService.findApprovedForTopic(topicId).ifPresent(reg -> {
+            String subject = "Kết quả đề tài: " + result.getTopic().getCode();
+            String body = "Kết quả đề tài " + result.getTopic().getTitle() + " đã được công bố.\nĐiểm tổng kết: " + result.getFinalScore() + "\n\nVui lòng đăng nhập hệ thống để xem chi tiết.";
+            for (GroupMember member : reg.getStudentGroup().getMembers()) {
+                if (member.getMember().getEmail() != null) {
+                    notifications.sendAfterCommit(member.getMember().getEmail(), subject, body);
+                }
+            }
+        });
     }
 
     @Transactional(readOnly = true)
@@ -182,13 +196,23 @@ public class TopicResultService {
     }
 
     @Transactional(readOnly = true)
+    public List<TopicResult> listStudentResults(String username) {
+        User student = userRepository.findByUsernameIgnoreCase(username)
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy người dùng"));
+        return resultRepository.findAllByOrderByIdAsc().stream()
+                .filter(r -> r.getStatus() == TopicResultStatus.PUBLISHED)
+                .filter(r -> topicRegistrationService.isStudentOnApprovedTopic(r.getTopic().getId(), student.getId()))
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<TopicResult> listResults(org.springframework.security.core.Authentication auth) {
         boolean isManager = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_FACULTY_MANAGER"));
         Long userId = userRepository.findByUsernameIgnoreCase(auth.getName()).orElseThrow().getId();
-        
+
         List<TopicResult> dbResults = resultRepository.findAllByOrderByIdAsc();
         List<CouncilAssignment> assignments = councilAssignmentRepository.findAllByOrderByIdAsc();
-        
+
         return assignments.stream()
             .filter(a -> isManager || councilService.isMemberOfCouncil(a.getCouncil().getId(), userId))
             .map(a -> {
@@ -204,19 +228,19 @@ public class TopicResultService {
             })
             .toList();
     }
-    
+
     @Transactional(readOnly = true)
     public TopicResult getResultForDetail(Long topicId, org.springframework.security.core.Authentication auth) {
         boolean isManager = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_FACULTY_MANAGER"));
         Long userId = userRepository.findByUsernameIgnoreCase(auth.getName()).orElseThrow().getId();
-        
+
         CouncilAssignment assignment = councilAssignmentRepository.findFirstByTopicIdOrderByIdDesc(topicId)
                 .orElseThrow(() -> new NotFoundException("Đề tài chưa phân công hội đồng"));
-                
+
         if (!isManager && !councilService.isMemberOfCouncil(assignment.getCouncil().getId(), userId)) {
             throw new AccessDeniedException("Không có quyền xem kết quả đề tài này");
         }
-        
+
         return resultRepository.findByTopicId(topicId).orElseGet(() -> {
             TopicResult dummy = new TopicResult();
             dummy.setTopic(assignment.getTopic());
@@ -224,7 +248,7 @@ public class TopicResultService {
             return dummy;
         });
     }
-    
+
     @Transactional(readOnly = true)
     public boolean canConfirm(Long topicId, String username) {
         Long userId = userRepository.findByUsernameIgnoreCase(username).orElseThrow().getId();
@@ -233,7 +257,7 @@ public class TopicResultService {
             .map(r -> r.getStatus() == TopicResultStatus.PENDING_CONFIRMATION && isLockedAndCurrentResult(topicId, r))
             .orElse(false);
     }
-    
+
     @Transactional(readOnly = true)
     public boolean canPublish(Long topicId, String username) {
         User user = userRepository.findByUsernameIgnoreCase(username).orElseThrow();
@@ -294,11 +318,11 @@ public class TopicResultService {
                 return false;
             }
         }
-        
+
         // Check council members
         Optional<CouncilAssignment> assignmentOpt = councilAssignmentRepository.findByTopicIdAndCouncil_StatusIn(
             topicId, List.of(CouncilStatus.ACTIVE, CouncilStatus.COMPLETED)).stream().findFirst();
-            
+
         if (assignmentOpt.isEmpty()) return false;
 
         Long councilId = assignmentOpt.get().getCouncil().getId();

@@ -5,12 +5,17 @@
 <div th:fragment="content">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h4>Quản lý kết quả đề tài</h4>
+        <div>
+            <a th:href="@{/evaluations/results/export/excel}" class="btn btn-success">Xuất Excel</a>
+            <a th:href="@{/evaluations/results/export/pdf}" class="btn btn-danger">Xuất PDF</a>
+        </div>
     </div>
     <div class="table-responsive">
         <table class="table table-bordered table-hover align-middle">
             <thead class="table-light">
             <tr>
                 <th>Đề tài</th>
+                <th>Hội đồng</th>
                 <th>Điểm tổng</th>
                 <th>Trạng thái</th>
                 <th>Thao tác</th>
@@ -19,6 +24,7 @@
             <tbody>
             <tr th:each="r : ${results}">
                 <td th:text="${r.topic.code + ' - ' + r.topic.title}"></td>
+                <td th:text="${r.councilAssignment != null ? r.councilAssignment.council.name : ''}"></td>
                 <td th:text="${r.finalScore != null ? r.finalScore : 'Chưa có'}"></td>
                 <td th:text="${r.status != null ? r.status : 'Chưa tính điểm'}"></td>
                 <td>
