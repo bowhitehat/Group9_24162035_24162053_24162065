@@ -1,0 +1,6 @@
+<!doctype html><html lang="vi" xmlns:th="http://www.thymeleaf.org"><body><div th:fragment="fields">
+<div th:if="${#fields.hasAnyErrors()}" class="alert alert-danger" role="alert"><p class="mb-0" th:each="err:${#fields.allErrors()}" th:text="${err}"></p></div>
+<label for="code" class="form-label">Mã bộ môn</label><input class="form-control mb-2" required maxlength="20" th:errorclass="is-invalid" th:field="*{code}">
+<label for="name" class="form-label">Tên bộ môn</label><input class="form-control mb-2" required maxlength="160" th:errorclass="is-invalid" th:field="*{name}">
+<label for="description" class="form-label">Mô tả</label><textarea class="form-control mb-3" maxlength="1000" th:errorclass="is-invalid" th:field="*{description}"></textarea>
+</div></body></html>

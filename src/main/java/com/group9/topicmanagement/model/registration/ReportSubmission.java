@@ -18,15 +18,15 @@ public class ReportSubmission extends BaseEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "student_group_id", nullable = false)
+    @JoinColumn(name = "student_group_id", nullable = false, foreignKey = @ForeignKey(name = "fk_report_submission_student_group_id"))
     private StudentGroup studentGroup;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "topic_registration_id", nullable = false)
+    @JoinColumn(name = "topic_registration_id", nullable = false, foreignKey = @ForeignKey(name = "fk_report_submission_topic_registration_id"))
     private TopicRegistration topicRegistration;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "submitter_id", nullable = false)
+    @JoinColumn(name = "submitter_id", nullable = false, foreignKey = @ForeignKey(name = "fk_report_submission_submitter_id"))
     private User submitter;
 
     @Column(name = "original_file_name", nullable = false, length = 255)

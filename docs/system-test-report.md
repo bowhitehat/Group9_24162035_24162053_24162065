@@ -77,3 +77,15 @@ Các lớp chính: `CoreAdminRequirementsTest`, `Member2BusinessRulesTest`, `Mem
 Chưa có URL production thật trong phiên kiểm thử này vì workspace không có tài khoản/credential của nhà cung cấp hosting và nhánh chưa được đẩy đến một remote triển khai. Do đó các mục health check, database, đăng nhập, phân quyền, static resource và upload **trên production** chưa thể đánh dấu đạt; không sử dụng URL giả.
 
 Khi triển khai lên nền tảng không có persistent disk, file trong `UPLOAD_DIR` sẽ mất khi container restart/redeploy. Cần gắn persistent volume hoặc chuyển upload sang object storage (S3-compatible) trước khi dùng thực tế.
+
+## 7. Bổ sung TV1 — 06/10/2026
+
+Lần chạy này độc lập với kết quả MySQL/E2E đã ghi ở trên; không đánh dấu lại toàn bộ E2E là đã chạy với code mới.
+
+- `mvn -B clean package`: BUILD SUCCESS; 144 test Java, 0 lỗi/thất bại/bỏ qua. Log tại `D:/demo_proj_web/tmp/tv1-final-build.log`.
+- `node --test src/test/js/period-form.test.cjs`: 24/24 test đạt.
+- Test mới: sửa hồ sơ giữ nguyên mật khẩu/ID; chống trùng username/email/MSSV; tự sửa ADMIN không được bỏ quyền/đổi username; sửa bộ môn/chống trùng; POST/GET sai role nhận 403; CSRF và ID không tồn tại; kiểm tra tên FK và unique MSSV.
+- EmailServiceTest dùng mock; EmailSmtpIntegrationTest dùng SMTP ServerSocket cục bộ và JavaMailSender thật, xác nhận người nhận/tiêu đề/nội dung tiếng Việt. Không chứng minh thư đến hộp thư Internet.
+- Mở JAR thật với profile test, H2 độc lập trên cổng 8093: admin sửa student1 thành công; email trùng giữ form và báo lỗi; sửa mô tả bộ môn có xác nhận; menu mobile 390×844 có Đăng ký đề tài/Nộp báo cáo và không có mục admin cho sinh viên.
+- Ảnh thật của môi trường thử: `screenshots/tv1_user_duplicate_email.jpg`, `screenshots/tv1_department_updated.jpg`, `screenshots/tv1_student_mobile_menu.jpg`. Đây không phải dữ liệu MySQL/production.
+- Chưa chạy lại E2E MySQL sau thay đổi TV1; chưa nối email vào công bố/phân công (TV3); chưa tách quyền trưởng khoa/trưởng bộ môn; cần TV2 xử lý duyệt đăng ký đồng thời sau khi bỏ cột sinh approved_topic_id.

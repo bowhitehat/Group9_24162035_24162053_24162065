@@ -1,6 +1,6 @@
 # Hệ thống quản lý đề tài sinh viên — Group 9
 
-**TRƯỜNG ĐẠI HỌC CÔNG NGHỆ KỸ THUẬT TP.HCM**
+**TRƯỜNG ĐẠI HỌC SƯ PHẠM KỸ THUẬT TP.HCM**
 
 **Khoa Công nghệ Thông tin**
 
@@ -10,7 +10,7 @@
 
 | Thành viên | MSSV | Phụ trách |
 |---|---:|---|
-| Trang Sĩ Hoàng | 24162035 | Nền tảng kỹ thuật, tích hợp, SQL Workbench, tài khoản–phân quyền, bộ môn và đợt đăng ký |
+| Trang Sĩ Hoàng | 24162035 | Nền tảng kỹ thuật, tích hợp, CSDL/JPA relationship mapping, tài khoản–phân quyền, bộ môn và đợt đăng ký |
 | Vũ Trọng Hưng | 24162053 | Đề tài, nhóm sinh viên, đăng ký đề tài và nộp báo cáo |
 | Trần Hào Kiệt | 24162065 | Phản biện, hội đồng, chấm điểm, thông báo, dashboard và triển khai |
 
@@ -18,7 +18,7 @@
 
 - Java 21, Spring Boot 3.5, Maven.
 - Spring MVC, Thymeleaf, Validation.
-- Spring Data JPA, MySQL 8, Flyway.
+- Spring Data JPA, Hibernate ORM và MySQL 8.
 - Spring Security, BCrypt, CSRF và method security.
 - Spring AOP và transaction management.
 - JUnit 5, MockMvc, H2 cho test.
@@ -35,8 +35,8 @@ HTTP request → Controller → Service → Repository → MySQL
 
 - Controller nhận/validate input, gọi service và chọn view.
 - Luật nghiệp vụ và transaction đặt tại service.
-- Repository là lớp duy nhất truy cập dữ liệu.
-- Flyway là nguồn sự thật của schema; không sửa migration đã được chia sẻ.
+- Repository chỉ dùng `JpaRepository`, derived query và relationship mapping; không viết SQL thủ công.
+- Hibernate tạo/cập nhật schema từ các entity bằng `spring.jpa.hibernate.ddl-auto=update`.
 - File người dùng nằm ngoài `static`, theo cấu hình `app.upload-dir`.
 
 Quy tắc tích hợp chi tiết: [docs/shared-contract.md](docs/shared-contract.md).
@@ -47,8 +47,8 @@ Quy tắc tích hợp chi tiết: [docs/shared-contract.md](docs/shared-contract
 
 1. Cài Java 21, Maven 3.9+ và MySQL 8.
 2. Mở MySQL Workbench bằng tài khoản quản trị.
-3. Mở [sql/mysql-workbench-setup.sql](sql/mysql-workbench-setup.sql), thay mật khẩu mẫu rồi chạy toàn bộ script.
-4. Sao chép `.env.example` thành `.env` và chỉ điền bí mật trong `.env`.
+3. Trong MySQL Workbench, tạo schema rỗng tên `group9_topic_management` bằng giao diện **Create Schema**; không chạy script SQL.
+4. Sao chép `.env.example` thành `.env`, điền tài khoản MySQL có quyền trên schema đó. Hibernate sẽ tạo bảng từ entity khi ứng dụng khởi động.
 
 Ví dụ:
 
@@ -88,7 +88,7 @@ mvn test
 mvn clean package
 ```
 
-File JAR được tạo trong `target/`. Profile test dùng H2; trước khi bàn giao phải chạy thêm ứng dụng thật với MySQL để Flyway và Hibernate `validate` toàn bộ schema.
+File JAR được tạo trong `target/`. Profile test dùng H2 và cũng tạo schema trực tiếp từ entity; trước khi bàn giao phải chạy thêm ứng dụng thật với MySQL để xác nhận toàn bộ relationship mapping.
 
 ## Docker
 
@@ -104,6 +104,11 @@ Xem thêm [deployment/README.md](deployment/README.md).
 
 ## Tài liệu
 
+- [Yêu cầu, ma trận quyền và phân công đến lớp](docs/system-requirements.md)
+- [Từ điển dữ liệu JPA](docs/data-dictionary.md)
+- [Use-case tổng thể](diagrams/use-case-system.svg)
+- [Cấu hình SMTP và contract EmailService](docs/mail-integration.md)
+- [Chương 1–2](docs/chapter-1-2.md)
 - [Hướng dẫn MySQL Workbench](docs/mysql-workbench-guide.md)
 - [Data contract dùng chung](docs/shared-contract.md)
 - [Thiết kế cơ sở dữ liệu](docs/chapter-4.md)

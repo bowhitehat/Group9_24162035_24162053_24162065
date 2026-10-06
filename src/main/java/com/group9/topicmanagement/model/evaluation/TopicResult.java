@@ -18,11 +18,11 @@ public class TopicResult extends BaseEntity {
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "topic_id", nullable = false, unique = true)
+    @JoinColumn(name = "topic_id", nullable = false, unique = true, foreignKey = @ForeignKey(name = "fk_topic_results_topic_id"))
     private Topic topic;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "council_assignment_id", nullable = false, unique = true)
+    @JoinColumn(name = "council_assignment_id", nullable = false, unique = true, foreignKey = @ForeignKey(name = "fk_topic_results_council_assignment_id"))
     private CouncilAssignment councilAssignment;
 
     @Column(precision = 4, scale = 2)
@@ -33,13 +33,13 @@ public class TopicResult extends BaseEntity {
     private TopicResultStatus status = TopicResultStatus.PENDING_CONFIRMATION;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "confirmer_id")
+    @JoinColumn(name = "confirmer_id", foreignKey = @ForeignKey(name = "fk_topic_results_confirmer_id"))
     private User confirmer;
 
     private LocalDateTime confirmedTime;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "publisher_id")
+    @JoinColumn(name = "publisher_id", foreignKey = @ForeignKey(name = "fk_topic_results_publisher_id"))
     private User publisher;
 
     private LocalDateTime publishedTime;

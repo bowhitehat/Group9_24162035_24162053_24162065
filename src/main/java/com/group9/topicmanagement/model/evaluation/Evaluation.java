@@ -22,11 +22,11 @@ public class Evaluation extends BaseEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "topic_id", nullable = false)
+    @JoinColumn(name = "topic_id", nullable = false, foreignKey = @ForeignKey(name = "fk_evaluations_topic_id"))
     private Topic topic;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "evaluator_id", nullable = false)
+    @JoinColumn(name = "evaluator_id", nullable = false, foreignKey = @ForeignKey(name = "fk_evaluations_evaluator_id"))
     private User evaluator;
 
     @Enumerated(EnumType.STRING)
@@ -34,11 +34,11 @@ public class Evaluation extends BaseEntity {
     private EvaluationType evaluationType;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "reviewer_assignment_id")
+    @JoinColumn(name = "reviewer_assignment_id", foreignKey = @ForeignKey(name = "fk_evaluations_reviewer_assignment_id"))
     private ReviewerAssignment reviewerAssignment;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "council_member_id")
+    @JoinColumn(name = "council_member_id", foreignKey = @ForeignKey(name = "fk_evaluations_council_member_id"))
     private CouncilMember councilMember;
 
     @Enumerated(EnumType.STRING)

@@ -18,11 +18,11 @@ public class StudentGroup extends BaseEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "registration_period_id", nullable = false)
+    @JoinColumn(name = "registration_period_id", nullable = false, foreignKey = @ForeignKey(name = "fk_student_group_registration_period_id"))
     private RegistrationPeriod registrationPeriod;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "leader_id", nullable = false)
+    @JoinColumn(name = "leader_id", nullable = false, foreignKey = @ForeignKey(name = "fk_student_group_leader_id"))
     private User leader;
 
     @OneToMany(mappedBy = "group", cascade = CascadeType.ALL, orphanRemoval = true)

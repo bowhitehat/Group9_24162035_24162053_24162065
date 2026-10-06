@@ -9,9 +9,9 @@ import java.math.BigDecimal;
 public class EvaluationScore extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "evaluation_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "evaluation_id", nullable = false, foreignKey = @ForeignKey(name = "fk_evaluation_scores_evaluation_id"))
     private Evaluation evaluation;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "criterion_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "criterion_id", nullable = false, foreignKey = @ForeignKey(name = "fk_evaluation_scores_criterion_id"))
     private EvaluationCriterion criterion;
     @Column(nullable = false, precision = 4, scale = 2)
     private BigDecimal score;

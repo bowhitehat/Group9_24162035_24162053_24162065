@@ -11,6 +11,12 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByUsernameIgnoreCase(String username);
     boolean existsByUsernameIgnoreCase(String username);
     boolean existsByEmailIgnoreCase(String email);
+    boolean existsByUsernameIgnoreCaseAndIdNot(String username, Long id);
+    boolean existsByEmailIgnoreCaseAndIdNot(String email, Long id);
+    boolean existsByStudentCodeIgnoreCase(String studentCode);
+    boolean existsByStudentCodeIgnoreCaseAndIdNot(String studentCode, Long id);
+    @EntityGraph(attributePaths = {"roles", "department"})
+    Optional<User> findOneById(Long id);
     @EntityGraph(attributePaths = {"roles", "department"})
     List<User> findByUsernameContainingIgnoreCaseOrFullNameContainingIgnoreCaseOrderByFullName(String username, String fullName);
     @EntityGraph(attributePaths = {"roles", "department"})

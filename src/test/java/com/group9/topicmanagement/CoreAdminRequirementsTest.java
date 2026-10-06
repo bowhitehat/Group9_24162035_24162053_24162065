@@ -295,6 +295,90 @@ class CoreAdminRequirementsTest {
                 .containsExactly("Nội dung", "Kỹ thuật", "Sản phẩm", "Báo cáo", "Trình bày/phản biện");
     }
 
+    @Test @WithMockUser(username="admin", roles="ADMIN")
+    void adminEditsAccountWithoutChangingPassword() throws Exception {
+        var student = userService.create("editstudent", "Tên cũ", "edit@test.local", "ED001", null, Set.of(RoleName.STUDENT), "Password@123");
+        String hash = student.getPasswordHash();
+        mvc.perform(get("/admin/users/" + student.getId() + "/edit"))
+                .andExpect(status().isOk()).andExpect(view().name("admin/user-edit"));
+        mvc.perform(post("/admin/users/" + student.getId() + "/edit").with(csrf())
+                .param("username", "editstudent").param("fullName", "Tên đã sửa")
+                .param("email", "edit-new@test.local").param("studentCode", "ED002").param("roles", "STUDENT"))
+                .andExpect(status().is3xxRedirection()).andExpect(flash().attributeExists("successMessage"));
+        var saved = userService.get(student.getId());
+        assertThat(saved.getFullName()).isEqualTo("Tên đã sửa");
+        assertThat(saved.getPasswordHash()).isEqualTo(hash);
+        assertThat(saved.getStudentCode()).isEqualTo("ED002");
+    }
+
+    @Test @WithMockUser(username="admin", roles="ADMIN")
+    void duplicateIdentityAndInvalidEditKeepFormAndData() throws Exception {
+        var student = userService.create("other", "Sinh viên", "other@test.local", "ED001", null, Set.of(RoleName.STUDENT), "Password@123");
+        mvc.perform(post("/admin/users/" + student.getId() + "/edit").with(csrf())
+                .param("username", " ADMIN ").param("fullName", "Tên mới").param("email", "other@test.local").param("roles", "STUDENT"))
+                .andExpect(status().isOk()).andExpect(model().attributeHasErrors("userUpdateForm"));
+        assertThat(userService.get(student.getId()).getUsername()).isEqualTo("other");
+        mvc.perform(post("/admin/users/" + student.getId() + "/edit").with(csrf()).param("username", "other"))
+                .andExpect(status().isOk()).andExpect(model().attributeHasErrors("userUpdateForm"));
+    }
+
+    @Test void studentCodeAndNormalizedEmailMustBeUnique() {
+        var first = userService.create("s1", "SV1", "s1@test.local", " UNIQUE ", null, Set.of(RoleName.STUDENT), "Password@123");
+        assertThatThrownBy(() -> userService.create("s2", "SV2", "s2@test.local", "unique", null, Set.of(RoleName.STUDENT), "Password@123"))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("MSSV");
+        assertThatThrownBy(() -> userService.create("s2", "SV2", " S1@TEST.LOCAL ", null, null, Set.of(RoleName.STUDENT), "Password@123"))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("Email");
+        var second = userService.create("s2", "SV2", "s2@test.local", "OTHER", null, Set.of(RoleName.STUDENT), "Password@123");
+        assertThatThrownBy(() -> userService.update(second.getId(), "s2", "SV2", "s2@test.local", first.getStudentCode(), null, Set.of(RoleName.STUDENT), "admin"))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("MSSV");
+    }
+
+    @Test void adminCannotRemoveOwnAccessOrRenameSelf() {
+        var admin = userService.getByUsername("admin");
+        assertThatThrownBy(() -> userService.update(admin.getId(), "admin", "Admin", "admin@test.local", null, null, Set.of(RoleName.STUDENT), "admin"))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("chính mình");
+        assertThatThrownBy(() -> userService.update(admin.getId(), "renamed", "Admin", "admin@test.local", null, null, Set.of(RoleName.ADMIN), "admin"))
+                .isInstanceOf(BusinessRuleException.class);
+    }
+
+    @Test @WithMockUser(username="admin", roles="ADMIN")
+    void departmentEditNormalizesCodeAndRejectsDuplicate() throws Exception {
+        Department original = departments.findByCodeIgnoreCase("CNPM").orElseThrow();
+        mvc.perform(get("/admin/departments/" + original.getId() + "/edit"))
+                .andExpect(status().isOk()).andExpect(view().name("admin/department-edit"));
+        mvc.perform(post("/admin/departments/" + original.getId() + "/edit").with(csrf())
+                .param("code", " attt ").param("name", "An toàn thông tin").param("description", "Đã cập nhật"))
+                .andExpect(status().is3xxRedirection()).andExpect(flash().attributeExists("successMessage"));
+        assertThat(departments.findById(original.getId()).orElseThrow().getCode()).isEqualTo("ATTT");
+        Department other = new Department(); other.setCode("HTTT"); other.setName("Hệ thống thông tin"); departments.save(other);
+        mvc.perform(post("/admin/departments/" + original.getId() + "/edit").with(csrf()).param("code", "httt").param("name", "Tên mới"))
+                .andExpect(status().isOk()).andExpect(model().attributeHasErrors("departmentForm"));
+        assertThat(departments.findById(original.getId()).orElseThrow().getCode()).isEqualTo("ATTT");
+    }
+
+    @ParameterizedTest @CsvSource({"STUDENT", "LECTURER", "FACULTY_MANAGER"})
+    void nonAdminCannotGetOrPostEditPages(String role) throws Exception {
+        var actor = org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user("admin").roles(role);
+        mvc.perform(get("/admin/users/1/edit").with(actor)).andExpect(status().isForbidden());
+        mvc.perform(post("/admin/users/1/edit").with(actor).with(csrf())).andExpect(status().isForbidden());
+        mvc.perform(get("/admin/departments/1/edit").with(actor)).andExpect(status().isForbidden());
+        mvc.perform(post("/admin/departments/1/edit").with(actor).with(csrf())).andExpect(status().isForbidden());
+    }
+
+    @Test @WithMockUser(username="admin", roles="ADMIN")
+    void editPostRequiresCsrfAndMissingIdsReturn404() throws Exception {
+        mvc.perform(post("/admin/users/1/edit")).andExpect(status().isForbidden());
+        mvc.perform(get("/admin/users/999999/edit")).andExpect(status().isNotFound());
+        mvc.perform(get("/admin/departments/999999/edit")).andExpect(status().isNotFound());
+    }
+
+    @Test @WithMockUser(username="admin", roles="STUDENT")
+    void mobileNavbarIncludesReportSubmission() throws Exception {
+        String html = mvc.perform(get("/dashboard")).andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(html).contains("aria-controls=\"nav\"");
+        assertThat(html.substring(0, html.indexOf("</nav>"))).contains("/reports/submit");
+    }
+
     private RegistrationPeriod validPeriod(PeriodType type) {
         RegistrationPeriod period = new RegistrationPeriod(); period.setName("Đợt kiểm thử"); period.setType(type);
         LocalDateTime start = LocalDateTime.now().plusDays(1); period.setLecturerStart(start); period.setLecturerEnd(start.plusDays(5));

@@ -9,9 +9,9 @@ import jakarta.persistence.*;
 public class CouncilAssignment extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "council_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "council_id", nullable = false, foreignKey = @ForeignKey(name = "fk_council_assignments_council_id"))
     private Council council;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "topic_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "topic_id", nullable = false, foreignKey = @ForeignKey(name = "fk_council_assignments_topic_id"))
     private Topic topic;
     
     public Long getId() { return id; } public void setId(Long id) { this.id = id; }

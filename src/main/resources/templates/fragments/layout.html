@@ -14,13 +14,14 @@
             <img th:src="@{/images/hcmute-logo.jpg}" class="brand-logo" alt="HCMUTE">
             <span>QLĐT · GROUP 9</span>
         </a>
-        <button class="navbar-toggler" data-bs-toggle="collapse" data-bs-target="#nav"><span class="navbar-toggler-icon"></span></button>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav" aria-controls="nav" aria-expanded="false" aria-label="Mở menu điều hướng"><span class="navbar-toggler-icon"></span></button>
         <div class="collapse navbar-collapse" id="nav">
             <ul class="navbar-nav me-auto">
                 <li class="nav-item"><a class="nav-link" th:href="@{/dashboard}">Tổng quan</a></li>
                 <li class="nav-item"><a class="nav-link" th:href="@{/topics}">Đề tài</a></li>
                 <li class="nav-item" sec:authorize="hasRole('STUDENT')"><a class="nav-link" th:href="@{/groups/my-group}">Nhóm của tôi</a></li>
                 <li class="nav-item" sec:authorize="hasRole('STUDENT')"><a class="nav-link" th:href="@{/registrations}">Đăng ký đề tài</a></li>
+                <li class="nav-item" sec:authorize="hasRole('STUDENT')"><a class="nav-link" th:href="@{/reports/submit}">Nộp báo cáo</a></li>
                 <li class="nav-item" sec:authorize="hasAnyRole('FACULTY_MANAGER','ADMIN')"><a class="nav-link" th:href="@{/registrations}">Duyệt đăng ký</a></li>
                 <li class="nav-item" sec:authorize="hasRole('FACULTY_MANAGER')"><a class="nav-link" th:href="@{/reviewer-assignments}">Phản biện</a></li>
                 <li class="nav-item" sec:authorize="hasRole('LECTURER') and !hasRole('FACULTY_MANAGER')"><a class="nav-link" th:href="@{/reviewer-assignments/my-assignments}">Phản biện</a></li>
@@ -62,8 +63,8 @@
             <a sec:authorize="hasAnyRole('FACULTY_MANAGER','ADMIN')" th:href="@{/faculty/periods}">Quản lý đợt</a>
         </aside>
         <section class="col-lg-10 ms-auto p-4 p-xl-5">
-            <div th:if="${successMessage}" class="alert alert-success" th:text="${successMessage}"></div>
-            <div th:if="${errorMessage}" class="alert alert-danger" th:text="${errorMessage}"></div>
+            <div th:if="${successMessage}" class="alert alert-success" role="status" aria-live="polite" th:text="${successMessage}"></div>
+            <div th:if="${errorMessage}" class="alert alert-danger" role="alert" th:text="${errorMessage}"></div>
             <main th:replace="${content}"></main>
         </section>
     </div>

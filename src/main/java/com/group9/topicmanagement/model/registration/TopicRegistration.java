@@ -22,15 +22,15 @@ public class TopicRegistration extends BaseEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "student_group_id", nullable = false)
+    @JoinColumn(name = "student_group_id", nullable = false, foreignKey = @ForeignKey(name = "fk_topic_registration_student_group_id"))
     private StudentGroup studentGroup;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "topic_id", nullable = false)
+    @JoinColumn(name = "topic_id", nullable = false, foreignKey = @ForeignKey(name = "fk_topic_registration_topic_id"))
     private Topic topic;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "registration_period_id", nullable = false)
+    @JoinColumn(name = "registration_period_id", nullable = false, foreignKey = @ForeignKey(name = "fk_topic_registration_registration_period_id"))
     private RegistrationPeriod registrationPeriod;
 
     @Enumerated(EnumType.STRING)
@@ -38,7 +38,7 @@ public class TopicRegistration extends BaseEntity {
     private RegistrationStatus status = RegistrationStatus.PENDING;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "approver_id")
+    @JoinColumn(name = "approver_id", foreignKey = @ForeignKey(name = "fk_topic_registration_approver_id"))
     private User approver;
 
     @Column(name = "rejection_reason", length = 500)

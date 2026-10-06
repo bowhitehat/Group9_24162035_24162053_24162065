@@ -15,7 +15,7 @@ public class EvaluationCriterion extends BaseEntity {
     private String name;
     @Lob
     private String description;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "registration_period_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "registration_period_id", nullable = false, foreignKey = @ForeignKey(name = "fk_evaluation_criteria_registration_period_id"))
     private RegistrationPeriod registrationPeriod;
     @Column(name = "display_order", nullable = false)
     private Integer displayOrder = 0;

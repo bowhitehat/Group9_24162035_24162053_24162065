@@ -14,11 +14,11 @@ public class GroupMember extends BaseEntity {
     private Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "group_id", nullable = false)
+    @JoinColumn(name = "group_id", nullable = false, foreignKey = @ForeignKey(name = "fk_group_member_group_id"))
     private StudentGroup group;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "member_id", nullable = false)
+    @JoinColumn(name = "member_id", nullable = false, foreignKey = @ForeignKey(name = "fk_group_member_member_id"))
     private User member;
 
     @Column(nullable = false)

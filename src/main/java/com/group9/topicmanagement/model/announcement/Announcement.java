@@ -25,7 +25,7 @@ public class Announcement extends BaseEntity {
     private String content;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "creator_id", nullable = false)
+    @JoinColumn(name = "creator_id", nullable = false, foreignKey = @ForeignKey(name = "fk_announcements_creator_id"))
     private User creator;
 
     @Enumerated(EnumType.STRING)
@@ -34,8 +34,8 @@ public class Announcement extends BaseEntity {
 
     @ManyToMany(fetch = FetchType.LAZY)
     @JoinTable(name = "announcement_target_roles",
-            joinColumns = @JoinColumn(name = "announcement_id"),
-            inverseJoinColumns = @JoinColumn(name = "role_id"),
+            joinColumns = @JoinColumn(name = "announcement_id", foreignKey = @ForeignKey(name = "fk_announcements_announcement_id")),
+            inverseJoinColumns = @JoinColumn(name = "role_id", foreignKey = @ForeignKey(name = "fk_announcements_role_id")),
             uniqueConstraints = @UniqueConstraint(name = "uk_announcement_role",
                     columnNames = {"announcement_id", "role_id"}))
     private Set<Role> targetRoles = new LinkedHashSet<>();

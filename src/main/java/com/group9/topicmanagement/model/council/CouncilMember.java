@@ -10,9 +10,9 @@ import jakarta.persistence.*;
 public class CouncilMember extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "council_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "council_id", nullable = false, foreignKey = @ForeignKey(name = "fk_council_members_council_id"))
     private Council council;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "member_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "member_id", nullable = false, foreignKey = @ForeignKey(name = "fk_council_members_member_id"))
     private User member;
     @Enumerated(EnumType.STRING) @Column(nullable = false)
     private CouncilMemberRole role;

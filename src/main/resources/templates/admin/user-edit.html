@@ -1,0 +1,6 @@
+<!doctype html><html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: page(~{::main})}"><main>
+<h1 class="page-title">Sửa thông tin tài khoản</h1><div class="row"><div class="col-lg-8 col-xl-6"><div class="card p-4">
+<p>Mật khẩu không thay đổi khi sửa thông tin. Không thể đổi tên đăng nhập hoặc bỏ quyền ADMIN của chính mình.</p>
+<form th:action="@{/admin/users/{id}/edit(id=${userId})}" th:object="${userUpdateForm}" method="post">
+<div th:replace="~{admin/user-fields :: fields}"></div><div class="d-flex gap-2"><button class="btn btn-primary">Lưu thay đổi</button><a class="btn btn-outline-secondary" th:href="@{/admin/users}">Hủy</a></div>
+</form></div></div></div></main></html>

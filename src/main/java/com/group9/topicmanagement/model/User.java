@@ -7,7 +7,8 @@ import java.util.Set;
 @Entity
 @Table(name = "users", uniqueConstraints = {
     @UniqueConstraint(name = "uk_user_username", columnNames = "username"),
-    @UniqueConstraint(name = "uk_user_email", columnNames = "email")
+    @UniqueConstraint(name = "uk_user_email", columnNames = "email"),
+    @UniqueConstraint(name = "uk_user_student_code", columnNames = "student_code")
 })
 public class User extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -20,7 +21,7 @@ public class User extends BaseEntity {
     private String fullName;
     @Column(nullable = false, length = 160)
     private String email;
-    @Column(length = 30)
+    @Column(name = "student_code", length = 30)
     private String studentCode;
     @Column(nullable = false)
     private boolean enabled = true;
@@ -28,7 +29,7 @@ public class User extends BaseEntity {
     @JoinColumn(name = "department_id", foreignKey = @ForeignKey(name = "fk_user_department"))
     private Department department;
     @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"), inverseJoinColumns = @JoinColumn(name = "role_id"), uniqueConstraints = @UniqueConstraint(name = "uk_user_role", columnNames = {"user_id", "role_id"}))
+    @JoinTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id", foreignKey = @ForeignKey(name = "fk_users_user_id")), inverseJoinColumns = @JoinColumn(name = "role_id", foreignKey = @ForeignKey(name = "fk_users_role_id")), uniqueConstraints = @UniqueConstraint(name = "uk_user_role", columnNames = {"user_id", "role_id"}))
     private Set<Role> roles = new LinkedHashSet<>();
 
     public Long getId() { return id; }

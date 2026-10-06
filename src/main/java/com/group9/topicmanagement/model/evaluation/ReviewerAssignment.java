@@ -12,11 +12,11 @@ import java.time.LocalDateTime;
 public class ReviewerAssignment extends BaseEntity {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "topic_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "topic_id", nullable = false, foreignKey = @ForeignKey(name = "fk_reviewer_assignments_topic_id"))
     private Topic topic;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "reviewer_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "reviewer_id", nullable = false, foreignKey = @ForeignKey(name = "fk_reviewer_assignments_reviewer_id"))
     private User reviewer;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "assigner_id")
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "assigner_id", foreignKey = @ForeignKey(name = "fk_reviewer_assignments_assigner_id"))
     private User assigner;
     private LocalDateTime assignedAt;
     private LocalDateTime deadline;

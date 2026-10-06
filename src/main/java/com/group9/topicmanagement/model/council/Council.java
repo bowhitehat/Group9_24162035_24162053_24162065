@@ -12,7 +12,7 @@ public class Council extends BaseEntity {
     private Long id;
     @Column(nullable = false)
     private String name;
-    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "registration_period_id", nullable = false)
+    @ManyToOne(fetch = FetchType.LAZY) @JoinColumn(name = "registration_period_id", nullable = false, foreignKey = @ForeignKey(name = "fk_councils_registration_period_id"))
     private RegistrationPeriod registrationPeriod;
     private LocalDateTime reportDate;
     private String location;

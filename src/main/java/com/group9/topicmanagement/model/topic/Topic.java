@@ -40,11 +40,11 @@ public class Topic extends BaseEntity {
     private String requirement;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "department_id", nullable = false)
+    @JoinColumn(name = "department_id", nullable = false, foreignKey = @ForeignKey(name = "fk_topic_department_id"))
     private Department department;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "registration_period_id", nullable = false)
+    @JoinColumn(name = "registration_period_id", nullable = false, foreignKey = @ForeignKey(name = "fk_topic_registration_period_id"))
     private RegistrationPeriod registrationPeriod;
 
     @Enumerated(EnumType.STRING)
@@ -52,13 +52,13 @@ public class Topic extends BaseEntity {
     private TopicStatus status = TopicStatus.DRAFT;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "proposer_id", nullable = false)
+    @JoinColumn(name = "proposer_id", nullable = false, foreignKey = @ForeignKey(name = "fk_topic_proposer_id"))
     private User proposer;
 
     @ManyToMany
     @JoinTable(name = "topic_advisors",
-            joinColumns = @JoinColumn(name = "topic_id"),
-            inverseJoinColumns = @JoinColumn(name = "advisor_id"),
+            joinColumns = @JoinColumn(name = "topic_id", foreignKey = @ForeignKey(name = "fk_topic_topic_id")),
+            inverseJoinColumns = @JoinColumn(name = "advisor_id", foreignKey = @ForeignKey(name = "fk_topic_advisor_id")),
             uniqueConstraints = @UniqueConstraint(columnNames = {"topic_id", "advisor_id"}))
     private Set<User> advisors = new HashSet<>();
 

@@ -38,7 +38,8 @@ public class DepartmentService {
 
     @Transactional
     public Department create(String code, String name, String description) {
-        String normalized = code.trim().toUpperCase();
+        validate(code, name, description);
+        String normalized = code.trim().toUpperCase(java.util.Locale.ROOT);
         if (departments.findByCodeIgnoreCase(normalized).isPresent()) throw new BusinessRuleException("Mã bộ môn đã tồn tại");
         Department department = new Department();
         department.setCode(normalized);
@@ -49,8 +50,9 @@ public class DepartmentService {
 
     @Transactional
     public Department update(Long id, String code, String name, String description) {
+        validate(code, name, description);
         Department department = get(id);
-        String normalized = code.trim().toUpperCase();
+        String normalized = code.trim().toUpperCase(java.util.Locale.ROOT);
         departments.findByCodeIgnoreCase(normalized).filter(other -> !other.getId().equals(id))
             .ifPresent(other -> { throw new BusinessRuleException("Mã bộ môn đã tồn tại"); });
         department.setCode(normalized);
@@ -66,5 +68,14 @@ public class DepartmentService {
             throw new BusinessRuleException("Không thể ngừng bộ môn đang có người dùng liên quan");
         }
         department.setActive(!department.isActive());
+    }
+
+    private void validate(String code, String name, String description) {
+        if (code == null || code.isBlank() || code.trim().length() > 20)
+            throw new BusinessRuleException("Mã bộ môn là bắt buộc và tối đa 20 ký tự");
+        if (name == null || name.isBlank() || name.trim().length() > 160)
+            throw new BusinessRuleException("Tên bộ môn là bắt buộc và tối đa 160 ký tự");
+        if (description != null && description.length() > 1000)
+            throw new BusinessRuleException("Mô tả tối đa 1000 ký tự");
     }
 }

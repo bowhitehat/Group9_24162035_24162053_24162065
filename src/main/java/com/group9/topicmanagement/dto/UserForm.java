@@ -11,7 +11,7 @@ import java.util.Set;
 public class UserForm {
     @NotBlank(message = "Tên đăng nhập là bắt buộc") @Size(max = 80) private String username;
     @NotBlank(message = "Họ tên là bắt buộc") @Size(max = 160) private String fullName;
-    @NotBlank(message = "Email là bắt buộc") @Email(message = "Email không hợp lệ") private String email;
+    @NotBlank(message = "Email là bắt buộc") @Email(message = "Email không hợp lệ") @Size(max = 160) private String email;
     @Size(max = 30) private String studentCode;
     private Long departmentId;
     @NotEmpty(message = "Chọn ít nhất một vai trò") private Set<RoleName> roles = new LinkedHashSet<>();
