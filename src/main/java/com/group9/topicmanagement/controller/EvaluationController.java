@@ -34,15 +34,17 @@ public class EvaluationController {
     private final TopicResultService topicResultService;
     private final TopicService topicService;
     private final TopicRegistrationService registrationService;
+    private final com.group9.topicmanagement.service.TopicResultExportService exportService;
 
     public EvaluationController(EvaluationService evaluationService,
                                 TopicResultService topicResultService,
                                 TopicService topicService,
-                                TopicRegistrationService registrationService) {
+                                TopicRegistrationService registrationService, com.group9.topicmanagement.service.TopicResultExportService exportService) {
         this.evaluationService = evaluationService;
         this.topicResultService = topicResultService;
         this.topicService = topicService;
         this.registrationService = registrationService;
+        this.exportService = exportService;
     }
 
     @GetMapping("/topic/{topicId}")
@@ -132,10 +134,24 @@ public class EvaluationController {
 
     @GetMapping("/my-result")
     @PreAuthorize("hasRole('STUDENT')")
-    public String myResult(@RequestParam Long topicId, Authentication auth, Model model) {
-        TopicResult result = topicResultService.getPublishedResultForStudent(topicId, auth.getName());
-        model.addAttribute("result", result);
-        model.addAttribute("evaluations", evaluationService.listByTopic(topicId));
+    public String myResult(@RequestParam(required = false) Long periodId, Authentication auth, Model model) {
+        List<TopicResult> allResults = topicResultService.listStudentResults(auth.getName());
+        model.addAttribute("allResults", allResults);
+        
+        TopicResult result = null;
+        if (periodId != null) {
+            result = allResults.stream()
+                .filter(r -> r.getTopic().getRegistrationPeriod().getId().equals(periodId))
+                .findFirst().orElse(null);
+        } else if (!allResults.isEmpty()) {
+            result = allResults.get(0);
+        }
+        
+        if (result != null) {
+            model.addAttribute("result", result);
+            model.addAttribute("evaluations", evaluationService.listByTopic(result.getTopic().getId()));
+            model.addAttribute("selectedPeriodId", result.getTopic().getRegistrationPeriod().getId());
+        }
         return "evaluations/student-result";
     }
 
@@ -209,5 +225,24 @@ public class EvaluationController {
                 .collect(java.util.stream.Collectors.toSet()) : java.util.Set.of());
         
         return "evaluations/result-detail";
+    }
+    @GetMapping("/results/export/excel")
+    @PreAuthorize("hasAnyRole('FACULTY_MANAGER', 'LECTURER')")
+    public void exportExcel(Authentication auth, jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+        List<TopicResult> results = topicResultService.listResults(auth);
+        byte[] data = exportService.exportToExcel(results);
+        response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
+        response.setHeader("Content-Disposition", "attachment; filename=\"results.xlsx\"");
+        response.getOutputStream().write(data);
+    }
+
+    @GetMapping("/results/export/pdf")
+    @PreAuthorize("hasAnyRole('FACULTY_MANAGER', 'LECTURER')")
+    public void exportPdf(Authentication auth, jakarta.servlet.http.HttpServletResponse response) throws java.io.IOException {
+        List<TopicResult> results = topicResultService.listResults(auth);
+        byte[] data = exportService.exportToPdf(results);
+        response.setContentType("application/pdf");
+        response.setHeader("Content-Disposition", "attachment; filename=\"results.pdf\"");
+        response.getOutputStream().write(data);
     }
 }

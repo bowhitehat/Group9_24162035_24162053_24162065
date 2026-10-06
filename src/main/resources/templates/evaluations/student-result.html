@@ -3,22 +3,40 @@
 <head><title>Kết quả nhóm</title></head>
 <body>
 <div th:fragment="content">
-    <h4 class="mb-3">Kết quả đề tài của nhóm</h4>
-    <div class="card mb-3">
-        <div class="card-body">
-            <p><strong>Đề tài:</strong> <span th:text="${result.topic.code + ' - ' + result.topic.title}"></span></p>
-            <p><strong>Điểm trung bình:</strong> <span th:text="${result.finalScore}"></span></p>
-            <p><strong>Trạng thái:</strong> <span th:text="${result.status}"></span></p>
-        </div>
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h4>Kết quả đề tài của nhóm</h4>
+        <form th:if="${not #lists.isEmpty(allResults)}" method="get" class="d-flex align-items-center gap-2">
+            <label class="text-nowrap mb-0">Đợt đăng ký:</label>
+            <select name="periodId" class="form-select form-select-sm" onchange="this.form.submit()">
+                <option th:each="res : ${allResults}" 
+                        th:value="${res.topic.registrationPeriod.id}" 
+                        th:text="${res.topic.registrationPeriod.name}"
+                        th:selected="${res.topic.registrationPeriod.id == selectedPeriodId}"></option>
+            </select>
+        </form>
     </div>
-    <h5>Điểm thành phần</h5>
-    <div class="card mb-3" th:each="e : ${evaluations}">
-        <div class="card-header" th:text="${e.evaluator.fullName + ' · ' + e.evaluationType + ' · ' + e.status}"></div>
-        <div class="card-body">
-            <p th:if="${e.comments != null}"><strong>Nhận xét:</strong> <span th:text="${e.comments}"></span></p>
-            <ul>
-                <li th:each="s : ${e.scores}" th:text="${s.criterion.name + ': ' + s.score}"></li>
-            </ul>
+
+    <div class="alert alert-info" th:if="${#lists.isEmpty(allResults)}">
+        Chưa có kết quả đề tài nào được công bố cho bạn.
+    </div>
+
+    <div th:if="${result != null}">
+        <div class="card mb-3">
+            <div class="card-body">
+                <p><strong>Đề tài:</strong> <span th:text="${result.topic.code + ' - ' + result.topic.title}"></span></p>
+                <p><strong>Điểm trung bình:</strong> <span th:text="${result.finalScore}"></span></p>
+                <p><strong>Trạng thái:</strong> <span th:text="${result.status}"></span></p>
+            </div>
+        </div>
+        <h5>Điểm thành phần</h5>
+        <div class="card mb-3" th:each="e : ${evaluations}">
+            <div class="card-header" th:text="${e.evaluator.fullName + ' · ' + e.evaluationType + ' · ' + e.status}"></div>
+            <div class="card-body">
+                <p th:if="${e.comments != null}"><strong>Nhận xét:</strong> <span th:text="${e.comments}"></span></p>
+                <ul>
+                    <li th:each="s : ${e.scores}" th:text="${s.criterion.name + ': ' + s.score}"></li>
+                </ul>
+            </div>
         </div>
     </div>
 </div>

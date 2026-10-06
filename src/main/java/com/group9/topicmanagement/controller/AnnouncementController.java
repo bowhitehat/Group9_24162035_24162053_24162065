@@ -97,4 +97,45 @@ public class AnnouncementController {
         redirectAttributes.addFlashAttribute("successMessage", "Đã lưu trữ thông báo");
         return "redirect:/announcements";
     }
+    @GetMapping("/{id}/edit")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FACULTY_MANAGER')")
+    public String showEditForm(@PathVariable Long id, Model model) {
+        var announcement = announcementService.getAnnouncementById(id);
+        AnnouncementForm form = new AnnouncementForm();
+        form.setTitle(announcement.getTitle());
+        form.setContent(announcement.getContent());
+        if (announcement.getTargetRoles() != null) {
+            form.setTargetRoles(announcement.getTargetRoles().stream()
+                    .map(r -> com.group9.topicmanagement.model.enums.RoleName.valueOf(r.getName().name()))
+                    .collect(Collectors.toSet()));
+        }
+        form.setExpirationTime(announcement.getExpirationTime());
+        form.setPublish(announcement.getStatus() == com.group9.topicmanagement.model.enums.AnnouncementStatus.PUBLISHED);
+        
+        model.addAttribute("announcementForm", form);
+        model.addAttribute("announcementId", id);
+        return "announcements/form";
+    }
+
+    @PostMapping("/{id}/edit")
+    @PreAuthorize("hasAnyRole('ADMIN', 'FACULTY_MANAGER')")
+    public String updateAnnouncement(@PathVariable Long id,
+                                     @Valid @ModelAttribute("announcementForm") AnnouncementForm form,
+                                     BindingResult bindingResult,
+                                     RedirectAttributes redirectAttributes) {
+        if (bindingResult.hasErrors()) {
+            redirectAttributes.addFlashAttribute("errorMessage", bindingResult.getAllErrors().get(0).getDefaultMessage());
+            return "redirect:/announcements/" + id + "/edit";
+        }
+        try {
+            announcementService.updateAnnouncement(id, form.getTitle(), form.getContent(),
+                    form.getTargetRoles().stream().map(Enum::name).toList(),
+                    form.isPublish(), form.getExpirationTime());
+            redirectAttributes.addFlashAttribute("successMessage", "Cập nhật thông báo thành công");
+        } catch (BusinessRuleException | IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            return "redirect:/announcements/" + id + "/edit";
+        }
+        return "redirect:/announcements";
+    }
 }

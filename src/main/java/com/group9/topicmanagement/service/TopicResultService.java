@@ -19,6 +19,7 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.group9.topicmanagement.model.studentgroup.GroupMember;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -40,6 +41,7 @@ public class TopicResultService {
     private final TopicRegistrationService topicRegistrationService;
     private final ReviewerAssignmentRepository reviewerAssignmentRepository;
     private final CouncilMemberRepository councilMemberRepository;
+    private final EmailService emailService;
 
     public TopicResultService(TopicResultRepository resultRepository,
                               TopicRepository topicRepository,
@@ -51,7 +53,8 @@ public class TopicResultService {
                               CouncilService councilService,
                               TopicRegistrationService topicRegistrationService,
                               ReviewerAssignmentRepository reviewerAssignmentRepository,
-                              CouncilMemberRepository councilMemberRepository) {
+                              CouncilMemberRepository councilMemberRepository,
+                              EmailService emailService) {
         this.resultRepository = resultRepository;
         this.topicRepository = topicRepository;
         this.evaluationRepository = evaluationRepository;
@@ -63,6 +66,7 @@ public class TopicResultService {
         this.topicRegistrationService = topicRegistrationService;
         this.reviewerAssignmentRepository = reviewerAssignmentRepository;
         this.councilMemberRepository = councilMemberRepository;
+        this.emailService = emailService;
     }
 
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
@@ -153,6 +157,16 @@ public class TopicResultService {
         result.setPublisher(publisher);
         result.setPublishedTime(LocalDateTime.now());
         resultRepository.save(result);
+        
+        topicRegistrationService.findApprovedForTopic(topicId).ifPresent(reg -> {
+            String subject = "Kết quả đề tài: " + result.getTopic().getCode();
+            String body = "Kết quả đề tài " + result.getTopic().getTitle() + " đã được công bố.\nĐiểm tổng kết: " + result.getFinalScore() + "\n\nVui lòng đăng nhập hệ thống để xem chi tiết.";
+            for (GroupMember member : reg.getStudentGroup().getMembers()) {
+                if (member.getMember().getEmail() != null) {
+                    emailService.sendNotification(member.getMember().getEmail(), subject, body);
+                }
+            }
+        });
     }
 
     @Transactional(readOnly = true)
@@ -179,6 +193,16 @@ public class TopicResultService {
         }
         return resultRepository.findByTopicId(topicId)
                 .filter(r -> r.getStatus() == TopicResultStatus.PUBLISHED);
+    }
+
+    @Transactional(readOnly = true)
+    public List<TopicResult> listStudentResults(String username) {
+        User student = userRepository.findByUsernameIgnoreCase(username)
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy người dùng"));
+        return resultRepository.findAll().stream()
+                .filter(r -> r.getStatus() == TopicResultStatus.PUBLISHED)
+                .filter(r -> topicRegistrationService.isStudentOnApprovedTopic(r.getTopic().getId(), student.getId()))
+                .toList();
     }
 
     @Transactional(readOnly = true)
