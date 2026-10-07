@@ -25,7 +25,7 @@ Chủ tịch/thư ký không phải role tài khoản riêng: CHAIR/SECRETARY/ME
 | FR02 | Tạo/xem/sửa tài khoản, vai trò, bộ môn; chống trùng username/email/MSSV/mã bộ môn | TV1 |
 | FR03 | Quản lý đợt, trạng thái và lịch GV → SV → báo cáo → phản biện → hội đồng | TV1 |
 | FR04 | Đề xuất/sửa/gửi duyệt/duyệt/từ chối/công bố đề tài; chỉ SV thấy đề tài công bố | TV2 |
-| FR05 | Lập nhóm, một trưởng nhóm, không ở hai nhóm cùng đợt; 3–5 SV khi đăng ký | TV2 cần cập nhật giới hạn hiện tại 3 |
+| FR05 | Lập nhóm, một trưởng nhóm, không ở hai nhóm cùng đợt; cho tạo nhóm thiếu người nhưng bắt buộc 3–5 SV khi đăng ký/duyệt | TV2 đã hoàn thiện |
 | FR06 | Đăng ký cùng đợt trong giai đoạn SV; duyệt một đề tài cho một nhóm | TV2 |
 | FR07 | Trưởng nhóm nộp trong hạn, lịch sử phiên bản, tải báo cáo theo quan hệ | TV2 |
 | FR08 | Phân công phản biện đúng đề tài đã được chấp thuận; theo dõi hạn/phiếu | TV3 |

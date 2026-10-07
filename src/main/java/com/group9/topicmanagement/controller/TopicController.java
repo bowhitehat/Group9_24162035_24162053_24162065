@@ -113,6 +113,7 @@ public class TopicController {
         model.addAttribute("rejectForm", new RejectForm());
         model.addAttribute("canEdit", topicService.canEdit(topic, authentication.getName()));
         model.addAttribute("canSubmit", topicService.canSubmit(topic, authentication.getName()));
+        model.addAttribute("canDelete", topicService.canDelete(topic, authentication.getName()));
         model.addAttribute("canApprove", topicService.canApprove(topic, manager));
         model.addAttribute("canReject", topicService.canReject(topic, manager));
         model.addAttribute("canPublish", topicService.canPublish(topic, manager));
@@ -228,6 +229,19 @@ public class TopicController {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/topics/detail/" + id;
+    }
+
+    @PreAuthorize("hasRole('LECTURER')")
+    @PostMapping("/delete/{id}")
+    public String deleteTopic(@PathVariable Long id, Principal principal, RedirectAttributes redirectAttributes) {
+        try {
+            topicService.deleteDraftTopic(id, principal.getName());
+            redirectAttributes.addFlashAttribute("successMessage", "Đã xóa đề tài nháp!");
+            return "redirect:/topics";
+        } catch (BusinessRuleException | IllegalArgumentException e) {
+            redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
+            return "redirect:/topics/detail/" + id;
+        }
     }
 
     @PreAuthorize("hasAnyRole('FACULTY_MANAGER', 'ADMIN')")
