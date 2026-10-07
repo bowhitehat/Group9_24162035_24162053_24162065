@@ -50,7 +50,7 @@ sequenceDiagram
 
     Note over TN,Sys: Bước 4 & 5: Thành lập và Quản lý nhóm SV
     TN->>Sys: 4. Tạo nhóm sinh viên trong đợt (Người tạo tự động là Trưởng nhóm)
-    TN->>Sys: 5. Thêm/xóa thành viên nhóm (Tối đa 3 SV, không trùng nhóm trong đợt)
+    TN->>Sys: 5. Thêm/xóa thành viên nhóm (Tối đa 5 SV, không trùng nhóm trong đợt)
 
     Note over TN,Khoa: Bước 6 & 7: Đăng ký và Xét duyệt đề tài
     TN->>Sys: 6. Trưởng nhóm đăng ký đề tài PUBLISHED (Đơn ở trạng thái PENDING)
@@ -67,7 +67,7 @@ sequenceDiagram
 2. **Bước 2 — Giảng viên gửi duyệt**: Khi hoàn thiện thông tin, giảng viên bấm nút "Gửi duyệt". Trạng thái chuyển từ `DRAFT` (hoặc `REJECTED`) sang `PENDING`.
 3. **Bước 3 — Khoa duyệt và công bố đề tài**: Quản lý Khoa xem danh sách đề tài chờ duyệt. Nếu đạt yêu cầu, Khoa bấm "Duyệt" (`APPROVED`). Khi đến thời điểm mở cho sinh viên, Khoa bấm "Công bố" (`PUBLISHED`) để đề tài hiển thị công khai. Nếu chưa đạt, Khoa bấm "Từ chối" kèm lý do phản hồi chi tiết để GV chỉnh sửa.
 4. **Bước 4 — Sinh viên tạo nhóm**: Trong thời gian sinh viên đăng ký, một sinh viên tạo nhóm mới cho đợt đăng ký đó. Hệ thống khởi tạo bản ghi `StudentGroup`, đồng thời tự động thêm sinh viên này vào bảng `GroupMember` với cờ `is_leader = true`.
-5. **Bước 5 — Thêm/xóa thành viên nhóm**: Trưởng nhóm nhập tên đăng nhập của các bạn cùng nhóm. Hệ thống kiểm tra ràng buộc: mỗi nhóm tối đa 3 thành viên và sinh viên chưa tham gia bất kỳ nhóm nào khác trong cùng đợt. Trưởng nhóm có quyền xóa thành viên nếu có thay đổi.
+5. **Bước 5 — Thêm/xóa thành viên nhóm**: Trưởng nhóm nhập tên đăng nhập của các bạn cùng nhóm. Hệ thống cho phép khởi tạo nhóm chưa đủ người, giới hạn tối đa 5 thành viên và kiểm tra sinh viên chưa tham gia nhóm khác trong cùng đợt. Khi đăng ký đề tài, nhóm phải có từ 3 đến 5 sinh viên và đúng một trưởng nhóm. Không cho xóa thành viên nếu thao tác làm một đăng ký đã duyệt còn dưới 3 người.
 6. **Bước 6 — Trưởng nhóm đăng ký đề tài**: Trưởng nhóm duyệt danh mục các đề tài đã `PUBLISHED`, chọn đề tài phù hợp và bấm "Đăng ký". Hệ thống ghi nhận bản ghi `TopicRegistration` với trạng thái `PENDING`. Thành viên thường bấm đăng ký sẽ bị chặn.
 7. **Bước 7 — Khoa duyệt đăng ký đề tài**: Quản lý Khoa tra cứu danh sách đăng ký theo đợt và bộ môn. Khi Khoa phê duyệt (`APPROVED`) cho nhóm, hệ thống xác nhận đề tài thuộc về nhóm đó và ngăn phê duyệt trùng cho nhóm khác.
 8. **Bước 8 — Trưởng nhóm nộp và tải lại báo cáo**: Khi đề tài đã được duyệt chính thức, Trưởng nhóm truy cập chức năng nộp báo cáo tiến độ, đính kèm file (PDF, DOC, DOCX, ZIP) và ghi chú. Khi nộp lại, hệ thống tự động tăng phiên bản (`version = latestVersion + 1`) và lưu trữ an toàn. Trưởng nhóm, thành viên nhóm, GVHD và Quản lý Khoa có quyền xem lịch sử và tải file về máy.
@@ -139,7 +139,7 @@ flowchart TD
 * **FR-03 (Phê duyệt & Từ chối đề tài)**: Chỉ Quản lý Khoa / Quản trị viên (`ROLE_FACULTY_MANAGER`, `ROLE_ADMIN`) mới có quyền duyệt (`APPROVED`) hoặc từ chối (`REJECTED`). Khi từ chối, **lý do từ chối là bắt buộc** không được để trống.
 * **FR-04 (Công bố đề tài)**: Đề tài sau khi `APPROVED` phải được Khoa bấm "Công bố" (`PUBLISHED`) mới hiển thị trong danh mục cho sinh viên đăng ký.
 * **FR-05 (Khởi tạo nhóm)**: Sinh viên tạo nhóm trong thời gian đợt mở cho sinh viên (`studentStart <= now <= studentEnd`). Người tạo mặc định là Trưởng nhóm (`is_leader = true`).
-* **FR-06 (Quy mô nhóm)**: Mỗi nhóm có **tối đa 3 sinh viên**. Mỗi sinh viên chỉ được phép tham gia **tối đa 1 nhóm** trong cùng một đợt đăng ký.
+* **FR-06 (Quy mô nhóm)**: Có thể tạo nhóm chưa đủ người; nhóm có **tối đa 5 sinh viên** và phải có **3–5 sinh viên khi đăng ký/duyệt đề tài**. Mỗi sinh viên chỉ được tham gia **tối đa 1 nhóm** trong cùng một đợt; mỗi nhóm có đúng một trưởng nhóm.
 * **FR-07 (Thêm/Xóa thành viên)**: Chỉ Trưởng nhóm mới có quyền mời/thêm hoặc loại bỏ thành viên khỏi nhóm.
 * **FR-08 (Quyền đăng ký đề tài)**: Chỉ **Trưởng nhóm** mới có quyền đăng ký đề tài cho nhóm. Đề tài đăng ký bắt buộc phải ở trạng thái `PUBLISHED`.
 * **FR-09 (Tính duy nhất trong duyệt đề tài)**: Đề tài chỉ được duyệt chính thức (`APPROVED`) cho **đúng 1 nhóm** duy nhất. Hệ thống ngăn chặn việc duyệt trùng đề tài cho nhiều nhóm.
@@ -178,7 +178,7 @@ Biểu mẫu dành cho giảng viên nhập mã, tên, đợt đăng ký, bộ m
 ---
 
 ### 3. Giao diện Quản lý Nhóm Sinh viên (`/groups/my-group`)
-Cho phép sinh viên khởi tạo nhóm, hiển thị huy hiệu Trưởng nhóm (`LEADER`), danh sách thành viên (tối đa 3 SV), biểu mẫu mời thêm thành viên bằng MSSV và nút xóa thành viên:
+Cho phép sinh viên khởi tạo nhóm, hiển thị huy hiệu Trưởng nhóm (`LEADER`), danh sách thành viên (tối đa 5 SV), biểu mẫu mời thêm thành viên bằng MSSV và nút xóa thành viên. Nút đăng ký chỉ khả dụng khi nhóm đủ 3–5 SV:
 
 ![Quản lý Nhóm Sinh viên](../screenshots/03_nhom_sinh_vien.png)
 *Hình 3.3: Giao diện Quản lý Nhóm Sinh viên và phân quyền Trưởng nhóm (`screenshots/03_nhom_sinh_vien.png`)*
@@ -203,20 +203,26 @@ Biểu mẫu tải file báo cáo dành cho Trưởng nhóm, tích hợp bảng 
 
 ## 3.7 Kết quả Kiểm thử Tự động (Automated Verification)
 
-Toàn bộ 13 ca kiểm thử tích hợp và phân quyền trong bộ test suite `Member2BusinessRulesTest` đã được chạy và vượt qua 100%:
+Bộ `Member2BusinessRulesTest` hiện có 24 ca kiểm thử tích hợp và phân quyền; bảng dưới trình bày các ca tiêu biểu, bao gồm ba ca hồi quy mới cho duyệt đồng thời, trạng thái đợt và giao diện xóa thành viên:
 
 | STT | Tên Test Case | Mục đích Kiểm thử | Kết quả |
 |:---:|:---|:---|:---:|
 | 1 | `testCreateTopicAndMaxAdvisorsRule` | Kiểm tra tạo đề tài ở trạng thái `DRAFT` và chặn tạo đề tài có quá 2 GVHD | **PASSED** |
 | 2 | `testTopicApprovalAndPublishFlow` | Kiểm tra luồng duyệt đề tài: `DRAFT` $\to$ `PENDING` $\to$ `APPROVED` $\to$ `PUBLISHED` | **PASSED** |
-| 3 | `testStudentGroupRulesMax3AndSingleLeaderAndNoDuplicateGroupInPeriod` | Ràng buộc nhóm tối đa 3 SV, tự động gán trưởng nhóm, 1 SV không ở 2 nhóm | **PASSED** |
-| 4 | `testOnlyLeaderCanRegisterTopicAndPreventDuplicateApprovedTopic` | Chỉ trưởng nhóm được đăng ký; Ngăn chặn duyệt trùng 1 đề tài cho nhóm khác | **PASSED** |
-| 5 | `testReportSubmissionOnlyLeaderAndVersionIncrement` | Chỉ trưởng nhóm được nộp báo cáo; Tự động tăng phiên bản (`v1`, `v2`) | **PASSED** |
-| 6 | `testBackendSecurity403ForUnauthorizedRole` | Sinh viên không được tạo đề tài, không được duyệt đăng ký/công bố (`403 Forbidden`) | **PASSED** |
-| 7 | `testLecturer403ForbiddenAccessToFacultyAndStudentEndpoints` | Giảng viên không được tạo nhóm SV, không được nộp báo cáo, không được duyệt đăng ký (`403 Forbidden`) | **PASSED** |
-| 8 | `testReportDownloadEndpoint` | Thành viên nhóm tải file báo cáo tiến độ thành công (`200 OK`) | **PASSED** |
-| 9 | `testRejectReasonIsRequired` | Từ chối đề tài bắt buộc phải có lý do (không được rỗng) | **PASSED** |
-| 10 | `testInvalidReportFileIsRejectedAndOtherGroupCannotRead` | Chặn upload file thực thi (`.exe`), chỉ nhận PDF/DOC/ZIP; Chặn nhóm khác xem file | **PASSED** |
-| 11 | `testReportDeadlineIsEnforced` | Chặn nộp báo cáo khi đã qua hạn chót của đợt | **PASSED** |
-| 12 | `testTopicOutsideLecturerWindowIsRejected` | Chặn giảng viên tạo đề tài khi ngoài khung thời gian quy định | **PASSED** |
-| 13 | `testReportHistoryReturns403ForStudentFromAnotherGroup` | Sinh viên khác nhóm truy cập URL xem lịch sử báo cáo bị trả về HTTP 403 | **PASSED** |
+| 3 | `testStudentGroupRulesMax5AndSingleLeaderAndNoDuplicateGroupInPeriod` | Ràng buộc nhóm tối đa 5 SV, tự động gán trưởng nhóm, 1 SV không ở 2 nhóm | **PASSED** |
+| 4 | `groupMayBeCreatedIncompleteButCannotRegisterUntilItHasThreeMembers` | Cho tạo nhóm thiếu người nhưng chặn đăng ký trước khi đủ 3 SV | **PASSED** |
+| 5 | `approvedRegistrationCannotBeMadeInvalidByRemovingAMember` | Không cho rút nhóm đã duyệt xuống dưới 3 SV | **PASSED** |
+| 6 | `lecturerCanDeleteOnlyOwnDraftWithoutRelatedRegistration` | Chỉ chủ đề xuất được xóa đề tài nháp chưa có dữ liệu liên quan | **PASSED** |
+| 7 | `repeatableReadConcurrentApprovalsAllowOnlyOneGroupForTopic` | Hai giao dịch `REPEATABLE_READ` đồng thời chỉ duyệt được một nhóm cho đề tài | **PASSED** |
+| 8 | `cannotAddMemberAfterPeriodMovesToInProgressEvenBeforeStudentDeadline` | Backend chặn thêm thành viên khi đợt đã chuyển sang `IN_PROGRESS` | **PASSED** |
+| 9 | `approvedThreeMemberGroupDoesNotExposeRemoveActions` | Nhóm đã duyệt đủ tối thiểu 3 người không hiển thị nút Xóa | **PASSED** |
+| 10 | `testOnlyLeaderCanRegisterTopicAndPreventDuplicateApprovedTopic` | Chỉ trưởng nhóm được đăng ký; Ngăn chặn duyệt trùng 1 đề tài cho nhóm khác | **PASSED** |
+| 11 | `testReportSubmissionOnlyLeaderAndVersionIncrement` | Chỉ trưởng nhóm được nộp báo cáo; Tự động tăng phiên bản (`v1`, `v2`) | **PASSED** |
+| 12 | `testBackendSecurity403ForUnauthorizedRole` | Sinh viên không được tạo đề tài, không được duyệt đăng ký/công bố (`403 Forbidden`) | **PASSED** |
+| 13 | `testLecturer403ForbiddenAccessToFacultyAndStudentEndpoints` | Giảng viên không được tạo nhóm SV, không được nộp báo cáo, không được duyệt đăng ký (`403 Forbidden`) | **PASSED** |
+| 14 | `testReportDownloadEndpoint` | Thành viên nhóm tải file báo cáo tiến độ thành công (`200 OK`) | **PASSED** |
+| 15 | `testRejectReasonIsRequired` | Từ chối đề tài bắt buộc phải có lý do (không được rỗng) | **PASSED** |
+| 16 | `testInvalidReportFileIsRejectedAndOtherGroupCannotRead` | Chặn upload file thực thi (`.exe`), chỉ nhận PDF/DOC/ZIP; Chặn nhóm khác xem file | **PASSED** |
+| 17 | `testReportDeadlineIsEnforced` | Chặn nộp báo cáo khi đã qua hạn chót của đợt | **PASSED** |
+| 18 | `testTopicOutsideLecturerWindowIsRejected` | Chặn giảng viên tạo đề tài khi ngoài khung thời gian quy định | **PASSED** |
+| 19 | `testReportHistoryReturns403ForStudentFromAnotherGroup` | Sinh viên khác nhóm truy cập URL xem lịch sử báo cáo bị trả về HTTP 403 | **PASSED** |

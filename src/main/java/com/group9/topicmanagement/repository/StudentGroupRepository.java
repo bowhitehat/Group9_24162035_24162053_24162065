@@ -3,10 +3,15 @@ package com.group9.topicmanagement.repository;
 import com.group9.topicmanagement.model.studentgroup.StudentGroup;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 
 import java.util.Optional;
 
 public interface StudentGroupRepository extends JpaRepository<StudentGroup, Long> {
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<StudentGroup> findLockedById(Long id);
 
     @Override
     @EntityGraph(attributePaths = {"registrationPeriod", "leader", "members", "members.member"})

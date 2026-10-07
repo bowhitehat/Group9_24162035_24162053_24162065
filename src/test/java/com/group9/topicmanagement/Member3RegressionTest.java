@@ -121,8 +121,6 @@ class Member3RegressionTest extends Member3BusinessRulesTest {
         var period = periods.findById(topic.getRegistrationPeriod().getId()).orElseThrow();
         period.setStatus(com.group9.topicmanagement.model.enums.PeriodStatus.STUDENT_REGISTRATION);
         periods.save(period);
-        var registration = registrationService.findApprovedForTopic(topic.getId()).orElseThrow();
-        groupService.addMember(registration.getStudentGroup().getId(), "student2", "student1");
         period.setStatus(com.group9.topicmanagement.model.enums.PeriodStatus.IN_PROGRESS);
         periods.save(period);
         seedCriteria();
@@ -158,7 +156,8 @@ class Member3RegressionTest extends Member3BusinessRulesTest {
         org.assertj.core.api.Assertions.assertThatThrownBy(() -> topicResultService.publishResult(topic.getId(), "faculty1"))
                 .isInstanceOf(com.group9.topicmanagement.exception.BusinessRuleException.class);
         verify(mail).sendNotification(eq("sv1@test.local"), contains("Kết quả"), contains("8.13"));
-        verify(mail).sendNotification(eq("sv2@test.local"), contains("Kết quả"), contains("8.13"));
+        verify(mail).sendNotification(eq("sv3@test.local"), contains("Kết quả"), contains("8.13"));
+        verify(mail).sendNotification(eq("sv4@test.local"), contains("Kết quả"), contains("8.13"));
         verifyNoMoreInteractions(mail);
     }
 

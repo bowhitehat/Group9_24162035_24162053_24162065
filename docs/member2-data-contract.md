@@ -43,6 +43,7 @@ Migration tích hợp đã được Thành viên 1 bổ sung tại `V6__create_t
 
 ## 3. Bảng `student_group` (Nhóm sinh viên)
 * **Mục đích**: Lưu thông tin nhóm sinh viên tham gia trong một đợt.
+* **Luật service**: Cho phép tạo nhóm chưa đủ người; tối đa 5 thành viên. Trước khi đăng ký hoặc duyệt đăng ký phải có 3–5 thành viên và đúng một bản ghi `group_member.is_leader = true` khớp với `student_group.leader_id`. Sinh viên không được thuộc hai nhóm trong cùng đợt. Không thay đổi entity/mapping cho yêu cầu này.
 * **Cột**:
   - `id`: `BIGINT AUTO_INCREMENT PRIMARY KEY`
   - `registration_period_id`: `BIGINT NOT NULL` (FK -> `registration_periods.id`)

@@ -11,6 +11,7 @@ import java.util.Optional;
 
 @Repository
 public interface TopicResultRepository extends JpaRepository<TopicResult, Long> {
+    boolean existsByTopicId(Long topicId);
     @EntityGraph(attributePaths = {"topic", "topic.registrationPeriod", "confirmer", "publisher"})
     Optional<TopicResult> findByTopicId(Long topicId);
 

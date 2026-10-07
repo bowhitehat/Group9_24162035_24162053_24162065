@@ -32,7 +32,7 @@ Tất cả các tài liệu và hình ảnh đã được chuẩn bị đầy đ
    - Khoa duyệt (`APPROVED`), từ chối (`REJECTED` kèm lý do), và Công bố (`PUBLISHED`).
 2. **Nhóm Sinh viên**:
    - Sinh viên tạo nhóm trong đợt đăng ký (người tạo là Trưởng nhóm `is_leader = true`).
-   - Mỗi nhóm **tối đa 3 sinh viên**. Mỗi sinh viên chỉ thuộc **tối đa 1 nhóm** trong cùng 1 đợt.
+   - Có thể tạo nhóm chưa đủ người; khi đăng ký/duyệt phải có **3–5 sinh viên** và đúng một trưởng nhóm. Mỗi sinh viên chỉ thuộc **tối đa 1 nhóm** trong cùng 1 đợt.
 3. **Đăng ký Đề tài**:
    - Chỉ **Trưởng nhóm** mới được đăng ký đề tài `PUBLISHED`.
    - Đề tài chỉ được phê duyệt đăng ký cho **đúng 1 nhóm**.

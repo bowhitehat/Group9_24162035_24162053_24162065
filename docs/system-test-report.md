@@ -89,3 +89,13 @@ Lần chạy này độc lập với kết quả MySQL/E2E đã ghi ở trên; k
 - Mở JAR thật với profile test, H2 độc lập trên cổng 8093: admin sửa student1 thành công; email trùng giữ form và báo lỗi; sửa mô tả bộ môn có xác nhận; menu mobile 390×844 có Đăng ký đề tài/Nộp báo cáo và không có mục admin cho sinh viên.
 - Ảnh thật của môi trường thử: `screenshots/tv1_user_duplicate_email.jpg`, `screenshots/tv1_department_updated.jpg`, `screenshots/tv1_student_mobile_menu.jpg`. Đây không phải dữ liệu MySQL/production.
 - Chưa chạy lại E2E MySQL sau thay đổi TV1; chưa nối email vào công bố/phân công (TV3); chưa tách quyền trưởng khoa/trưởng bộ môn; cần TV2 xử lý duyệt đăng ký đồng thời sau khi bỏ cột sinh approved_topic_id.
+
+## 8. Hồi quy TV2/TV3 — 07/10/2026
+
+- `mvn -B test`: BUILD SUCCESS; **177 test Java**, 0 lỗi/thất bại/bỏ qua.
+- `node --test src/test/js/period-form.test.cjs`: **24/24 test đạt**.
+- Bổ sung kiểm tra nhóm được tạo khi chưa đủ người, tối đa 5 sinh viên, chỉ đăng ký/duyệt khi đủ 3–5 và đúng một trưởng nhóm; chặn rút nhóm đã duyệt xuống dưới 3.
+- Bổ sung transaction mới `READ_COMMITTED` và khóa bi quan khi duyệt đăng ký; test hai transaction ngoài `REPEATABLE_READ` xác nhận chỉ một nhóm được duyệt cho cùng đề tài. Không thay đổi entity/mapping hoặc database.
+- Backend chặn quản lý thành viên khi đợt không còn `STUDENT_REGISTRATION`; giao diện ẩn nút Xóa khi nhóm đã duyệt đang ở mức tối thiểu 3 người.
+- Bổ sung xóa đề tài nháp của chính giảng viên đề xuất và chặn xóa khi sai trạng thái hoặc có đăng ký/dữ liệu chấm điểm liên quan.
+- Các kiểm thử H2 không thay thế việc chạy lại E2E MySQL hoặc xác nhận hosting thật.

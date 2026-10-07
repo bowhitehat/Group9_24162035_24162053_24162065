@@ -94,7 +94,7 @@ Ký hiệu: **PK** – khóa chính, **FK** – khóa ngoại, **UK** – khóa 
 - `ck_evaluation_score_range`: điểm phải thuộc đoạn 0–10.
 - Các index theo trạng thái, đợt, bộ môn, reviewer và deadline hỗ trợ danh sách lọc/dashboard.
 
-Các luật có tính tổng hợp như tối đa hai GVHD, nhóm tối đa ba sinh viên, hội đồng 3–5 giảng viên, đúng một chủ tịch/thư ký và cấm chấm đề tài đang hướng dẫn được kiểm tra tại service trong transaction.
+Các luật có tính tổng hợp như tối đa hai GVHD, nhóm tối đa năm sinh viên và phải đủ 3–5 người khi đăng ký, hội đồng 3–5 giảng viên, đúng một chủ tịch/thư ký và cấm chấm đề tài đang hướng dẫn được kiểm tra tại service trong transaction. Việc duyệt đăng ký khóa bi quan bản ghi đăng ký và đề tài để chống hai yêu cầu đồng thời cùng duyệt một đề tài; thay đổi này không yêu cầu sửa entity/mapping hay làm lại cơ sở dữ liệu.
 
 ## 4.5 Quản lý schema bằng relationship mapping
 

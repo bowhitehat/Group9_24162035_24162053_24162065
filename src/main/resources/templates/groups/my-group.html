@@ -37,7 +37,7 @@
     <div class="card" th:if="${group != null}">
         <div class="card-header bg-white d-flex justify-content-between align-items-center py-3">
             <h5 class="mb-0">Thông tin nhóm (Mã nhóm #<span th:text="${group.id}"></span>)</h5>
-            <span class="badge bg-info" th:text="${group.members.size() + '/3 thành viên'}"></span>
+            <span class="badge bg-info" th:text="${group.members.size() + '/5 thành viên'}"></span>
         </div>
         <div class="card-body">
             <p><strong>Trưởng nhóm:</strong> <span th:text="${group.leader.fullName + ' (' + group.leader.username + ')'}"></span></p>
@@ -76,7 +76,7 @@
                 </table>
             </div>
 
-            <!-- Thêm thành viên nếu là trưởng nhóm và nhóm chưa đủ 3 người -->
+            <!-- Thêm thành viên nếu là trưởng nhóm và nhóm chưa đủ 5 người -->
             <div class="mt-4 border-top pt-3" th:if="${canAddMember}">
                 <h6>Thêm thành viên mới</h6>
                 <form th:action="@{/groups/add-member}" method="post" class="row g-2 align-items-center">

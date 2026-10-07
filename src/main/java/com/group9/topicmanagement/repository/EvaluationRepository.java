@@ -12,6 +12,7 @@ import java.util.Optional;
 
 @Repository
 public interface EvaluationRepository extends JpaRepository<Evaluation, Long> {
+    boolean existsByTopicId(Long topicId);
     @EntityGraph(attributePaths = {"evaluator"})
     List<Evaluation> findByTopicId(Long topicId);
     List<Evaluation> findByEvaluatorId(Long evaluatorId);

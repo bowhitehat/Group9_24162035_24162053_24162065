@@ -13,6 +13,9 @@ import com.group9.topicmanagement.repository.CouncilMemberRepository;
 import com.group9.topicmanagement.repository.RegistrationPeriodRepository;
 import com.group9.topicmanagement.repository.ReviewerAssignmentRepository;
 import com.group9.topicmanagement.repository.TopicRepository;
+import com.group9.topicmanagement.repository.TopicRegistrationRepository;
+import com.group9.topicmanagement.repository.EvaluationRepository;
+import com.group9.topicmanagement.repository.TopicResultRepository;
 import com.group9.topicmanagement.repository.UserRepository;
 import com.group9.topicmanagement.dto.TopicForm;
 import org.springframework.data.domain.Page;
@@ -40,6 +43,9 @@ public class TopicService {
     private final ReviewerAssignmentRepository reviewerAssignmentRepository;
     private final CouncilAssignmentRepository councilAssignmentRepository;
     private final CouncilMemberRepository councilMemberRepository;
+    private final TopicRegistrationRepository topicRegistrationRepository;
+    private final EvaluationRepository evaluationRepository;
+    private final TopicResultRepository topicResultRepository;
     private final Clock clock;
 
     public TopicService(TopicRepository topicRepository, 
@@ -49,6 +55,9 @@ public class TopicService {
                         ReviewerAssignmentRepository reviewerAssignmentRepository,
                         CouncilAssignmentRepository councilAssignmentRepository,
                         CouncilMemberRepository councilMemberRepository,
+                        TopicRegistrationRepository topicRegistrationRepository,
+                        EvaluationRepository evaluationRepository,
+                        TopicResultRepository topicResultRepository,
                         Clock clock) {
         this.topicRepository = topicRepository;
         this.periodRepository = periodRepository;
@@ -57,6 +66,9 @@ public class TopicService {
         this.reviewerAssignmentRepository = reviewerAssignmentRepository;
         this.councilAssignmentRepository = councilAssignmentRepository;
         this.councilMemberRepository = councilMemberRepository;
+        this.topicRegistrationRepository = topicRegistrationRepository;
+        this.evaluationRepository = evaluationRepository;
+        this.topicResultRepository = topicResultRepository;
         this.clock = clock;
     }
 
@@ -221,6 +233,32 @@ public class TopicService {
 
     public boolean canSubmit(Topic topic, String username) {
         return canEdit(topic, username);
+    }
+
+    public boolean canDelete(Topic topic, String username) {
+        return topic.getStatus() == TopicStatus.DRAFT
+                && topic.getProposer().getUsername().equalsIgnoreCase(username)
+                && isInsideLecturerWindow(topic.getRegistrationPeriod());
+    }
+
+    public void deleteDraftTopic(Long id, String username) {
+        Topic topic = getTopicById(id);
+        if (!topic.getProposer().getUsername().equalsIgnoreCase(username)) {
+            throw new BusinessRuleException("Chỉ giảng viên đề xuất mới được xóa đề tài");
+        }
+        if (topic.getStatus() != TopicStatus.DRAFT) {
+            throw new BusinessRuleException("Chỉ có thể xóa đề tài ở trạng thái nháp");
+        }
+        requireLecturerWindow(topic.getRegistrationPeriod());
+        boolean hasRelatedData = topicRegistrationRepository.existsByTopic_Id(id)
+                || evaluationRepository.existsByTopicId(id)
+                || topicResultRepository.existsByTopicId(id)
+                || !reviewerAssignmentRepository.findByTopicId(id).isEmpty()
+                || !councilAssignmentRepository.findByTopicId(id).isEmpty();
+        if (hasRelatedData) {
+            throw new BusinessRuleException("Không thể xóa đề tài đã có đăng ký hoặc dữ liệu chấm điểm");
+        }
+        topicRepository.delete(topic);
     }
 
     public boolean canApprove(Topic topic, boolean manager) {

@@ -14,6 +14,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
@@ -55,6 +57,8 @@ public class TopicRegistrationService {
         if (!group.getLeader().getUsername().equalsIgnoreCase(leaderUsername)) {
             throw new BusinessRuleException("Chỉ trưởng nhóm mới được quyền đăng ký đề tài");
         }
+
+        requireEligibleGroup(group);
 
         RegistrationPeriod period = group.getRegistrationPeriod();
         if (period.getStatus() != PeriodStatus.STUDENT_REGISTRATION) {
@@ -104,8 +108,9 @@ public class TopicRegistrationService {
         return registrationRepository.save(registration);
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_COMMITTED)
     public void approveRegistration(Long registrationId, String approverUsername) {
-        TopicRegistration registration = registrationRepository.findById(registrationId)
+        TopicRegistration registration = registrationRepository.findLockedById(registrationId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin đăng ký đề tài"));
 
         if (registration.getStatus() != RegistrationStatus.PENDING) {
@@ -115,8 +120,23 @@ public class TopicRegistrationService {
         User approver = userRepository.findByUsernameIgnoreCase(approverUsername)
                 .orElseThrow(() -> new BusinessRuleException("Không tìm thấy người phê duyệt"));
 
+        RegistrationPeriod period = registration.getRegistrationPeriod();
+        LocalDateTime now = LocalDateTime.now(clock);
+        if (period.getStatus() != PeriodStatus.STUDENT_REGISTRATION
+                || now.isBefore(period.getStudentStart()) || now.isAfter(period.getStudentEnd())) {
+            throw new BusinessRuleException("Chỉ được duyệt đăng ký trong giai đoạn đăng ký của sinh viên");
+        }
+        if (registration.getTopic().getStatus() != TopicStatus.PUBLISHED) {
+            throw new BusinessRuleException("Chỉ được duyệt đề tài đã công bố");
+        }
+        requireEligibleGroup(registration.getStudentGroup());
+
+        // Serialize approvals for the same topic so two pending registrations cannot both pass.
+        topicRepository.findLockedById(registration.getTopic().getId())
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đề tài"));
+
         // Ngăn 2 nhóm đăng ký thành công cùng 1 đề tài
-        Optional<TopicRegistration> existingApproved = registrationRepository.findFirstByTopic_IdAndStatus(
+        Optional<TopicRegistration> existingApproved = registrationRepository.findFirstLockedByTopic_IdAndStatus(
                 registration.getTopic().getId(), RegistrationStatus.APPROVED);
         if (existingApproved.isPresent() && !existingApproved.get().getId().equals(registrationId)) {
             throw new BusinessRuleException("Đề tài này đã được phê duyệt cho nhóm khác");
@@ -178,6 +198,7 @@ public class TopicRegistrationService {
         RegistrationPeriod period = group.getRegistrationPeriod();
         LocalDateTime now = LocalDateTime.now(clock);
         if (!group.getLeader().getUsername().equalsIgnoreCase(username)
+                || !isEligibleGroup(group)
                 || topic.getStatus() != TopicStatus.PUBLISHED
                 || !topic.getRegistrationPeriod().getId().equals(period.getId())
                 || period.getStatus() != PeriodStatus.STUDENT_REGISTRATION
@@ -187,6 +208,29 @@ public class TopicRegistrationService {
         Optional<TopicRegistration> existing = registrationRepository.findByStudentGroupIdAndRegistrationPeriodId(groupId, period.getId());
         return existing.isEmpty() || (existing.get().getStatus() != RegistrationStatus.PENDING
                 && existing.get().getStatus() != RegistrationStatus.APPROVED);
+    }
+
+    private void requireEligibleGroup(StudentGroup group) {
+        int memberCount = group.getMembers().size();
+        if (memberCount < StudentGroupService.MIN_MEMBERS_FOR_REGISTRATION
+                || memberCount > StudentGroupService.MAX_MEMBERS) {
+            throw new BusinessRuleException("Nhóm phải có từ 3 đến 5 sinh viên trước khi đăng ký hoặc được duyệt");
+        }
+        long leaderCount = group.getMembers().stream().filter(member -> member.isLeader()).count();
+        boolean leaderMatches = group.getMembers().stream().anyMatch(member -> member.isLeader()
+                && member.getMember().getId().equals(group.getLeader().getId()));
+        if (leaderCount != 1 || !leaderMatches) {
+            throw new BusinessRuleException("Nhóm phải có đúng một trưởng nhóm");
+        }
+    }
+
+    private boolean isEligibleGroup(StudentGroup group) {
+        try {
+            requireEligibleGroup(group);
+            return true;
+        } catch (BusinessRuleException exception) {
+            return false;
+        }
     }
 
     public TopicRegistration getRegistrationById(Long id) {

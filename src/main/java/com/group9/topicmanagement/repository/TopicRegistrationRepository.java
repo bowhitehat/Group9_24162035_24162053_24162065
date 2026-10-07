@@ -4,11 +4,20 @@ import com.group9.topicmanagement.model.enums.RegistrationStatus;
 import com.group9.topicmanagement.model.registration.TopicRegistration;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
+import jakarta.persistence.LockModeType;
 
 import java.util.List;
 import java.util.Optional;
 
 public interface TopicRegistrationRepository extends JpaRepository<TopicRegistration, Long> {
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @EntityGraph(attributePaths = {"topic", "studentGroup", "studentGroup.leader", "studentGroup.members", "studentGroup.members.member", "registrationPeriod"})
+    Optional<TopicRegistration> findLockedById(Long id);
+
+    boolean existsByTopic_Id(Long topicId);
+    boolean existsByStudentGroup_IdAndStatus(Long groupId, RegistrationStatus status);
+
     @EntityGraph(attributePaths = {"registrationPeriod"})
     List<TopicRegistration> findDistinctByStudentGroup_Members_Member_UsernameIgnoreCaseOrderByIdDesc(String username);
 
@@ -25,6 +34,12 @@ public interface TopicRegistrationRepository extends JpaRepository<TopicRegistra
     
     @EntityGraph(attributePaths = {"topic", "studentGroup", "studentGroup.members", "studentGroup.members.member"})
     Optional<TopicRegistration> findFirstByTopic_IdAndStatus(Long topicId, RegistrationStatus status);
+
+    // Locking reads are current reads on MySQL/InnoDB, even under REPEATABLE_READ.
+    // The topic row is locked first by the service, so this query observes an approval
+    // committed by the preceding transaction instead of reusing an older snapshot.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<TopicRegistration> findFirstLockedByTopic_IdAndStatus(Long topicId, RegistrationStatus status);
 
     Optional<TopicRegistration> findFirstByTopic_IdAndRegistrationPeriod_IdAndStatus(Long topicId, Long periodId,
                                                                                       RegistrationStatus status);

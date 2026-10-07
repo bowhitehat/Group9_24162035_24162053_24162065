@@ -9,7 +9,9 @@ import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.repository.GroupMemberRepository;
 import com.group9.topicmanagement.repository.RegistrationPeriodRepository;
 import com.group9.topicmanagement.repository.StudentGroupRepository;
+import com.group9.topicmanagement.repository.TopicRegistrationRepository;
 import com.group9.topicmanagement.repository.UserRepository;
+import com.group9.topicmanagement.model.enums.RegistrationStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,26 +25,34 @@ import java.util.stream.Collectors;
 @Transactional
 public class StudentGroupService {
 
+    public static final int MIN_MEMBERS_FOR_REGISTRATION = 3;
+    public static final int MAX_MEMBERS = 5;
+
     private final StudentGroupRepository groupRepository;
     private final GroupMemberRepository groupMemberRepository;
     private final RegistrationPeriodRepository periodRepository;
     private final UserRepository userRepository;
+    private final TopicRegistrationRepository registrationRepository;
     private final Clock clock;
 
     public StudentGroupService(StudentGroupRepository groupRepository,
                                GroupMemberRepository groupMemberRepository,
                                RegistrationPeriodRepository periodRepository,
                                UserRepository userRepository,
+                               TopicRegistrationRepository registrationRepository,
                                Clock clock) {
         this.groupRepository = groupRepository;
         this.groupMemberRepository = groupMemberRepository;
         this.periodRepository = periodRepository;
         this.userRepository = userRepository;
+        this.registrationRepository = registrationRepository;
         this.clock = clock;
     }
 
     public StudentGroup createGroup(Long periodId, String leaderUsername) {
-        User leader = userRepository.findByUsernameIgnoreCase(leaderUsername)
+        User leaderCandidate = userRepository.findByUsernameIgnoreCase(leaderUsername)
+                .orElseThrow(() -> new BusinessRuleException("Không tìm thấy thông tin sinh viên"));
+        User leader = userRepository.findLockedById(leaderCandidate.getId())
                 .orElseThrow(() -> new BusinessRuleException("Không tìm thấy thông tin sinh viên"));
 
         RegistrationPeriod period = periodRepository.findById(periodId)
@@ -76,7 +86,7 @@ public class StudentGroupService {
     }
 
     public void addMember(Long groupId, String memberUsernameToAdd, String currentUsername) {
-        StudentGroup group = groupRepository.findById(groupId)
+        StudentGroup group = groupRepository.findLockedById(groupId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy nhóm sinh viên"));
 
         if (!group.getLeader().getUsername().equalsIgnoreCase(currentUsername)) {
@@ -84,11 +94,13 @@ public class StudentGroupService {
         }
         requireStudentWindow(group.getRegistrationPeriod());
 
-        if (group.getMembers().size() >= 3) {
-            throw new BusinessRuleException("Mỗi nhóm chỉ được phép tối đa 3 sinh viên");
+        if (group.getMembers().size() >= MAX_MEMBERS) {
+            throw new BusinessRuleException("Mỗi nhóm chỉ được phép tối đa 5 sinh viên");
         }
 
-        User newMember = userRepository.findByUsernameIgnoreCase(memberUsernameToAdd)
+        User candidate = userRepository.findByUsernameIgnoreCase(memberUsernameToAdd)
+                .orElseThrow(() -> new BusinessRuleException("Không tìm thấy sinh viên có tên đăng nhập: " + memberUsernameToAdd));
+        User newMember = userRepository.findLockedById(candidate.getId())
                 .orElseThrow(() -> new BusinessRuleException("Không tìm thấy sinh viên có tên đăng nhập: " + memberUsernameToAdd));
 
         boolean isStudent = newMember.getRoles().stream()
@@ -111,7 +123,7 @@ public class StudentGroupService {
     }
 
     public void removeMember(Long groupId, Long memberIdToRemove, String currentUsername) {
-        StudentGroup group = groupRepository.findById(groupId)
+        StudentGroup group = groupRepository.findLockedById(groupId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy nhóm sinh viên"));
 
         if (!group.getLeader().getUsername().equalsIgnoreCase(currentUsername)) {
@@ -121,6 +133,12 @@ public class StudentGroupService {
 
         if (group.getLeader().getId().equals(memberIdToRemove)) {
             throw new BusinessRuleException("Không thể xóa trưởng nhóm khỏi nhóm");
+        }
+
+        boolean hasApprovedRegistration = group.getId() != null
+                && registrationRepository.existsByStudentGroup_IdAndStatus(group.getId(), RegistrationStatus.APPROVED);
+        if (hasApprovedRegistration && group.getMembers().size() - 1 < MIN_MEMBERS_FOR_REGISTRATION) {
+            throw new BusinessRuleException("Không thể thay đổi nhóm làm đăng ký đã duyệt còn dưới 3 sinh viên");
         }
 
         boolean removed = group.getMembers().removeIf(m -> m.getMember().getId().equals(memberIdToRemove));
@@ -158,11 +176,15 @@ public class StudentGroupService {
     }
 
     public boolean canAddMember(StudentGroup group, String username) {
-        return canManageGroup(group, username) && group.getMembers().size() < 3;
+        return canManageGroup(group, username) && group.getMembers().size() < MAX_MEMBERS;
     }
 
     public Set<Long> removableMemberIds(StudentGroup group, String username) {
         if (!canManageGroup(group, username)) return Set.of();
+        boolean approvedAtMinimumSize = group.getId() != null
+                && group.getMembers().size() <= MIN_MEMBERS_FOR_REGISTRATION
+                && registrationRepository.existsByStudentGroup_IdAndStatus(group.getId(), RegistrationStatus.APPROVED);
+        if (approvedAtMinimumSize) return Set.of();
         return group.getMembers().stream()
                 .filter(member -> !member.isLeader())
                 .map(member -> member.getMember().getId())
@@ -170,7 +192,9 @@ public class StudentGroupService {
     }
 
     private void requireStudentWindow(RegistrationPeriod period) {
-        if (!isInsideStudentWindow(period)) throw new BusinessRuleException("Ngoài thời gian sinh viên được phép quản lý nhóm");
+        if (period.getStatus() != PeriodStatus.STUDENT_REGISTRATION || !isInsideStudentWindow(period)) {
+            throw new BusinessRuleException("Ngoài giai đoạn sinh viên được phép quản lý nhóm");
+        }
     }
 
     private boolean isInsideStudentWindow(RegistrationPeriod period) {

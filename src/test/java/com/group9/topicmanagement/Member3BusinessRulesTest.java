@@ -89,6 +89,8 @@ class Member3BusinessRulesTest {
     private User lecturer4;
     private User student1;
     private User student2;
+    private User student3;
+    private User student4;
     private User facultyManager;
     private Department dept;
     private RegistrationPeriod period;
@@ -130,6 +132,8 @@ class Member3BusinessRulesTest {
         lecturer4 = userService.create("lecturer4", "GV D", "lec4@test.local", null, dept.getId(), Set.of(RoleName.LECTURER), "Password@123");
         student1 = userService.create("student1", "SV 1", "sv1@test.local", null, dept.getId(), Set.of(RoleName.STUDENT), "Password@123");
         student2 = userService.create("student2", "SV 2", "sv2@test.local", null, dept.getId(), Set.of(RoleName.STUDENT), "Password@123");
+        student3 = userService.create("student3", "SV 3", "sv3@test.local", null, dept.getId(), Set.of(RoleName.STUDENT), "Password@123");
+        student4 = userService.create("student4", "SV 4", "sv4@test.local", null, dept.getId(), Set.of(RoleName.STUDENT), "Password@123");
         facultyManager = userService.create("faculty1", "Trưởng Khoa", "faculty@test.local", null, dept.getId(), Set.of(RoleName.FACULTY_MANAGER), "Password@123");
 
         period = new RegistrationPeriod();
@@ -609,6 +613,8 @@ class Member3BusinessRulesTest {
         period.setStatus(PeriodStatus.STUDENT_REGISTRATION);
         periods.save(period);
         StudentGroup group = groupService.createGroup(period.getId(), student1.getUsername());
+        groupService.addMember(group.getId(), student3.getUsername(), student1.getUsername());
+        groupService.addMember(group.getId(), student4.getUsername(), student1.getUsername());
         var reg = registrationService.registerTopic(group.getId(), topic.getId(), student1.getUsername());
         registrationService.approveRegistration(reg.getId(), facultyManager.getUsername());
         period.setStatus(PeriodStatus.IN_PROGRESS);

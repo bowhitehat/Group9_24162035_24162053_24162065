@@ -51,10 +51,13 @@
             </div>
 
             <!-- Thao tác cho Giảng viên -->
-            <div class="d-flex gap-2" th:if="${canEdit || canSubmit}">
+            <div class="d-flex gap-2 flex-wrap" th:if="${canEdit || canSubmit || canDelete}">
                     <a th:if="${canEdit}" th:href="@{/topics/edit/{id}(id=${topic.id})}" class="btn btn-warning">Chỉnh sửa</a>
                     <form th:action="@{/topics/submit/{id}(id=${topic.id})}" method="post">
                         <button th:if="${canSubmit}" type="submit" class="btn btn-primary" onclick="return confirm('Bạn có chắc chắn muốn gửi duyệt đề tài này?')">Gửi duyệt</button>
+                    </form>
+                    <form th:if="${canDelete}" th:action="@{/topics/delete/{id}(id=${topic.id})}" method="post">
+                        <button type="submit" class="btn btn-outline-danger" onclick="return confirm('Xóa vĩnh viễn đề tài nháp này?')">Xóa đề tài nháp</button>
                     </form>
             </div>
 
