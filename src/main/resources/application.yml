@@ -35,6 +35,9 @@ server:
     whitelabel:
       enabled: false
 management:
+  health:
+    mail:
+      enabled: ${app.mail.enabled}
   endpoints:
     web:
       exposure:

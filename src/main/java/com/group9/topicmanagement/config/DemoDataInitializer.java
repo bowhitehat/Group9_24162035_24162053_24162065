@@ -46,11 +46,25 @@ public class DemoDataInitializer implements CommandLineRunner {
     }
 
     private void ensureDepartment(String code, String name, String description) {
-        Department department = departments.findByCodeIgnoreCase(code)
-                .or(() -> "ATTT".equals(code)
-                        ? departments.findByCodeIgnoreCase("MMT")
-                        : java.util.Optional.empty())
-                .orElseGet(Department::new);
+        // Seed missing data only; restarting must not undo administrator edits.
+        if (departments.findByCodeIgnoreCase(code).isPresent()) {
+            return;
+        }
+        Department legacy = "ATTT".equals(code)
+                ? departments.findByCodeIgnoreCase("MMT").orElse(null) : null;
+        if (legacy != null) {
+            // One-time code migration retains the ID, relationships and inactive state.
+            legacy.setCode(code);
+            if ("Mạng máy tính".equals(legacy.getName())) {
+                legacy.setName(name);
+            }
+            if ("Phụ trách mạng máy tính và an toàn thông tin.".equals(legacy.getDescription())) {
+                legacy.setDescription(description);
+            }
+            departments.save(legacy);
+            return;
+        }
+        Department department = new Department();
         department.setCode(code);
         department.setName(name);
         department.setDescription(description);

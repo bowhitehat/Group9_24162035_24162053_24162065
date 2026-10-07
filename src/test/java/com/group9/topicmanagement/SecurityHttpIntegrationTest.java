@@ -5,6 +5,8 @@ import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.CsvSource;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.actuate.health.HealthContributorRegistry;
 import org.springframework.test.context.ActiveProfiles;
 
 import java.net.CookieManager;
@@ -23,11 +25,21 @@ import static org.assertj.core.api.Assertions.assertThat;
 // A real servlet server is necessary: MockMvc does not execute Security's forwards.
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "spring.datasource.url=jdbc:h2:mem:group9_security_http;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1",
-        "app.demo-password=SecurityTest@123"
+        "app.demo-password=SecurityTest@123",
+        "app.mail.enabled=false"
 })
 @ActiveProfiles("test")
 class SecurityHttpIntegrationTest {
     @LocalServerPort int port;
+    @Autowired HealthContributorRegistry healthContributors;
+
+    @Test void disabledEmailDoesNotFailPublicHealthCheckOrExposeDetails() throws Exception {
+        assertThat(healthContributors.getContributor("mail")).isNull();
+        assertThat(healthContributors.getContributor("db")).isNotNull();
+        var response = get(client(), "/actuator/health");
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.body()).isEqualTo("{\"status\":\"UP\"}");
+    }
 
     @ParameterizedTest
     @CsvSource({
