@@ -14,6 +14,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
@@ -106,6 +108,7 @@ public class TopicRegistrationService {
         return registrationRepository.save(registration);
     }
 
+    @Transactional(propagation = Propagation.REQUIRES_NEW, isolation = Isolation.READ_COMMITTED)
     public void approveRegistration(Long registrationId, String approverUsername) {
         TopicRegistration registration = registrationRepository.findLockedById(registrationId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin đăng ký đề tài"));
@@ -133,7 +136,7 @@ public class TopicRegistrationService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đề tài"));
 
         // Ngăn 2 nhóm đăng ký thành công cùng 1 đề tài
-        Optional<TopicRegistration> existingApproved = registrationRepository.findFirstByTopic_IdAndStatus(
+        Optional<TopicRegistration> existingApproved = registrationRepository.findFirstLockedByTopic_IdAndStatus(
                 registration.getTopic().getId(), RegistrationStatus.APPROVED);
         if (existingApproved.isPresent() && !existingApproved.get().getId().equals(registrationId)) {
             throw new BusinessRuleException("Đề tài này đã được phê duyệt cho nhóm khác");

@@ -28,10 +28,18 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -62,6 +70,7 @@ class Member2BusinessRulesTest {
     @Autowired TopicRegistrationRepository registrations;
     @Autowired ReportSubmissionRepository reports;
     @Autowired EvaluationCriterionRepository criteria;
+    @Autowired PlatformTransactionManager transactionManager;
 
     private User lecturer1;
     private User lecturer2;
@@ -223,6 +232,66 @@ class Member2BusinessRulesTest {
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("đăng ký đã duyệt");
         assertThat(groupService.getGroupById(group.getId()).getMembers()).hasSize(3);
+    }
+
+    @Test
+    void approvedThreeMemberGroupDoesNotExposeRemoveActions() throws Exception {
+        TopicRegistration registration = createApprovedRegistration();
+        StudentGroup group = groupService.getGroupById(registration.getStudentGroup().getId());
+
+        assertThat(groupService.removableMemberIds(group, student1.getUsername())).isEmpty();
+        mvc.perform(get("/groups/my-group")
+                        .param("periodId", period.getId().toString())
+                        .with(user(student1.getUsername()).roles("STUDENT")))
+                .andExpect(status().isOk())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.content()
+                        .string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("/groups/remove-member"))));
+    }
+
+    @Test
+    void cannotAddMemberAfterPeriodMovesToInProgressEvenBeforeStudentDeadline() {
+        StudentGroup group = groupService.createGroup(period.getId(), student1.getUsername());
+        period.setStatus(PeriodStatus.IN_PROGRESS);
+        periods.saveAndFlush(period);
+
+        assertThatThrownBy(() -> groupService.addMember(group.getId(), student2.getUsername(), student1.getUsername()))
+                .isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("Ngoài giai đoạn");
+        assertThat(groupService.getGroupById(group.getId()).getMembers()).hasSize(1);
+    }
+
+    @Test
+    void repeatableReadConcurrentApprovalsAllowOnlyOneGroupForTopic() throws Exception {
+        Topic topic = topicService.createTopic(topicForm("DT-CONCURRENT", "Duyệt đồng thời"), lecturer1.getUsername());
+        topicService.submitTopic(topic.getId(), lecturer1.getUsername());
+        topicService.approveTopic(topic.getId());
+        topicService.publishTopic(topic.getId());
+
+        StudentGroup firstGroup = groupService.createGroup(period.getId(), student1.getUsername());
+        groupService.addMember(firstGroup.getId(), student2.getUsername(), student1.getUsername());
+        groupService.addMember(firstGroup.getId(), student3.getUsername(), student1.getUsername());
+        StudentGroup secondGroup = groupService.createGroup(period.getId(), student4.getUsername());
+        groupService.addMember(secondGroup.getId(), student5.getUsername(), student4.getUsername());
+        groupService.addMember(secondGroup.getId(), student6.getUsername(), student4.getUsername());
+
+        TopicRegistration first = registrationService.registerTopic(firstGroup.getId(), topic.getId(), student1.getUsername());
+        TopicRegistration second = registrationService.registerTopic(secondGroup.getId(), topic.getId(), student4.getUsername());
+        CountDownLatch snapshotsReady = new CountDownLatch(2);
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            Future<String> firstResult = executor.submit(() -> approveAfterRepeatableReadSnapshot(first.getId(), snapshotsReady));
+            Future<String> secondResult = executor.submit(() -> approveAfterRepeatableReadSnapshot(second.getId(), snapshotsReady));
+            List<String> results = List.of(firstResult.get(15, TimeUnit.SECONDS), secondResult.get(15, TimeUnit.SECONDS));
+
+            assertThat(results).contains("APPROVED");
+            assertThat(results).anyMatch(message -> message.contains("phê duyệt cho nhóm khác"));
+            assertThat(registrations.findAll().stream()
+                    .filter(registration -> registration.getTopic().getId().equals(topic.getId()))
+                    .filter(registration -> registration.getStatus() == RegistrationStatus.APPROVED))
+                    .hasSize(1);
+        } finally {
+            executor.shutdownNow();
+        }
     }
 
     @Test
@@ -514,6 +583,29 @@ class Member2BusinessRulesTest {
         TopicRegistration registration = registrationService.registerTopic(group.getId(), topic.getId(), student1.getUsername());
         registrationService.approveRegistration(registration.getId(), facultyManager.getUsername());
         return registration;
+    }
+
+    private String approveAfterRepeatableReadSnapshot(Long registrationId, CountDownLatch snapshotsReady) {
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        transaction.setIsolationLevel(TransactionDefinition.ISOLATION_REPEATABLE_READ);
+        try {
+            return transaction.execute(status -> {
+                registrations.findById(registrationId).orElseThrow();
+                snapshotsReady.countDown();
+                try {
+                    if (!snapshotsReady.await(10, TimeUnit.SECONDS)) {
+                        throw new IllegalStateException("Hai giao dịch không tạo snapshot đúng thời gian");
+                    }
+                } catch (InterruptedException exception) {
+                    Thread.currentThread().interrupt();
+                    throw new IllegalStateException("Kiểm thử bị gián đoạn", exception);
+                }
+                registrationService.approveRegistration(registrationId, facultyManager.getUsername());
+                return "APPROVED";
+            });
+        } catch (BusinessRuleException exception) {
+            return exception.getMessage();
+        }
     }
 
     private TopicForm topicForm(String code, String title) {

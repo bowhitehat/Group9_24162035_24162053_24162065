@@ -181,6 +181,10 @@ public class StudentGroupService {
 
     public Set<Long> removableMemberIds(StudentGroup group, String username) {
         if (!canManageGroup(group, username)) return Set.of();
+        boolean approvedAtMinimumSize = group.getId() != null
+                && group.getMembers().size() <= MIN_MEMBERS_FOR_REGISTRATION
+                && registrationRepository.existsByStudentGroup_IdAndStatus(group.getId(), RegistrationStatus.APPROVED);
+        if (approvedAtMinimumSize) return Set.of();
         return group.getMembers().stream()
                 .filter(member -> !member.isLeader())
                 .map(member -> member.getMember().getId())
@@ -188,7 +192,9 @@ public class StudentGroupService {
     }
 
     private void requireStudentWindow(RegistrationPeriod period) {
-        if (!isInsideStudentWindow(period)) throw new BusinessRuleException("Ngoài thời gian sinh viên được phép quản lý nhóm");
+        if (period.getStatus() != PeriodStatus.STUDENT_REGISTRATION || !isInsideStudentWindow(period)) {
+            throw new BusinessRuleException("Ngoài giai đoạn sinh viên được phép quản lý nhóm");
+        }
     }
 
     private boolean isInsideStudentWindow(RegistrationPeriod period) {

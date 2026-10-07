@@ -92,9 +92,10 @@ Lần chạy này độc lập với kết quả MySQL/E2E đã ghi ở trên; k
 
 ## 8. Hồi quy TV2/TV3 — 07/10/2026
 
-- `mvn -B test`: BUILD SUCCESS; **174 test Java**, 0 lỗi/thất bại/bỏ qua.
+- `mvn -B test`: BUILD SUCCESS; **177 test Java**, 0 lỗi/thất bại/bỏ qua.
 - `node --test src/test/js/period-form.test.cjs`: **24/24 test đạt**.
 - Bổ sung kiểm tra nhóm được tạo khi chưa đủ người, tối đa 5 sinh viên, chỉ đăng ký/duyệt khi đủ 3–5 và đúng một trưởng nhóm; chặn rút nhóm đã duyệt xuống dưới 3.
-- Bổ sung khóa bi quan khi duyệt đăng ký để tuần tự hóa hai lượt duyệt cùng đề tài; không thay đổi entity/mapping hoặc database.
+- Bổ sung transaction mới `READ_COMMITTED` và khóa bi quan khi duyệt đăng ký; test hai transaction ngoài `REPEATABLE_READ` xác nhận chỉ một nhóm được duyệt cho cùng đề tài. Không thay đổi entity/mapping hoặc database.
+- Backend chặn quản lý thành viên khi đợt không còn `STUDENT_REGISTRATION`; giao diện ẩn nút Xóa khi nhóm đã duyệt đang ở mức tối thiểu 3 người.
 - Bổ sung xóa đề tài nháp của chính giảng viên đề xuất và chặn xóa khi sai trạng thái hoặc có đăng ký/dữ liệu chấm điểm liên quan.
 - Các kiểm thử H2 không thay thế việc chạy lại E2E MySQL hoặc xác nhận hosting thật.

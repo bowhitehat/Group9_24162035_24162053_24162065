@@ -82,7 +82,7 @@ Các hình trong chương này được chụp trực tiếp từ ứng dụng S
 
 ## 6.1. Kết quả đạt được
 
-Hệ thống đã hoàn thiện luồng nghiệp vụ từ quản trị tài khoản, tạo đợt, đề xuất và duyệt đề tài, lập nhóm, đăng ký, nộp báo cáo đến phản biện, hội đồng, chấm điểm, khóa điểm, xác nhận và công bố. Phiên E2E trên MySQL đi đủ 16 bước; điểm tổng kết thực tế là 8,79. Lần hồi quy gần nhất ngày 07/10/2026 đạt 174/174 test Java và 24/24 test JavaScript. Health check, phân quyền, static resource và upload local đã được xác minh; hosting production vẫn cần URL chạy thật trước khi xác nhận hoàn thành.
+Hệ thống đã hoàn thiện luồng nghiệp vụ từ quản trị tài khoản, tạo đợt, đề xuất và duyệt đề tài, lập nhóm, đăng ký, nộp báo cáo đến phản biện, hội đồng, chấm điểm, khóa điểm, xác nhận và công bố. Phiên E2E trên MySQL đi đủ 16 bước; điểm tổng kết thực tế là 8,79. Lần hồi quy gần nhất ngày 07/10/2026 đạt 177/177 test Java và 24/24 test JavaScript. Health check, phân quyền, static resource và upload local đã được xác minh; hosting production vẫn cần URL chạy thật trước khi xác nhận hoàn thành.
 
 ## 6.2. Ưu điểm
 

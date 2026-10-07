@@ -35,6 +35,12 @@ public interface TopicRegistrationRepository extends JpaRepository<TopicRegistra
     @EntityGraph(attributePaths = {"topic", "studentGroup", "studentGroup.members", "studentGroup.members.member"})
     Optional<TopicRegistration> findFirstByTopic_IdAndStatus(Long topicId, RegistrationStatus status);
 
+    // Locking reads are current reads on MySQL/InnoDB, even under REPEATABLE_READ.
+    // The topic row is locked first by the service, so this query observes an approval
+    // committed by the preceding transaction instead of reusing an older snapshot.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<TopicRegistration> findFirstLockedByTopic_IdAndStatus(Long topicId, RegistrationStatus status);
+
     Optional<TopicRegistration> findFirstByTopic_IdAndRegistrationPeriod_IdAndStatus(Long topicId, Long periodId,
                                                                                       RegistrationStatus status);
 

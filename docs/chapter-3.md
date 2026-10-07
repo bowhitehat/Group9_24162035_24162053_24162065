@@ -50,7 +50,7 @@ sequenceDiagram
 
     Note over TN,Sys: Bước 4 & 5: Thành lập và Quản lý nhóm SV
     TN->>Sys: 4. Tạo nhóm sinh viên trong đợt (Người tạo tự động là Trưởng nhóm)
-    TN->>Sys: 5. Thêm/xóa thành viên nhóm (Tối đa 3 SV, không trùng nhóm trong đợt)
+    TN->>Sys: 5. Thêm/xóa thành viên nhóm (Tối đa 5 SV, không trùng nhóm trong đợt)
 
     Note over TN,Khoa: Bước 6 & 7: Đăng ký và Xét duyệt đề tài
     TN->>Sys: 6. Trưởng nhóm đăng ký đề tài PUBLISHED (Đơn ở trạng thái PENDING)
@@ -203,7 +203,7 @@ Biểu mẫu tải file báo cáo dành cho Trưởng nhóm, tích hợp bảng 
 
 ## 3.7 Kết quả Kiểm thử Tự động (Automated Verification)
 
-Toàn bộ 13 ca kiểm thử tích hợp và phân quyền trong bộ test suite `Member2BusinessRulesTest` đã được chạy và vượt qua 100%:
+Bộ `Member2BusinessRulesTest` hiện có 24 ca kiểm thử tích hợp và phân quyền; bảng dưới trình bày các ca tiêu biểu, bao gồm ba ca hồi quy mới cho duyệt đồng thời, trạng thái đợt và giao diện xóa thành viên:
 
 | STT | Tên Test Case | Mục đích Kiểm thử | Kết quả |
 |:---:|:---|:---|:---:|
@@ -213,13 +213,16 @@ Toàn bộ 13 ca kiểm thử tích hợp và phân quyền trong bộ test suit
 | 4 | `groupMayBeCreatedIncompleteButCannotRegisterUntilItHasThreeMembers` | Cho tạo nhóm thiếu người nhưng chặn đăng ký trước khi đủ 3 SV | **PASSED** |
 | 5 | `approvedRegistrationCannotBeMadeInvalidByRemovingAMember` | Không cho rút nhóm đã duyệt xuống dưới 3 SV | **PASSED** |
 | 6 | `lecturerCanDeleteOnlyOwnDraftWithoutRelatedRegistration` | Chỉ chủ đề xuất được xóa đề tài nháp chưa có dữ liệu liên quan | **PASSED** |
-| 4 | `testOnlyLeaderCanRegisterTopicAndPreventDuplicateApprovedTopic` | Chỉ trưởng nhóm được đăng ký; Ngăn chặn duyệt trùng 1 đề tài cho nhóm khác | **PASSED** |
-| 5 | `testReportSubmissionOnlyLeaderAndVersionIncrement` | Chỉ trưởng nhóm được nộp báo cáo; Tự động tăng phiên bản (`v1`, `v2`) | **PASSED** |
-| 6 | `testBackendSecurity403ForUnauthorizedRole` | Sinh viên không được tạo đề tài, không được duyệt đăng ký/công bố (`403 Forbidden`) | **PASSED** |
-| 7 | `testLecturer403ForbiddenAccessToFacultyAndStudentEndpoints` | Giảng viên không được tạo nhóm SV, không được nộp báo cáo, không được duyệt đăng ký (`403 Forbidden`) | **PASSED** |
-| 8 | `testReportDownloadEndpoint` | Thành viên nhóm tải file báo cáo tiến độ thành công (`200 OK`) | **PASSED** |
-| 9 | `testRejectReasonIsRequired` | Từ chối đề tài bắt buộc phải có lý do (không được rỗng) | **PASSED** |
-| 10 | `testInvalidReportFileIsRejectedAndOtherGroupCannotRead` | Chặn upload file thực thi (`.exe`), chỉ nhận PDF/DOC/ZIP; Chặn nhóm khác xem file | **PASSED** |
-| 11 | `testReportDeadlineIsEnforced` | Chặn nộp báo cáo khi đã qua hạn chót của đợt | **PASSED** |
-| 12 | `testTopicOutsideLecturerWindowIsRejected` | Chặn giảng viên tạo đề tài khi ngoài khung thời gian quy định | **PASSED** |
-| 13 | `testReportHistoryReturns403ForStudentFromAnotherGroup` | Sinh viên khác nhóm truy cập URL xem lịch sử báo cáo bị trả về HTTP 403 | **PASSED** |
+| 7 | `repeatableReadConcurrentApprovalsAllowOnlyOneGroupForTopic` | Hai giao dịch `REPEATABLE_READ` đồng thời chỉ duyệt được một nhóm cho đề tài | **PASSED** |
+| 8 | `cannotAddMemberAfterPeriodMovesToInProgressEvenBeforeStudentDeadline` | Backend chặn thêm thành viên khi đợt đã chuyển sang `IN_PROGRESS` | **PASSED** |
+| 9 | `approvedThreeMemberGroupDoesNotExposeRemoveActions` | Nhóm đã duyệt đủ tối thiểu 3 người không hiển thị nút Xóa | **PASSED** |
+| 10 | `testOnlyLeaderCanRegisterTopicAndPreventDuplicateApprovedTopic` | Chỉ trưởng nhóm được đăng ký; Ngăn chặn duyệt trùng 1 đề tài cho nhóm khác | **PASSED** |
+| 11 | `testReportSubmissionOnlyLeaderAndVersionIncrement` | Chỉ trưởng nhóm được nộp báo cáo; Tự động tăng phiên bản (`v1`, `v2`) | **PASSED** |
+| 12 | `testBackendSecurity403ForUnauthorizedRole` | Sinh viên không được tạo đề tài, không được duyệt đăng ký/công bố (`403 Forbidden`) | **PASSED** |
+| 13 | `testLecturer403ForbiddenAccessToFacultyAndStudentEndpoints` | Giảng viên không được tạo nhóm SV, không được nộp báo cáo, không được duyệt đăng ký (`403 Forbidden`) | **PASSED** |
+| 14 | `testReportDownloadEndpoint` | Thành viên nhóm tải file báo cáo tiến độ thành công (`200 OK`) | **PASSED** |
+| 15 | `testRejectReasonIsRequired` | Từ chối đề tài bắt buộc phải có lý do (không được rỗng) | **PASSED** |
+| 16 | `testInvalidReportFileIsRejectedAndOtherGroupCannotRead` | Chặn upload file thực thi (`.exe`), chỉ nhận PDF/DOC/ZIP; Chặn nhóm khác xem file | **PASSED** |
+| 17 | `testReportDeadlineIsEnforced` | Chặn nộp báo cáo khi đã qua hạn chót của đợt | **PASSED** |
+| 18 | `testTopicOutsideLecturerWindowIsRejected` | Chặn giảng viên tạo đề tài khi ngoài khung thời gian quy định | **PASSED** |
+| 19 | `testReportHistoryReturns403ForStudentFromAnotherGroup` | Sinh viên khác nhóm truy cập URL xem lịch sử báo cáo bị trả về HTTP 403 | **PASSED** |
