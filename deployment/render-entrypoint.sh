@@ -8,6 +8,11 @@ if [ -n "${DB_CA_CERT_PEM:-}" ]; then
 fi
 if [ -n "${DB_CA_CERT_FILE:-}" ]; then
   test -r "$DB_CA_CERT_FILE" || { echo "Missing MySQL CA certificate" >&2; exit 1; }
+  # Restarts can retain /tmp. Replace this managed alias before importing the current CA.
+  if [ -f /tmp/aiven-truststore.p12 ]; then
+    keytool -delete -alias aiven-mysql -keystore /tmp/aiven-truststore.p12 \
+      -storetype PKCS12 -storepass changeit
+  fi
   keytool -importcert -noprompt -alias aiven-mysql -file "$DB_CA_CERT_FILE" \
     -keystore /tmp/aiven-truststore.p12 -storetype PKCS12 -storepass changeit
 fi

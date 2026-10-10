@@ -12,6 +12,7 @@ COPY --from=builder /app/target/*.jar app.jar
 COPY deployment/render-entrypoint.sh /app/entrypoint.sh
 RUN sed -i 's/\r$//' /app/entrypoint.sh && chmod 755 /app/entrypoint.sh
 USER app
+ENV UPLOAD_DIR=/data/uploads
 EXPOSE 8080
 HEALTHCHECK --interval=30s --timeout=5s --start-period=40s CMD wget -qO- http://127.0.0.1:8080/actuator/health || exit 1
 ENTRYPOINT ["/app/entrypoint.sh"]
