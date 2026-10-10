@@ -104,6 +104,8 @@ public class RegistrationPeriodService {
             throw new BusinessRuleException("Thời gian sinh viên bắt đầu phải trước thời gian kết thúc");
         if (period.getLecturerEnd().isAfter(period.getStudentStart()))
             throw new BusinessRuleException("Giai đoạn giảng viên phải kết thúc trước giai đoạn sinh viên");
+        if ((period.getType() == PeriodType.TLCN || period.getType() == PeriodType.KLTN) && period.getReportSubmissionDeadline() == null)
+            throw new BusinessRuleException("TLCN/KLTN phải có thời hạn nộp báo cáo");
         if (period.getReportSubmissionDeadline() != null && period.getReportSubmissionDeadline().isBefore(period.getStudentEnd()))
             throw new BusinessRuleException("Hạn nộp báo cáo phải sau khi kết thúc đăng ký đề tài");
         if ((period.getType() == PeriodType.TLCN || period.getType() == PeriodType.KLTN) && period.getReviewDeadline() == null)

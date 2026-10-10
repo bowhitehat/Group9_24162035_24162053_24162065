@@ -40,6 +40,7 @@
         </div>
         <div class="col-12">
             <label class="form-label" for="reportSubmissionDeadline">Thời hạn nộp báo cáo</label>
+            <p class="form-text mb-1">Bắt buộc đối với đợt TLCN và KLTN.</p>
             <input class="form-control" type="datetime-local" th:field="*{reportSubmissionDeadline}" th:attr="data-original-value=${period?.reportSubmissionDeadline}">
             <div class="invalid-feedback" id="reportSubmissionDeadline-error" aria-live="polite"></div>
         </div>

@@ -3,6 +3,10 @@ target/
 .idea/
 .vscode/
 .env
+deployment/.env.oracle
+deployment/.env.render
+*.p12
+*.jks
 uploads/
 *.log
 *.mv.db

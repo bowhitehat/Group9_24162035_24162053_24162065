@@ -326,8 +326,9 @@ public class TopicService {
 
     private Page<Topic> page(List<Topic> items, Pageable pageable) {
         if (pageable.isUnpaged()) return new PageImpl<>(items);
-        int from = Math.min((int) pageable.getOffset(), items.size());
-        int to = Math.min(from + pageable.getPageSize(), items.size());
+        // Pageable offsets are longs; clamp before narrowing to prevent integer overflow.
+        int from = (int) Math.min(pageable.getOffset(), (long) items.size());
+        int to = (int) Math.min((long) from + pageable.getPageSize(), (long) items.size());
         return new PageImpl<>(items.subList(from, to), pageable, items.size());
     }
 

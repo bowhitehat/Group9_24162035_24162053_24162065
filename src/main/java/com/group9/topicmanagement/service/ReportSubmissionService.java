@@ -1,6 +1,5 @@
 package com.group9.topicmanagement.service;
 
-import com.group9.topicmanagement.config.UploadConfig;
 import com.group9.topicmanagement.model.RegistrationPeriod;
 import com.group9.topicmanagement.model.User;
 import com.group9.topicmanagement.model.enums.RegistrationStatus;
@@ -24,11 +23,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.InvalidPathException;
 import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -50,7 +46,7 @@ public class ReportSubmissionService {
     private final ReviewerAssignmentRepository reviewerAssignmentRepository;
     private final CouncilAssignmentRepository councilAssignmentRepository;
     private final CouncilMemberRepository councilMemberRepository;
-    private final UploadConfig uploadConfig;
+    private final ReportFileStorage fileStorage;
     private final Clock clock;
 
     public ReportSubmissionService(ReportSubmissionRepository reportRepository,
@@ -59,7 +55,7 @@ public class ReportSubmissionService {
                                    ReviewerAssignmentRepository reviewerAssignmentRepository,
                                    CouncilAssignmentRepository councilAssignmentRepository,
                                    CouncilMemberRepository councilMemberRepository,
-                                   UploadConfig uploadConfig,
+                                   ReportFileStorage fileStorage,
                                    Clock clock) {
         this.reportRepository = reportRepository;
         this.registrationRepository = registrationRepository;
@@ -67,7 +63,7 @@ public class ReportSubmissionService {
         this.reviewerAssignmentRepository = reviewerAssignmentRepository;
         this.councilAssignmentRepository = councilAssignmentRepository;
         this.councilMemberRepository = councilMemberRepository;
-        this.uploadConfig = uploadConfig;
+        this.fileStorage = fileStorage;
         this.clock = clock;
     }
 
@@ -83,17 +79,7 @@ public class ReportSubmissionService {
         String originalFileName = sanitizeOriginalFileName(file.getOriginalFilename());
         String extension = extensionOf(originalFileName);
         String storedFileName = UUID.randomUUID() + "." + extension;
-        Path uploadDirectory = uploadConfig.getUploadDirectory().toAbsolutePath().normalize();
-        Path targetPath = uploadDirectory.resolve(storedFileName).normalize();
-        if (!targetPath.startsWith(uploadDirectory)) {
-            throw new BusinessRuleException("Tên tập tin không hợp lệ");
-        }
-
-        try {
-            Files.copy(file.getInputStream(), targetPath, StandardCopyOption.REPLACE_EXISTING);
-        } catch (IOException error) {
-            throw new BusinessRuleException("Không thể lưu tập tin báo cáo");
-        }
+        storedFileName = fileStorage.save(storedFileName, file);
 
         ReportSubmission submission = new ReportSubmission();
         submission.setStudentGroup(registration.getStudentGroup());
@@ -110,12 +96,8 @@ public class ReportSubmissionService {
 
     @Transactional(readOnly = true)
     public Set<Long> availableFileIds(List<ReportSubmission> submissions) {
-        Path root = uploadConfig.getUploadDirectory().toAbsolutePath().normalize();
-        return submissions.stream().filter(report -> {
-            if (report.getStoredFileName() == null) return false;
-            Path path = root.resolve(report.getStoredFileName()).normalize();
-            return path.startsWith(root) && Files.isRegularFile(path) && Files.isReadable(path);
-        }).map(ReportSubmission::getId).collect(java.util.stream.Collectors.toSet());
+        return submissions.stream().filter(report -> fileStorage.exists(report.getStoredFileName()))
+                .map(ReportSubmission::getId).collect(java.util.stream.Collectors.toSet());
     }
 
     @Transactional(readOnly = true)

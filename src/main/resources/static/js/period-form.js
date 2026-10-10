@@ -16,6 +16,9 @@
         if (values.reportSubmissionDeadline && values.studentEnd && time(values.reportSubmissionDeadline) < time(values.studentEnd)) {
             errors.reportSubmissionDeadline = 'Hạn nộp báo cáo không được trước thời gian sinh viên đăng ký kết thúc.';
         }
+        if (['TLCN', 'KLTN'].includes(values.type) && !values.reportSubmissionDeadline) {
+            errors.reportSubmissionDeadline = 'Đợt TLCN/KLTN phải có thời hạn nộp báo cáo.';
+        }
         if (['TLCN', 'KLTN'].includes(values.type) && !values.reviewDeadline) {
             errors.reviewDeadline = 'Đợt TLCN/KLTN phải có hạn phản biện.';
         }
@@ -142,6 +145,9 @@
         function refresh(showAll = false) {
             const values = Object.fromEntries(names.map(name => [name, form.elements.namedItem(name).value]));
             const errors = validatePeriod(values, new Date(), originals);
+            const requiresReport = ['TLCN', 'KLTN'].includes(values.type);
+            form.elements.namedItem('reportSubmissionDeadline').required = requiresReport;
+            displays.get('reportSubmissionDeadline').display.required = requiresReport;
             // Restrict the native calendars too; typed values still go through validation.
             const nextDay = value => {
                 if (!value) return '';

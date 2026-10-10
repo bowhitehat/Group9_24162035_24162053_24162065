@@ -134,6 +134,36 @@ class CoreAdminRequirementsTest {
         assertThat(periods.count()).isZero();
     }
 
+    @ParameterizedTest @CsvSource({"TLCN", "KLTN"})
+    void thesisTypesRequireReportDeadlineOnCreateAndEdit(PeriodType type) {
+        RegistrationPeriod input = validPeriod(type);
+        input.setReportSubmissionDeadline(null);
+        assertThatThrownBy(() -> periodService.save(input)).isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("thời hạn nộp báo cáo");
+        assertThat(periods.count()).isZero();
+        RegistrationPeriod saved = periodService.save(validPeriod(type));
+        assertThatThrownBy(() -> periodService.update(saved.getId(), input)).isInstanceOf(BusinessRuleException.class)
+                .hasMessageContaining("thời hạn nộp báo cáo");
+        assertThat(periods.findById(saved.getId()).orElseThrow().getReportSubmissionDeadline()).isNotNull();
+    }
+
+    @ParameterizedTest @WithMockUser(roles="ADMIN") @CsvSource({"TLCN", "KLTN"})
+    void missingReportDeadlineReturnsFormRatherThanSavingInvalidSchedule(PeriodType type) throws Exception {
+        RegistrationPeriod input = validPeriod(type);
+        var format = java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm");
+        var request = post("/faculty/periods").with(csrf()).param("name", "Thiếu thời hạn báo cáo")
+                .param("type", type.name()).param("lecturerStart", input.getLecturerStart().format(format))
+                .param("lecturerEnd", input.getLecturerEnd().format(format))
+                .param("studentStart", input.getStudentStart().format(format))
+                .param("studentEnd", input.getStudentEnd().format(format))
+                .param("reviewDeadline", input.getStudentStart().plusDays(1).format(format));
+        if (type == PeriodType.KLTN) request.param("councilDate", input.getStudentStart().plusDays(2).toLocalDate().toString());
+        mvc.perform(request).andExpect(status().isOk()).andExpect(view().name("faculty/periods"))
+                .andExpect(model().attributeHasErrors("periodForm"))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("thời hạn nộp báo cáo")));
+        assertThat(periods.count()).isZero();
+    }
+
     @Test void thesisTypesRequireReviewDeadline() {
         RegistrationPeriod period = validPeriod(PeriodType.TLCN); period.setReviewDeadline(null);
         assertThatThrownBy(() -> periodService.save(period)).isInstanceOf(BusinessRuleException.class).hasMessageContaining("TLCN/KLTN");
@@ -383,7 +413,10 @@ class CoreAdminRequirementsTest {
         RegistrationPeriod period = new RegistrationPeriod(); period.setName("Đợt kiểm thử"); period.setType(type);
         LocalDateTime start = LocalDateTime.now().plusDays(1); period.setLecturerStart(start); period.setLecturerEnd(start.plusDays(5));
         period.setStudentStart(start.plusDays(6)); period.setStudentEnd(start.plusDays(12));
-        if (type == PeriodType.TLCN || type == PeriodType.KLTN) period.setReviewDeadline(start.plusDays(20));
+        if (type == PeriodType.TLCN || type == PeriodType.KLTN) {
+            period.setReportSubmissionDeadline(start.plusDays(15));
+            period.setReviewDeadline(start.plusDays(20));
+        }
         if (type == PeriodType.KLTN) period.setCouncilDate(start.plusDays(25).toLocalDate());
         return period;
     }

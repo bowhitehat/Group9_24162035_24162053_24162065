@@ -1,0 +1,85 @@
+TRIỂN KHAI MIỄN PHÍ: RENDER + AIVEN MYSQL + SUPABASE STORAGE
+Cập nhật 10/10/2026. Trạng thái: chuẩn bị code; CHƯA deploy, CHƯA có URL thật.
+
+1. Đăng ký / đăng nhập bằng tài khoản của chủ đồ án:
+   Render: https://dashboard.render.com/
+   Aiven: https://console.aiven.io/
+   Supabase: https://supabase.com/dashboard
+   Chỉ chọn Free. Chủ tài khoản tự xác nhận điều khoản/OAuth/OTP.
+   Không gửi mật khẩu, API key, thông tin thẻ vào chat hoặc commit lên Git.
+
+2. Aiven:
+   Tạo MySQL plan Free (không phải trial trả phí). Dùng database defaultdb hoặc
+   database riêng được tạo trong Console. Giữ DB MySQL; không dùng H2/Postgres.
+   Lấy hostname, port, username, password và tải CA certificate từ Console.
+   JPA relationship mapping tạo/cập nhật bảng, không chạy SQL migration cũ.
+   Không dùng sslMode=DISABLED, useSSL=false hoặc bỏ kiểm tra chứng chỉ.
+
+3. Supabase:
+   Tạo project Free. Storage -> tạo bucket tên reports, Public OFF.
+   File size limit ít nhất 10 MB; các định dạng PDF/DOC/DOCX/ZIP.
+   Chỉ backend truy cập bằng legacy service_role key. KHÔNG dùng anon key.
+   Không mở public bucket / không thêm policy cho mọi người đọc báo cáo.
+   SUPABASE_STORAGE_KEY giữ riêng trên Render Environment, không đưa vào HTML/JS.
+   Hệ thống không chuyển đăng nhập hoặc dữ liệu nghiệp vụ sang Supabase.
+   Bucket Supabase dùng hạ tầng Storage của dịch vụ, không viết thêm SQL mapping.
+
+4. Đưa đúng code đã kiểm thử lên nhánh GitHub trước khi Render build.
+   Không chọn commit cũ chưa có ReportFileStorage/render-entrypoint.sh.
+   Render -> New Web Service -> repo Group9 -> chọn nhánh đã cập nhật.
+   Runtime Docker, plan Free, Dockerfile ./Dockerfile, Health /actuator/health.
+   Có thể dùng render.yaml qua Blueprint; nhớ bổ sung secret file dưới đây.
+
+5. Render -> Environment:
+   SPRING_PROFILES_ACTIVE=prod
+   PORT=8080
+   STORAGE_PROVIDER=supabase
+   SUPABASE_URL=https://PROJECT_REF.supabase.co
+   SUPABASE_BUCKET=reports
+   SUPABASE_STORAGE_KEY=<legacy service_role key, nhập riêng>
+   DB_USERNAME=<Aiven username>
+   DB_PASSWORD=<Aiven password, nhập riêng>
+   DB_URL=jdbc:mysql://HOST:PORT/defaultdb?sslMode=VERIFY_IDENTITY&trustCertificateKeyStoreUrl=file:/tmp/aiven-truststore.p12&trustCertificateKeyStoreType=PKCS12&trustCertificateKeyStorePassword=changeit&serverTimezone=Asia/Ho_Chi_Minh&characterEncoding=UTF-8
+   DB_CA_CERT_FILE=/etc/secrets/aiven-ca.pem
+   DEMO_PASSWORD=<mật khẩu mạnh, nhập riêng; dùng cho tài khoản mẫu mới>
+   APP_BASE_URL=https://<hostname Render cấp thực tế>
+   SERVER_SERVLET_SESSION_COOKIE_SECURE=true
+   JAVA_TOOL_OPTIONS=-Xms64m -Xmx256m -XX:ReservedCodeCacheSize=64m -XX:MaxDirectMemorySize=32m -Xss512k -XX:+ExitOnOutOfMemoryError
+   MAIL_ENABLED=false
+
+   Secret Files: tạo aiven-ca.pem, nội dung đúng certificate tải từ Aiven.
+   Entrypoint import CA vào truststore /tmp lúc container khởi động.
+   changeit là mật khẩu truststore chỉ chứa CA công khai, KHÔNG là mật khẩu DB.
+   Không import CA vào Git / image; không tắt TLS khi lỗi kết nối.
+
+6. Giới hạn cần công khai trong báo cáo:
+   Render Free ngủ sau 15 phút không truy cập; lần mở lại có độ trễ.
+   RAM thấp: phải kiểm tra log / xuất Excel-PDF thực tế, không cam kết chịu tải.
+   Render filesystem tạm: file mới được lưu ở Supabase (metadata MySQL), không local.
+   File local cũ chưa tự chuyển sang Supabase: cần nộp lại file gốc, không chỉ copy metadata.
+   Nếu giao dịch DB lỗi sau upload, có thể còn object mồ côi; quản trị đối chiếu trước khi dọn.
+   Render Free chặn SMTP 25/465/587. Email SMTP giữ hoạt động khi chạy local,
+   nhưng trên host phải tắt hoặc bổ sung nhà cung cấp email qua HTTPS rồi kiểm thử inbox thật.
+   Không ghi email hosting hoạt động khi chưa kiểm chứng.
+   Aiven Free 1 GB; Supabase Free 1 GB Storage, có giới hạn băng thông và cơ chế pause.
+   Không thêm thẻ / nâng cấp trả phí khi hết quota nếu chủ tài khoản chưa đồng ý.
+   Sao lưu dữ liệu/file riêng. Gói Free không phải cam kết uptime production.
+
+7. Trước khi báo hoàn thành:
+   /actuator/health trả UP, đăng nhập đủ 4 role, GET/POST sai quyền 403.
+   Kiểm tra dữ liệu được JPA tạo, CSS/JS, cookie HTTPS, CSRF, trang nhập điểm.
+   Upload PDF thật bằng trưởng nhóm, download đúng quyền và so SHA256.
+   Restart/redeploy app, đăng nhập lại và tải file đã nộp vẫn đúng SHA256.
+   Chặn sinh viên khác / giảng viên không được phân công đọc báo cáo.
+   URL Supabase public không được đọc file trong bucket riêng tư.
+   Kiểm tra file lỗi/thiếu, lưu điểm/khóa/công bố, Excel/PDF và Unicode.
+   Chỉ sau đó ghi URL thật vào Word/checklist và tạo ZIP mới.
+
+Nguồn chính thức đã kiểm tra:
+https://render.com/docs/free
+https://render.com/docs/blueprint-spec
+https://aiven.io/docs/products/mysql/concepts/mysql-free-tier
+https://aiven.io/docs/platform/concepts/tls-ssl-certificates
+https://supabase.com/pricing
+https://supabase.com/docs/guides/storage/security/access-control
+https://supabase.com/docs/guides/storage/serving/downloads

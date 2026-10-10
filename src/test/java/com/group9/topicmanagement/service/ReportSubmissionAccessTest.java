@@ -39,7 +39,7 @@ class ReportSubmissionAccessTest {
     @Mock ReviewerAssignmentRepository reviewerAssignmentRepository;
     @Mock CouncilAssignmentRepository councilAssignmentRepository;
     @Mock CouncilMemberRepository councilMemberRepository;
-    @Mock UploadConfig uploadConfig;
+    @Mock ReportFileStorage fileStorage;
     @Mock Clock clock;
     @InjectMocks ReportSubmissionService service;
 

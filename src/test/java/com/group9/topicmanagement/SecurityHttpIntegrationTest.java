@@ -105,6 +105,8 @@ class SecurityHttpIntegrationTest {
     @CsvSource({
         "student1,/topics?page=-1,400", "student1,/topics?size=0,400",
         "student1,/topics?size=101,400", "student1,/topics?status=BAD,400",
+        "faculty,/topics?page=2147483647&size=10,200",
+        "student1,/topics?page=2147483647&size=100,200",
         "student1,/topics/detail/999999,404", "student1,/registrations?page=-1,400",
         "student1,/evaluations/my-result,200", "student1,/evaluations/my-result?topicId=no-number,400",
         "lecturer1,/evaluations/topic/1?type=BAD,400", "admin,/unknown-path,404"

@@ -1,0 +1,23 @@
+KIỂM CHỨNG CHUYỂN PHƯƠNG ÁN HOSTING - 10/10/2026
+
+Đã chạy thật trong repository trên máy:
+- mvn -B -Dtest=ReportFileStorageTest,Member2BusinessRulesTest,ReportSubmissionAccessTest test:
+  44 test, 0 failure/error/skipped; BUILD SUCCESS.
+- mvn -B clean package: 196 test, 0 failure/error/skipped; BUILD SUCCESS.
+- Sau đó bổ sung chặn URL có fragment/port, đọc upload có giới hạn và test chống
+  overwrite/oversize: mvn -B -Dtest=ReportFileStorageTest package:
+  8 test storage, 0 failure/error/skipped; BUILD SUCCESS.
+  Đã chạy lại mvn -B clean package lúc 22:14:56 ngày 10/10/2026:
+  197 test, 0 failure/error/skipped; BUILD SUCCESS.
+  node --test src/test/js/period-form.test.cjs: 26 test thành công.
+
+HTTP storage được kiểm bằng server giả lập local, KHÔNG phải Supabase thật.
+Các test integration nghiệp vụ chạy profile test, KHÔNG phải MySQL Aiven thật.
+Docker API local chưa hoạt động; chưa build/chạy Docker image mới trong lượt này.
+Chưa commit/push trong lượt này. Render phải build nhánh có code mới đã được push.
+Đã tạo MySQL Free group9-mysql trên Aiven và project Free group9-reports trên
+Supabase; bucket reports riêng tư, giới hạn 10 MB. Render Free đã cấu hình,
+chưa có kết quả deploy/URL public được kiểm chứng.
+Chưa kiểm thử TLS Aiven, bucket private, upload/download sau restart trên cloud.
+SMTP trên Render Free bị chặn; cấu hình deploy tắt email. Chưa tích hợp email HTTPS.
+Chưa cập nhật URL hosting vào Word/ZIP vì chưa có kết quả deploy thực tế.

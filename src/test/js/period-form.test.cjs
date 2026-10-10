@@ -37,6 +37,17 @@ test('TLCN and KLTN require review deadline', () => {
     for (const type of ['TLCN', 'KLTN']) assert.ok(validatePeriod({ ...valid, type, reviewDeadline: '' }).reviewDeadline);
     assert.equal(validatePeriod({ ...valid, type: 'MON_HOC', reviewDeadline: '' }).reviewDeadline, undefined);
 });
+test('TLCN and KLTN cannot omit report deadline to bypass the milestone chain', () => {
+    for (const type of ['TLCN', 'KLTN']) {
+        assert.match(validatePeriod({ ...valid, type, reportSubmissionDeadline: '', councilDate: type === 'KLTN' ? '2026-11-11' : '' })
+            .reportSubmissionDeadline, /phải có thời hạn nộp báo cáo/);
+    }
+});
+test('course and research periods may omit report deadline', () => {
+    for (const type of ['MON_HOC', 'NCKH']) {
+        assert.deepEqual(validatePeriod({ ...valid, type, reportSubmissionDeadline: '', reviewDeadline: '' }), {});
+    }
+});
 test('council date is required only for KLTN', () => {
     assert.ok(validatePeriod({ ...valid, type: 'KLTN' }).councilDate);
     assert.ok(validatePeriod({ ...valid, councilDate: '2026-11-20' }).councilDate);
@@ -62,7 +73,7 @@ test('fixing a past value clears its warning', () => {
 });
 test('today is accepted even if the selected hour has already passed', () => {
     assert.deepEqual(validatePeriodAt({ ...valid, lecturerStart: '2026-08-01T00:00' }, new Date('2026-08-01T23:59:45')), {});
-    assert.deepEqual(validatePeriodAt({ ...valid, reportSubmissionDeadline: '', reviewDeadline: '2026-08-01T00:00' }, new Date('2026-08-01T23:59:45')), {});
+    assert.deepEqual(validatePeriodAt({ ...valid, type: 'MON_HOC', reportSubmissionDeadline: '', reviewDeadline: '2026-08-01T00:00' }, new Date('2026-08-01T23:59:45')), {});
 });
 test('unchanged historical dates are allowed on edit but a different past date is rejected', () => {
     const now = new Date('2026-10-01T10:00:00');

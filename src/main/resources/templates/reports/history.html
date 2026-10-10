@@ -1,12 +1,13 @@
 <!DOCTYPE html>
-<html lang="vi" xmlns:th="http://www.thymeleaf.org" th:replace="~{fragments/layout :: page(~{::content})}">
+<html lang="vi" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security" th:replace="~{fragments/layout :: page(~{::content})}">
 <head>
     <title>Lịch sử Nộp Báo cáo</title>
 </head>
 <body>
 <div th:fragment="content">
     <div class="mb-3">
-        <a th:href="@{/registrations}" class="btn btn-sm btn-outline-secondary">&larr; Quay lại danh sách đăng ký</a>
+        <a sec:authorize="hasAnyRole('ADMIN','FACULTY_MANAGER','STUDENT')" th:href="@{/registrations}" class="btn btn-sm btn-outline-secondary">&larr; Quay lại danh sách đăng ký</a>
+        <a sec:authorize="hasRole('LECTURER') and !hasAnyRole('ADMIN','FACULTY_MANAGER','STUDENT')" th:href="@{/evaluations/results}" class="btn btn-sm btn-outline-secondary">&larr; Quay lại đề tài được phân công</a>
     </div>
 
     <div class="card mb-4">

@@ -48,6 +48,11 @@ management:
 app:
   base-url: ${APP_BASE_URL:http://localhost:8090}
   upload-dir: ${UPLOAD_DIR:./uploads}
+  storage:
+    provider: ${STORAGE_PROVIDER:local}
+    supabase-url: ${SUPABASE_URL:}
+    supabase-bucket: ${SUPABASE_BUCKET:reports}
+    supabase-key: ${SUPABASE_STORAGE_KEY:}
   demo-password: ${DEMO_PASSWORD:}
   mail:
     enabled: ${MAIL_ENABLED:false}

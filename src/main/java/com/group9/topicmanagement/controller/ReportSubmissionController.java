@@ -1,15 +1,13 @@
 package com.group9.topicmanagement.controller;
 
-import com.group9.topicmanagement.config.UploadConfig;
 import com.group9.topicmanagement.model.registration.ReportSubmission;
 import com.group9.topicmanagement.model.registration.TopicRegistration;
 import com.group9.topicmanagement.exception.BusinessRuleException;
-import com.group9.topicmanagement.exception.NotFoundException;
 import com.group9.topicmanagement.service.ReportSubmissionService;
+import com.group9.topicmanagement.service.ReportFileStorage;
 import com.group9.topicmanagement.dto.ReportSubmissionForm;
 import jakarta.validation.Valid;
 import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -22,8 +20,6 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
-import java.net.MalformedURLException;
-import java.nio.file.Path;
 import java.nio.charset.StandardCharsets;
 import java.security.Principal;
 import java.util.List;
@@ -33,12 +29,12 @@ import java.util.List;
 public class ReportSubmissionController {
 
     private final ReportSubmissionService reportService;
-    private final UploadConfig uploadConfig;
+    private final ReportFileStorage fileStorage;
 
     public ReportSubmissionController(ReportSubmissionService reportService,
-                                      UploadConfig uploadConfig) {
+                                      ReportFileStorage fileStorage) {
         this.reportService = reportService;
-        this.uploadConfig = uploadConfig;
+        this.fileStorage = fileStorage;
     }
 
     @PreAuthorize("hasRole('STUDENT')")
@@ -117,23 +113,12 @@ public class ReportSubmissionController {
     @GetMapping("/download/{id}")
     public ResponseEntity<Resource> downloadReport(@PathVariable Long id, Principal principal) {
         ReportSubmission submission = reportService.getSubmissionByIdForUser(id, principal.getName());
-        Path uploadDirectory = uploadConfig.getUploadDirectory().toAbsolutePath().normalize();
-        Path filePath = uploadDirectory.resolve(submission.getStoredFileName()).normalize();
-        if (!filePath.startsWith(uploadDirectory)) throw new AccessDeniedException("Đường dẫn tập tin không hợp lệ");
+        Resource resource = fileStorage.read(submission.getStoredFileName());
 
-        try {
-            Resource resource = new UrlResource(filePath.toUri());
-            if (!resource.exists() || !resource.isReadable()) {
-                throw new NotFoundException("Tệp báo cáo không còn trên máy chủ. Vui lòng liên hệ nhóm trưởng nộp lại file gốc.");
-            }
-
-            return ResponseEntity.ok()
-                    .contentType(MediaType.parseMediaType(submission.getContentType()))
-                    .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
-                            .filename(submission.getOriginalFileName(), StandardCharsets.UTF_8).build().toString())
-                    .body(resource);
-        } catch (MalformedURLException e) {
-            throw new NotFoundException("Không tìm thấy tệp báo cáo hợp lệ");
-        }
+        return ResponseEntity.ok()
+                .contentType(MediaType.parseMediaType(submission.getContentType()))
+                .header(HttpHeaders.CONTENT_DISPOSITION, ContentDisposition.attachment()
+                        .filename(submission.getOriginalFileName(), StandardCharsets.UTF_8).build().toString())
+                .body(resource);
     }
 }

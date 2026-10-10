@@ -497,6 +497,23 @@ class Member2BusinessRulesTest {
     }
 
     @Test
+    void lecturerReportHistoryBackLinkGoesToAnAllowedPage() throws Exception {
+        TopicRegistration registration = createApprovedRegistration();
+        String html = mvc.perform(get("/reports/history/" + registration.getId())
+                        .with(user(lecturer1.getUsername()).roles("LECTURER")))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(html).contains("href=\"/evaluations/results\"", "Quay lại đề tài được phân công")
+                .doesNotContain("Quay lại danh sách đăng ký");
+        mvc.perform(get("/evaluations/results").with(user(lecturer1.getUsername()).roles("LECTURER")))
+                .andExpect(status().isOk());
+        String studentHtml = mvc.perform(get("/reports/history/" + registration.getId())
+                        .with(user(student1.getUsername()).roles("STUDENT")))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(studentHtml).contains("href=\"/registrations\"", "Quay lại danh sách đăng ký")
+                .doesNotContain("Quay lại đề tài được phân công");
+    }
+
+    @Test
     void reportMenuAutomaticallySelectsLeadersApprovedRegistration() throws Exception {
         TopicRegistration registration = createApprovedRegistration();
         mvc.perform(get("/reports/submit").with(user(student1.getUsername()).roles("STUDENT")))
