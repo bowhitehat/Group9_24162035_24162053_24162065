@@ -1,0 +1,29 @@
+KIỂM CHỨNG HOSTING RAILWAY - 10/10/2026
+
+Đã thực hiện:
+- Push nhánh feature/core-admin với author liên kết tài khoản bowhitehat.
+- Deploy Docker/JDK 21/Spring Boot 3.5.16 trên Railway Trial đã xác minh.
+- Kết nối Aiven MySQL 8.4.11 thành công; import CA và VERIFY_IDENTITY.
+- Phát hiện lỗi quyền ghi /app/uploads và import CA trùng khi restart.
+  Commit 1f3abe6 sửa UPLOAD_DIR và thay alias CA trước khi import.
+- Log bản f15a1253-ce5e-472c-beff-1e877f0ef2db: Tomcat port 8080,
+  Started TopicManagementApplication; service hiển thị Online.
+- Mở URL HTTPS thật và đăng nhập admin/faculty/lecturer1/student1 thành công.
+- Admin mở quản lý tài khoản: có 4 user đúng role và 3 bộ môn.
+- Student menu đúng role; mở Nộp báo cáo không 500, thông báo chưa có đăng ký
+  đã duyệt với vai trò trưởng nhóm. GET /admin/users hiện trang 403.
+- Lecturer bấm navbar Phản biện mở /reviewer-assignments/my-assignments,
+  không bị 403. Chưa có nhiệm vụ do database mới.
+- Faculty mở quản lý đợt thành công; danh sách chưa có đợt.
+
+Phạm vi chưa kiểm chứng trên cloud:
+- Chưa có đề tài/nhóm/đăng ký/báo cáo từ database local trên Aiven.
+- Chưa test toàn bộ POST nghiệp vụ, nộp/tải Supabase và tồn tại sau restart.
+- Chưa cấu hình SMTP; email đang tắt.
+- Trình duyệt chặn mở trực tiếp /actuator/health; không bypass. Railway
+  vẫn đã kiểm healthcheck và ứng dụng web thực tế hoạt động.
+- Word và ZIP chưa cập nhật URL trong lượt deploy này.
+
+Kiểm thử local trước deploy: mvn -B clean package 197 test thành công;
+node --test src/test/js/period-form.test.cjs 26 test thành công.
+Đây không phải kết quả test toàn bộ chức năng trên MySQL cloud.

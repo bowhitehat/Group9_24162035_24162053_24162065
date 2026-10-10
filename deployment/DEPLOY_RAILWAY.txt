@@ -1,0 +1,33 @@
+HOSTING GROUP 9 - RAILWAY + AIVEN + SUPABASE
+
+URL: https://group9-topic-management-production.up.railway.app
+Branch: feature/core-admin
+Dockerfile: /Dockerfile
+Healthcheck: /actuator/health
+Profile: prod
+
+Railway chạy Spring Boot; Aiven lưu MySQL; Supabase bucket reports riêng tư
+lưu các báo cáo mới. Không lưu dữ liệu bền vững vào ổ đĩa Railway.
+UPLOAD_DIR=/data/uploads chỉ là đường dẫn local có quyền ghi trong container.
+STORAGE_PROVIDER phải là supabase để các báo cáo mới lưu trên object storage.
+
+Các biến bí mật DB_PASSWORD, SUPABASE_STORAGE_KEY, DEMO_PASSWORD chỉ đặt trong
+Railway Variables. Tuyệt đối không đưa giá trị vào Git, Word, ảnh hoặc ZIP.
+DB_CA_CERT_PEM là chứng chỉ CA công khai của Aiven. Entrypoint import vào
+/tmp/aiven-truststore.p12. JDBC dùng sslMode=VERIFY_IDENTITY, không tắt TLS.
+
+Các tài khoản demo: admin, faculty, lecturer1, student1.
+Mật khẩu là DEMO_PASSWORD do chủ tài khoản đã nhập; không phải mật khẩu mặc
+định. Initializer chỉ tạo người dùng còn thiếu, không đổi mật khẩu đã có.
+
+Database cloud mới chỉ có dữ liệu khởi tạo tài khoản và bộ môn, không tự sao
+chép dữ liệu MySQL hay file uploads trên máy. Cần chuẩn bị dữ liệu nghiệp vụ
+hoặc quy trình di chuyển riêng trước buổi demo đầy đủ.
+
+MAIL_ENABLED=false: email thực tế chưa được cấu hình trên hosting.
+Chưa được coi kiểm thử upload/download Supabase sau restart là hoàn tất khi
+chưa thực hiện bằng một báo cáo của nhóm đã đăng ký được duyệt.
+
+Railway hiện là Trial, UI hiển thị tối đa 30 ngày hoặc $5 credit. Không có
+nâng cấp trả phí hay thêm thẻ. Theo dõi credit trong dashboard; không coi đây
+là hosting miễn phí chạy liên tục vô thời hạn.
