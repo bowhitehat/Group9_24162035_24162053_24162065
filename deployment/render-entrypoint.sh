@@ -17,4 +17,4 @@ if [ -n "${DB_CA_CERT_FILE:-}" ]; then
   keytool -importcert -noprompt -alias aiven-mysql -file "$DB_CA_CERT_FILE" \
     -keystore /tmp/aiven-truststore.p12 -storetype PKCS12 -storepass changeit
 fi
-exec java -jar /app/app.jar "$@"
+exec java -Duser.timezone="${APP_TIME_ZONE:-Asia/Ho_Chi_Minh}" -jar /app/app.jar "$@"

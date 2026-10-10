@@ -1,0 +1,41 @@
+CHUYỂN DỮ LIỆU DEMO LOCAL SANG CLOUD - 10/10/2026
+
+Nguồn: MySQL local group9_topic_management, chỉ đọc, không sửa/xóa dữ liệu.
+Đích: MySQL Aiven defaultdb, VERIFY_IDENTITY với project CA.
+File: Supabase bucket reports, giữ PRIVATE, không thêm public policy.
+
+Đã sao lưu cả nguồn và đích ngoài Git trước khi chuyển. Snapshot có dữ liệu
+và password hash, chỉ cấp quyền tài khoản Windows hiện tại, không đưa vào
+repository, tài liệu nộp, ZIP hoặc screenshot.
+
+Preflight xác nhận business tables cloud trống, seed IDs trùng username/code/
+role. Copy transaction với khóa ngoại bật; rollback khi conflict, không dùng
+TRUNCATE, DELETE hay INSERT IGNORE. Bỏ cột approved_topic_id STORED GENERATED
+của schema Flyway cũ vì đây là cột suy dẫn, không thuộc model JPA hiện tại.
+Không chép flyway_schema_history, không thay đổi JPA relationship mapping.
+
+Đối chiếu số dòng sau commit:
+roles 4; departments 5; users 9; user_roles 9; registration_periods 4;
+topic 4; topic_advisors 2; student_group 1; group_member 3;
+topic_registration 1; report_submission 3; evaluation_criteria 20;
+announcements 1; announcement_target_roles 1.
+reviewer_assignments/councils/council_members/council_assignments/evaluations/
+evaluation_scores/topic_results đều 0, giống nguồn; không tự tạo điểm/hội đồng.
+
+Giữ nguyên 4 tài khoản cloud, mật khẩu và metadata của chúng. 5 tài khoản demo
+bổ sung dùng password hash của mật khẩu demo cloud đã được chủ tài khoản đặt.
+Đã đối chiếu ngày/giờ DATETIME giữa hai DB, giá trị giống nhau.
+
+Một file thật: e247e4f7-eef4-4028-b457-6c28e5e0ec43.pdf, 698333 bytes.
+Đổi stored_file_name phía cloud thành supabase:<tên file>; local giữ nguyên.
+Student1 đăng nhập cloud: thấy nhóm, đề tài APPROVED và báo cáo v3.
+Nút Nộp báo cáo mở đúng registrationId=1; nút Tải tệp tải được file thật.
+SHA256 nguồn và file tải từ cloud trùng:
+CD968E3FC9F7F548A146858E6283EB9DC8ED14920019E8B828A0D8986CAE3623.
+
+demo-report-v1.pdf và demo-report-v2.pdf không tồn tại ở nguồn. Giữ 2 bản ghi
+lịch sử; UI hiển thị "File không còn trên máy chủ. Cần nộp lại file gốc."
+Không sinh báo cáo thay thế. Hai file này vẫn cần nhóm trưởng nộp lại.
+
+Migration là thao tác vận hành một lần, không thêm SQL vào ứng dụng. Code
+ứng dụng tiếp tục dùng JPA/relationship mapping.

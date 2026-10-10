@@ -20,9 +20,20 @@ Các tài khoản demo: admin, faculty, lecturer1, student1.
 Mật khẩu là DEMO_PASSWORD do chủ tài khoản đã nhập; không phải mật khẩu mặc
 định. Initializer chỉ tạo người dùng còn thiếu, không đổi mật khẩu đã có.
 
-Database cloud mới chỉ có dữ liệu khởi tạo tài khoản và bộ môn, không tự sao
-chép dữ liệu MySQL hay file uploads trên máy. Cần chuẩn bị dữ liệu nghiệp vụ
-hoặc quy trình di chuyển riêng trước buổi demo đầy đủ.
+Ngày 10/10/2026 đã chuyển dữ liệu demo local: 9 tài khoản, 5 bộ môn, 4 đợt,
+4 đề tài, 1 nhóm/3 thành viên, 1 đăng ký, 3 bản ghi báo cáo, 20 tiêu chí,
+1 thông báo. 4 tài khoản cloud hiện có được giữ nguyên. Các tài khoản demo
+bổ sung dùng mật khẩu demo đã đặt trên cloud, không dùng mật khẩu local cũ.
+MySQL local và cloud là hai database độc lập, không tự đồng bộ sau lần chuyển.
+Workbench chỉ là client: muốn xem dữ liệu web phải kết nối tới MySQL Aiven.
+
+Chỉ 1/3 báo cáo local có file thật, đã chuyển vào Supabase private và tải qua
+web thành công, SHA256 trùng file local. Hai báo cáo demo v1/v2 đã mất file
+gốc trên máy trước khi chuyển; giữ lịch sử và hiển thị cần nộp lại file gốc.
+Không tạo file giả và không tuyên bố đã khôi phục hai báo cáo đó.
+
+APP_TIME_ZONE mặc định Asia/Ho_Chi_Minh để JVM cùng timezone với JDBC.
+Không thay đổi các ngày/giờ lưu trong database khi chuyển dữ liệu.
 
 MAIL_ENABLED=false: email thực tế chưa được cấu hình trên hosting.
 Chưa được coi kiểm thử upload/download Supabase sau restart là hoàn tất khi
