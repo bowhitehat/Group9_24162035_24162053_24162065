@@ -234,7 +234,9 @@ public class TopicResultService {
         boolean isManager = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_FACULTY_MANAGER"));
         Long userId = userRepository.findByUsernameIgnoreCase(auth.getName()).orElseThrow().getId();
 
-        CouncilAssignment assignment = councilAssignmentRepository.findFirstByTopicIdOrderByIdDesc(topicId)
+        CouncilAssignment assignment = councilAssignmentRepository.findByTopicIdAndCouncil_StatusIn(topicId,
+                        List.of(CouncilStatus.ACTIVE, CouncilStatus.COMPLETED)).stream().findFirst()
+                .or(() -> councilAssignmentRepository.findFirstByTopicIdOrderByIdDesc(topicId))
                 .orElseThrow(() -> new NotFoundException("Đề tài chưa phân công hội đồng"));
 
         if (!isManager && !councilService.isMemberOfCouncil(assignment.getCouncil().getId(), userId)) {

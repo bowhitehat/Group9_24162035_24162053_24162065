@@ -19,7 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.EnumSet;
 import java.util.List;
 
 @Service
@@ -273,12 +272,11 @@ public class CouncilService {
 
     @Transactional(readOnly = true)
     public boolean isChairOfTopic(Long topicId, Long userId) {
-        return assignmentRepository.findByTopicId(topicId).stream()
-                .filter(a -> EnumSet.of(CouncilStatus.ACTIVE, CouncilStatus.COMPLETED)
-                        .contains(a.getCouncil().getStatus()))
-                .anyMatch(a -> memberRepository.findByCouncilIdAndMemberId(a.getCouncil().getId(), userId)
+        return assignmentRepository.findByTopicIdAndCouncil_StatusIn(topicId,
+                        List.of(CouncilStatus.ACTIVE, CouncilStatus.COMPLETED)).stream().findFirst()
+                .map(a -> memberRepository.findByCouncilIdAndMemberId(a.getCouncil().getId(), userId)
                         .filter(m -> m.getRole() == CouncilMemberRole.CHAIR)
-                        .isPresent());
+                        .isPresent()).orElse(false);
     }
 
     @Transactional(readOnly = true)
