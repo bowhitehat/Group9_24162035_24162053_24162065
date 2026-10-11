@@ -50,7 +50,8 @@ public interface TopicRegistrationRepository extends JpaRepository<TopicRegistra
     })
     List<TopicRegistration> findAllByOrderByIdDesc();
 
-    @EntityGraph(attributePaths = {"topic", "studentGroup", "studentGroup.members", "studentGroup.members.member"})
+    // The reviewer form reads period type/status/deadline after the service transaction closes.
+    @EntityGraph(attributePaths = {"topic", "registrationPeriod", "studentGroup", "studentGroup.members", "studentGroup.members.member"})
     List<TopicRegistration> findByStatusOrderByIdAsc(RegistrationStatus status);
 
     long countByStatus(RegistrationStatus status);

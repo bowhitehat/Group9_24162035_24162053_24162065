@@ -24,6 +24,21 @@ class Member3RegressionTest extends Member3BusinessRulesTest {
     @MockitoBean EmailService mail;
     @Autowired PlatformTransactionManager transactions;
 
+    @Test void reviewerCreateRendersApprovedTopicAndPeriodDateLimitsWithoutOpenSession() throws Exception {
+        Topic topic = preparedApprovedTopic();
+        var period = topic.getRegistrationPeriod();
+        period.setType(com.group9.topicmanagement.model.enums.PeriodType.KLTN);
+        var deadline = java.time.LocalDateTime.now().plusDays(7).withSecond(0).withNano(0);
+        period.setReviewDeadline(deadline);
+        periods.save(period);
+        var response = mvc.perform(get("/reviewer-assignments/create")
+                .with(user("faculty1").roles("FACULTY_MANAGER")))
+                .andExpect(status().isOk()).andReturn();
+        assertThat(response.getResponse().getContentAsString()).contains("DT99", "data-type=\"KLTN\"",
+                "data-status=\"IN_PROGRESS\"", "data-review-deadline=\"" + deadline,
+                "data-date-form=\"reviewer\"");
+    }
+
     @Test void editAnnouncementPreservesTextAndEscapesHtmlExactlyOnce() throws Exception {
         String content = "Nội dung A & B <script>alert(1)</script>";
         var announcement = announcementService.saveAnnouncement("Thông báo thử", content,
