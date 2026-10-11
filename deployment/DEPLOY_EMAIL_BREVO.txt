@@ -1,0 +1,49 @@
+EMAIL CLOUD QUA BREVO HTTPS API
+
+Railway Free/Trial/Hobby không hỗ trợ SMTP outbound. Giữ JavaMailSender
+cho localhost/hosting hỗ trợ SMTP; cloud chọn Brevo qua HTTPS cổng 443.
+
+1. Đăng ký tài khoản Brevo bằng thông tin thật, xác minh điện thoại nếu
+   dịch vụ yêu cầu, kiểm tra mục Transactional đã được phép gửi.
+2. Settings -> Senders, domains, IPs: thêm/xác minh email người gửi do
+   nhóm sở hữu. MAIL_FROM phải đúng email đã xác minh. Nếu có domain
+   riêng, cấu hình DKIM/DMARC theo Brevo; không giả mạo domain trường.
+3. Settings -> SMTP & API -> API Keys: chủ tài khoản tự tạo API key cho
+   backend. KHÔNG dùng SMTP key thay API key, không gửi key vào chat,
+   không lưu key trong source/Git/ảnh chụp/báo cáo. Nhập trực tiếp vào
+   biến BREVO_API_KEY trên Railway; giữ biến secret không công khai.
+4. Railway Variables (chỉ bật sau khi hoàn thành các bước trên):
+   MAIL_PROVIDER=brevo
+   BREVO_API_KEY=<nhập trực tiếp key bí mật>
+   MAIL_FROM=<email đã xác minh>
+   MAIL_ENABLED=true
+   MAIL_SMTP_HEALTH_ENABLED=false
+   Không cần đổi MAIL_HOST/MAIL_PORT hoặc nâng cấp Railway chỉ để SMTP.
+5. Deploy code mới, kiểm tra /actuator/health và đăng nhập. Health này
+   không kiểm tra khả năng gửi email. Kiểm tra log ứng dụng và Brevo
+   Transactional -> Logs, rồi kiểm tra inbox/spam của email test đã
+   được chủ sở hữu đồng ý. Không ghi hoàn thành chỉ vì HTTP 201.
+
+Luồng hiện có: service nghiệp vụ phát event; AFTER_COMMIT mới gọi
+EmailService qua mailExecutor. SMTP dùng JavaMailSender; Brevo dùng
+HttpClient tới https://api.brevo.com/v3/smtp/email (TLS chuẩn, không
+theo redirect). Mỗi sinh viên nhận riêng một email, không lộ danh sách
+email/điểm qua CC/BCC. Nội dung có tiếng Việt UTF-8 và link APP_BASE_URL.
+Kết quả chỉ gửi khi công bố, không gửi điểm nháp; công bố lại không tạo
+thêm email theo luật nghiệp vụ hiện tại. Rollback không phát email.
+
+Giới hạn: SENT chỉ nghĩa nhà cung cấp nhận yêu cầu. Email có thể bounce
+hoặc vào spam; Brevo logs/inbox mới xác nhận nhận thư. Không có outbox,
+webhook delivery hoặc retry tự động; timeout không retry để tránh gửi
+trùng nếu nhà cung cấp đã nhận. Giới hạn/quy trình duyệt phụ thuộc Brevo;
+kiểm tra gói hiện tại trước buổi báo cáo. Không cần mua gói trả phí.
+
+Nếu lỗi: 401 kiểm tra API key; 400 kiểm tra sender/nội dung; 403 kiểm
+tra tài khoản được kích hoạt Transactional/xác minh; 429 kiểm tra hạn
+mức. Log chỉ ghi loại lỗi/mã HTTP, không ghi key, địa chỉ, nội dung thư.
+Tắt MAIL_ENABLED=false để tạm ngừng email mà không ảnh hưởng nghiệp vụ.
+
+Nguồn chính thức:
+https://docs.railway.com/networking/outbound-networking
+https://developers.brevo.com/docs/send-a-transactional-email
+https://help.brevo.com/hc/en-us/articles/208836149-Create-a-new-sender-From-name-and-From-email

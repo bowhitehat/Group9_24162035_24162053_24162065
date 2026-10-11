@@ -37,7 +37,8 @@ server:
 management:
   health:
     mail:
-      enabled: ${app.mail.enabled}
+      # Set false for Brevo: its HTTPS delivery is not tested by an SMTP health probe.
+      enabled: ${MAIL_SMTP_HEALTH_ENABLED:${app.mail.enabled}}
   endpoints:
     web:
       exposure:
@@ -57,3 +58,5 @@ app:
   mail:
     enabled: ${MAIL_ENABLED:false}
     from: ${MAIL_FROM:no-reply@group9.local}
+    provider: ${MAIL_PROVIDER:smtp}
+    brevo-api-key: ${BREVO_API_KEY:}
