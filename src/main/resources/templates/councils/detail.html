@@ -31,7 +31,8 @@
                     </p>
                     <p><strong>Đợt:</strong> <span th:text="${council.registrationPeriod.name}"></span></p>
                     <form sec:authorize="hasRole('FACULTY_MANAGER')" th:if="${canEditCouncil}" th:object="${updateForm}"
-                          th:action="@{/councils/{id}/update(id=${council.id})}" method="post">
+                          th:action="@{/councils/{id}/update(id=${council.id})}" method="post" data-date-form="council"
+                          th:attr="data-type=${council.registrationPeriod.type},data-council-date=${council.registrationPeriod.councilDate}">
                         <div class="mb-2"><label class="form-label">Tên</label><input class="form-control" th:field="*{name}" required></div>
                         <div class="mb-2"><label class="form-label">Ngày báo cáo</label>
                             <input class="form-control" type="datetime-local" th:field="*{reportDate}" required>

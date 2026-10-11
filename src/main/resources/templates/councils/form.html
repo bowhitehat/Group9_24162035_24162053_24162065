@@ -10,16 +10,16 @@
 
     <div class="card shadow-sm max-w-md">
         <div class="card-body p-4">
-            <form th:action="@{/councils/create}" th:object="${councilForm}" method="post">
+            <form th:action="@{/councils/create}" th:object="${councilForm}" method="post" data-date-form="council">
                 <div class="mb-3">
                     <label class="form-label">Tên hội đồng</label>
                     <input type="text" th:field="*{name}" class="form-control" required>
                 </div>
                 <div class="mb-3">
                     <label class="form-label">Đợt</label>
-                    <select th:field="*{periodId}" class="form-select" required>
+                    <select th:field="*{periodId}" class="form-select" required data-date-context>
                         <option value="">-- Chọn đợt --</option>
-                        <option th:each="p : ${periods}" th:value="${p.id}" th:text="${p.name}"></option>
+                        <option th:each="p : ${periods}" th:value="${p.id}" th:text="${p.name}" th:attr="data-type=${p.type},data-council-date=${p.councilDate}"></option>
                     </select>
                 </div>
                 <div class="mb-3">

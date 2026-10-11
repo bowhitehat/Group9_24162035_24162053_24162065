@@ -109,7 +109,11 @@
             field.setAttribute('aria-hidden', 'true');
             pickerContainer.append(button, field);
             group.append(display, pickerContainer);
-            const state = { display, group, dateOnly, error: '' };
+            const hint = document.createElement('div');
+            hint.className = 'form-text';
+            hint.id = `${field.id}-hint`;
+            group.after(hint);
+            const state = { display, group, hint, dateOnly, error: '' };
             displays.set(name, state);
             button.addEventListener('click', () => {
                 if (typeof field.showPicker === 'function') field.showPicker();
@@ -146,8 +150,11 @@
             const values = Object.fromEntries(names.map(name => [name, form.elements.namedItem(name).value]));
             const errors = validatePeriod(values, new Date(), originals);
             const requiresReport = ['TLCN', 'KLTN'].includes(values.type);
-            form.elements.namedItem('reportSubmissionDeadline').required = requiresReport;
-            displays.get('reportSubmissionDeadline').display.required = requiresReport;
+            for (const [name, required] of Object.entries({reportSubmissionDeadline: requiresReport,
+                reviewDeadline: requiresReport, councilDate: values.type === 'KLTN'})) {
+                form.elements.namedItem(name).required = required;
+                displays.get(name).display.required = required;
+            }
             // Restrict the native calendars too; typed values still go through validation.
             const nextDay = value => {
                 if (!value) return '';
@@ -155,9 +162,42 @@
                 day.setUTCDate(day.getUTCDate() + 1);
                 return day.toISOString().slice(0, 10);
             };
-            const reviewMin = nextDay(values.reportSubmissionDeadline);
-            form.elements.namedItem('reviewDeadline').min = reviewMin ? reviewMin + 'T00:00' : '';
-            form.elements.namedItem('councilDate').min = values.type === 'KLTN' ? nextDay(values.reviewDeadline) : '';
+            const now = new Date();
+            const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            const afterMinute = value => {
+                if (!value) return '';
+                const date = new Date(value.slice(0, 16) + ':00Z');
+                date.setUTCMinutes(date.getUTCMinutes() + 1);
+                return date.toISOString().slice(0, 16);
+            };
+            const lowerBounds = {
+                lecturerEnd: afterMinute(values.lecturerStart), studentStart: values.lecturerEnd,
+                studentEnd: afterMinute(values.studentStart), reportSubmissionDeadline: values.studentEnd,
+                reviewDeadline: values.reportSubmissionDeadline ? nextDay(values.reportSubmissionDeadline) + 'T00:00' : '',
+                councilDate: values.type === 'KLTN' ? nextDay(values.reviewDeadline) : ''
+            };
+            const explanations = {
+                lecturerStart: 'Chọn từ hôm nay; kiểm tra quá khứ chỉ theo ngày, không theo giờ.',
+                lecturerEnd: 'Phải sau giờ bắt đầu đăng ký giảng viên.',
+                studentStart: 'Không trước thời điểm kết thúc đăng ký giảng viên.',
+                studentEnd: 'Phải sau giờ bắt đầu đăng ký sinh viên.',
+                reportSubmissionDeadline: 'Không trước thời điểm kết thúc đăng ký sinh viên.',
+                reviewDeadline: 'Phải sau ngày nộp báo cáo (ít nhất ngày kế tiếp).',
+                councilDate: values.type === 'KLTN' ? 'Phải sau ngày phản biện (ít nhất ngày kế tiếp).' : 'Chỉ áp dụng cho đợt KLTN; để trống với loại đợt khác.'
+            };
+            for (const [name, state] of displays) {
+                const field = form.elements.namedItem(name);
+                // Existing past dates remain editable on the same day, matching the service.
+                const originalDay = (originals[name] || '').slice(0, 10);
+                const baseDay = originalDay && originalDay < today ? originalDay : today;
+                const base = baseDay + (state.dateOnly ? '' : 'T00:00');
+                field.min = [base, lowerBounds[name] || ''].sort().at(-1);
+                state.hint.textContent = explanations[name] + ' Ngày sớm nhất: ' + formatDisplayDate(field.min, state.dateOnly) + '.';
+                if (originalDay && originalDay < today) {
+                    state.hint.textContent += ' Khi sửa dữ liệu cũ, chỉ được giữ đúng ngày ' + formatDisplayDate(originalDay, true)
+                        + ' hoặc chọn từ hôm nay trở đi; vẫn phải đúng thứ tự các mốc.';
+                }
+            }
             for (const name of names) {
                 const field = form.elements.namedItem(name);
                 const state = displays.get(name);
@@ -176,7 +216,7 @@
                 display.classList.toggle('is-invalid', visible);
                 state?.group.classList.toggle('is-invalid', visible);
                 display.setAttribute('aria-invalid', String(visible));
-                display.setAttribute('aria-describedby', `${field.id}-error`);
+                display.setAttribute('aria-describedby', `${field.id}-error${state ? ' ' + state.hint.id : ''}`);
                 form.querySelector(`[id="${field.id}-error"]`).textContent = visible ? message : '';
             }
             return form.checkValidity();

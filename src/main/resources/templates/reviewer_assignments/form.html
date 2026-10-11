@@ -8,12 +8,13 @@
     </div>
     <div class="card shadow-sm max-w-md">
         <div class="card-body p-4">
-            <form th:action="@{/reviewer-assignments/create}" th:object="${assignmentForm}" method="post">
+            <form th:action="@{/reviewer-assignments/create}" th:object="${assignmentForm}" method="post" data-date-form="reviewer">
                 <div class="mb-3">
                     <label class="form-label">Đề tài</label>
-                    <select th:field="*{topicId}" class="form-select" required>
+                    <select th:field="*{topicId}" class="form-select" required data-date-context>
                         <option value="">- Chọn đề tài đã duyệt -</option>
-                        <option th:each="reg : ${approvedRegistrations}" th:value="${reg.topic.id}" th:text="${reg.topic.code + ' - ' + reg.topic.title}"></option>
+                        <option th:each="reg : ${approvedRegistrations}" th:value="${reg.topic.id}" th:text="${reg.topic.code + ' - ' + reg.topic.title}"
+                                th:attr="data-type=${reg.registrationPeriod.type},data-review-deadline=${reg.registrationPeriod.reviewDeadline},data-status=${reg.registrationPeriod.status}"></option>
                     </select>
                 </div>
                 <div class="mb-3">

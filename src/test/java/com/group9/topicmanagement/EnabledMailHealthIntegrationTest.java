@@ -24,6 +24,8 @@ import static org.assertj.core.api.Assertions.assertThat;
         "spring.datasource.url=jdbc:h2:mem:group9_mail_health;MODE=MySQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1",
         "app.demo-password=",
         "app.mail.enabled=true",
+        "app.mail.provider=smtp",
+        "MAIL_SMTP_HEALTH_ENABLED=true",
         "spring.mail.host=127.0.0.1",
         "spring.mail.username=",
         "spring.mail.password=",

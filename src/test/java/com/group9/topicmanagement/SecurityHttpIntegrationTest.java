@@ -77,6 +77,15 @@ class SecurityHttpIntegrationTest {
         assertThat(get(login(username).client(), path).statusCode()).isEqualTo(200);
     }
 
+    @ParameterizedTest
+    @CsvSource({"faculty,/councils/create,council", "faculty,/reviewer-assignments/create,reviewer",
+            "faculty,/announcements/create,announcement", "admin,/announcements/create,announcement"})
+    void dateFormsRenderImmediateValidationForAuthorizedRoles(String username, String path, String kind) throws Exception {
+        var response = get(login(username).client(), path);
+        assertThat(response.statusCode()).isEqualTo(200);
+        assertThat(response.body()).contains("data-date-form=\"" + kind + "\"", "/js/date-form.js");
+    }
+
     @Test void missingCsrfOnAnOtherwiseAllowedPostReturns403() throws Exception {
         HttpResponse<String> response = post(login("admin").client(), "/admin/users", "username=not-created");
         assertThat(response.statusCode()).isEqualTo(403);
