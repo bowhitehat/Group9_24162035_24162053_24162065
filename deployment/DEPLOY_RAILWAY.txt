@@ -35,7 +35,13 @@ Không tạo file giả và không tuyên bố đã khôi phục hai báo cáo �
 APP_TIME_ZONE mặc định Asia/Ho_Chi_Minh để JVM cùng timezone với JDBC.
 Không thay đổi các ngày/giờ lưu trong database khi chuyển dữ liệu.
 
-MAIL_ENABLED=false: email thực tế chưa được cấu hình trên hosting.
+Ngày 11/10/2026 đã bật email cloud qua Brevo HTTPS API: MAIL_ENABLED=true,
+MAIL_PROVIDER=brevo, MAIL_SMTP_HEALTH_ENABLED=false. BREVO_API_KEY chỉ lưu
+trong Railway Variables; MAIL_FROM là email người gửi đã xác minh.
+Kiểm thử phân công phản biện từ web Railway đã gửi thư thật, chủ tài khoản
+xác nhận nhận trong Inbox. Xem DEPLOY_EMAIL_BREVO.txt và verification-email-
+20261011.txt về cấu hình, phạm vi kiểm thử và giới hạn; không dùng SMTP
+outbound trên Railway Trial.
 Chưa được coi kiểm thử upload/download Supabase sau restart là hoàn tất khi
 chưa thực hiện bằng một báo cáo của nhóm đã đăng ký được duyệt.
 

@@ -1,0 +1,40 @@
+KIEM THU EMAIL CLOUD - 11/10/2026
+
+Code: c9e12f8, branch feature/core-admin.
+Web: https://group9-topic-management-production.up.railway.app
+Cloud provider: Brevo HTTPS API. Localhost vẫn hỗ trợ JavaMailSender/SMTP.
+API key chỉ được lưu trong biến bí mật Railway, không lưu trong Git.
+
+Tự động:
+- mvn -B clean package: 221 tests, 0 failures/errors/skipped, BUILD SUCCESS.
+- node --test src/test/js/period-form.test.cjs: 26 tests passed.
+- Kiểm thử Brevo bao gồm payload UTF-8, một người nhận, không CC/BCC,
+  trạng thái HTTP, phản hồi không hợp lệ, timeout/interruption, không retry,
+  không theo redirect, không ghi secret/nội dung thư trong log.
+- Kiểm thử cấu hình Brevo health: không chạy SMTP health probe khi tắt
+  MAIL_SMTP_HEALTH_ENABLED; health UP không tự chứng minh email được nhận.
+
+Kiểm thử thật trên Railway, được chủ tài khoản đồng ý:
+- Tạm thêm LECTURER cho tài khoản demo student4 có email của chủ tài khoản.
+- Tạm chuyển đợt 1 từ STUDENT_REGISTRATION sang IN_PROGRESS.
+- Phân công phản biện KLTN-001, web hiển thị thành công.
+- Chủ tài khoản gửi ảnh xác nhận thư "Phân công phản biện đề tài KLTN-001"
+  vào Inbox ngày 11/10/2026 lúc 13:12 (giờ trên ảnh nhận thư).
+- Đây là email từ nghiệp vụ thực tế qua event AFTER_COMMIT và EmailService,
+  không phải email gửi tay từ dashboard Brevo.
+
+Hoàn tác đã xác minh:
+- Phân công kiểm thử ở trạng thái CANCELLED, giữ lịch sử hủy.
+- student4 chỉ còn STUDENT; không đổi thông tin khác hoặc mật khẩu.
+- Đợt 1 trở lại STUDENT_REGISTRATION bằng JPA; không sửa luật chuyển trạng
+  thái một chiều của ứng dụng chỉ để phục vụ kiểm thử.
+- evaluations = 0, topic_results = 0 như trước kiểm thử; không nhập/sửa điểm.
+- Đã xóa file credential tạm phục vụ hoàn tác; không có credential trong Git.
+
+Giới hạn kết luận:
+- Đã chứng minh gửi/nhận email phân công phản biện từ cloud.
+- Luồng email công bố kết quả cho từng sinh viên được kiểm tra tự động;
+  chưa thử công bố điểm thật trên cloud, không tạo điểm giả để gửi thử.
+- Brevo HTTP 201 chỉ là nhận yêu cầu; ảnh Inbox mới xác nhận thư test đã đến.
+- Không có outbox, webhook delivery hoặc retry tự động. Theo dõi hạn mức,
+  thời hạn API key và Inbox/Spam trước buổi báo cáo.
