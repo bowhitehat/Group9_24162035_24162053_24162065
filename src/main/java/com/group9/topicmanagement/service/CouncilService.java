@@ -31,6 +31,8 @@ public class CouncilService {
     private final UserRepository userRepository;
     private final RegistrationPeriodRepository periodRepository;
     private final TopicRegistrationService topicRegistrationService;
+    private final EvaluationRepository evaluationRepository;
+    private final EvaluationScopeService evaluationScope;
 
     public CouncilService(CouncilRepository councilRepository,
                           CouncilMemberRepository memberRepository,
@@ -38,7 +40,9 @@ public class CouncilService {
                           TopicRepository topicRepository,
                           UserRepository userRepository,
                           RegistrationPeriodRepository periodRepository,
-                          TopicRegistrationService topicRegistrationService) {
+                          TopicRegistrationService topicRegistrationService,
+                          EvaluationRepository evaluationRepository,
+                          EvaluationScopeService evaluationScope) {
         this.councilRepository = councilRepository;
         this.memberRepository = memberRepository;
         this.assignmentRepository = assignmentRepository;
@@ -46,6 +50,8 @@ public class CouncilService {
         this.userRepository = userRepository;
         this.periodRepository = periodRepository;
         this.topicRegistrationService = topicRegistrationService;
+        this.evaluationRepository = evaluationRepository;
+        this.evaluationScope = evaluationScope;
     }
 
     @Transactional(readOnly = true)
@@ -165,7 +171,7 @@ public class CouncilService {
         Council council = getCouncil(councilId);
         checkDraftForMemberAndTopic(council);
 
-        Topic topic = topicRepository.findById(topicId)
+        Topic topic = topicRepository.findLockedById(topicId)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy đề tài"));
 
         if (!topic.getRegistrationPeriod().getId().equals(council.getRegistrationPeriod().getId())) {
@@ -184,6 +190,12 @@ public class CouncilService {
                 .anyMatch(a -> !a.getCouncil().getId().equals(councilId));
         if (assignedElsewhere) {
             throw new BusinessRuleException("Đề tài đã được phân công vào hội đồng khác");
+        }
+        // The schema deliberately keeps one ballot per topic/evaluator/type.
+        // Never recycle or overwrite a historical ballot to support reassignment.
+        if (!evaluationRepository.findByTopicIdAndEvaluationType(topicId,
+                com.group9.topicmanagement.model.enums.EvaluationType.COUNCIL_MEMBER).isEmpty()) {
+            throw new BusinessRuleException("Đề tài đã có phiếu chấm hội đồng; không thể chuyển sang hội đồng khác");
         }
 
         List<CouncilMember> members = memberRepository.findByCouncilId(councilId);
@@ -235,16 +247,26 @@ public class CouncilService {
         long secs = members.stream().filter(m -> m.getRole() == CouncilMemberRole.SECRETARY).count();
         if (chairs != 1) throw new BusinessRuleException("Hội đồng phải có đúng một Chủ tịch");
         if (secs != 1) throw new BusinessRuleException("Hội đồng phải có đúng một Thư ký");
+        if (assignmentRepository.findByCouncilId(councilId).isEmpty()) {
+            throw new BusinessRuleException("Phải phân công ít nhất một đề tài trước khi kích hoạt hội đồng");
+        }
 
         council.setStatus(CouncilStatus.ACTIVE);
         councilRepository.save(council);
     }
 
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
+    @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public void completeCouncil(Long councilId) {
         Council council = getCouncil(councilId);
         if (council.getStatus() != CouncilStatus.ACTIVE) {
             throw new BusinessRuleException("Chỉ hội đồng đang hoạt động mới được hoàn tất");
+        }
+        assignmentRepository.findByCouncilId(councilId).stream()
+                .map(a -> a.getTopic().getId()).sorted()
+                .forEach(id -> topicRepository.findLockedById(id).orElseThrow());
+        if (!councilReadyToComplete(councilId)) {
+            throw new BusinessRuleException("Chưa thể hoàn tất: cần có đề tài và tất cả thành viên nộp đủ điểm bắt buộc cho từng đề tài");
         }
         council.setStatus(CouncilStatus.COMPLETED);
         councilRepository.save(council);
@@ -255,6 +277,12 @@ public class CouncilService {
         Council council = getCouncil(councilId);
         if (council.getStatus() == CouncilStatus.COMPLETED) {
             throw new BusinessRuleException("Không thể hủy hội đồng đã hoàn tất");
+        }
+        for (var assignment : assignmentRepository.findByCouncilId(councilId)) {
+            topicRepository.findLockedById(assignment.getTopic().getId()).orElseThrow();
+            if (hasCouncilBallots(councilId, assignment.getTopic().getId())) {
+                throw new BusinessRuleException("Hội đồng đã có phiếu chấm; không thể hủy để bảo toàn lịch sử điểm");
+            }
         }
         council.setStatus(CouncilStatus.CANCELLED);
         councilRepository.save(council);
@@ -309,16 +337,35 @@ public class CouncilService {
     }
 
     public boolean canActivate(Council council, boolean manager) {
-        return manager && council.getStatus() == CouncilStatus.DRAFT;
+        var members = manager && council.getStatus() == CouncilStatus.DRAFT
+                ? memberRepository.findByCouncilId(council.getId()) : List.<CouncilMember>of();
+        return members.size() >= 3 && members.size() <= 5
+                && members.stream().filter(m -> m.getRole() == CouncilMemberRole.CHAIR).count() == 1
+                && members.stream().filter(m -> m.getRole() == CouncilMemberRole.SECRETARY).count() == 1
+                && !assignmentRepository.findByCouncilId(council.getId()).isEmpty();
     }
 
     public boolean canComplete(Council council, boolean manager) {
-        return manager && council.getStatus() == CouncilStatus.ACTIVE;
+        return manager && council.getStatus() == CouncilStatus.ACTIVE && councilReadyToComplete(council.getId());
     }
 
     public boolean canCancel(Council council, boolean manager) {
         return manager && council.getStatus() != CouncilStatus.COMPLETED
-                && council.getStatus() != CouncilStatus.CANCELLED;
+                && council.getStatus() != CouncilStatus.CANCELLED
+                && assignmentRepository.findByCouncilId(council.getId()).stream()
+                .noneMatch(a -> hasCouncilBallots(council.getId(), a.getTopic().getId()));
+    }
+
+    private boolean hasCouncilBallots(Long councilId, Long topicId) {
+        return evaluationRepository.findByTopicIdAndEvaluationType(topicId,
+                com.group9.topicmanagement.model.enums.EvaluationType.COUNCIL_MEMBER).stream()
+                .anyMatch(e -> e.getCouncilMember() != null
+                        && e.getCouncilMember().getCouncil().getId().equals(councilId));
+    }
+
+    private boolean councilReadyToComplete(Long councilId) {
+        var topics = assignmentRepository.findByCouncilId(councilId);
+        return !topics.isEmpty() && topics.stream().allMatch(evaluationScope::councilSubmitted);
     }
 
     private void validateReportDate(RegistrationPeriod period, LocalDateTime reportDate) {

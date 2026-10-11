@@ -109,6 +109,23 @@ public class ReportFileStorage {
         return true;
     }
 
+    /** Rollback compensation for a newly saved object, never a report deletion endpoint. */
+    public void deleteNewUpload(String storedName) {
+        String name = stripPrefix(storedName);
+        validateName(name);
+        if (storedName.startsWith(CLOUD_PREFIX)) {
+            if (!cloud) throw missing();
+            HttpRequest request = requestBuilder(URI.create(endpoint + "/storage/v1/object/" + bucket))
+                    .header("Content-Type", "application/json")
+                    .method("DELETE", HttpRequest.BodyPublishers.ofString("{\"prefixes\":[\"" + name + "\"]}"))
+                    .build();
+            requireSuccess(send(request, HttpResponse.BodyHandlers.discarding()).statusCode());
+        } else {
+            try { Files.deleteIfExists(localPath(name)); }
+            catch (IOException e) { throw unavailable(); }
+        }
+    }
+
     public Resource read(String storedName) {
         if (storedName == null) throw missing();
         String name = stripPrefix(storedName);
@@ -134,7 +151,11 @@ public class ReportFileStorage {
 
     private HttpRequest.Builder request(String route, String name) {
         // Only validated bucket and generated filenames are placed into the URL.
-        return HttpRequest.newBuilder(URI.create(endpoint + "/storage/v1" + route + bucket + "/" + name))
+        return requestBuilder(URI.create(endpoint + "/storage/v1" + route + bucket + "/" + name));
+    }
+
+    private HttpRequest.Builder requestBuilder(URI uri) {
+        return HttpRequest.newBuilder(uri)
                 .timeout(Duration.ofSeconds(30)).header("apikey", key)
                 .header("Authorization", "Bearer " + key);
     }

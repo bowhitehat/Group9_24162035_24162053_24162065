@@ -21,6 +21,9 @@ import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.nio.file.InvalidPathException;
@@ -36,6 +39,7 @@ import java.util.UUID;
 @Service
 @Transactional
 public class ReportSubmissionService {
+    private static final org.slf4j.Logger log = org.slf4j.LoggerFactory.getLogger(ReportSubmissionService.class);
 
     private static final long MAX_FILE_SIZE = 10L * 1024 * 1024;
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of("pdf", "doc", "docx", "zip");
@@ -67,8 +71,11 @@ public class ReportSubmissionService {
         this.clock = clock;
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public ReportSubmission submitReport(ReportSubmissionForm form, String submitterUsername) {
-        TopicRegistration registration = getRegistrationForSubmission(form.getTopicRegistrationId(), submitterUsername);
+        TopicRegistration registration = registrationRepository.findForUploadLockedById(form.getTopicRegistrationId())
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy đăng ký đề tài"));
+        ensureCanSubmit(registration, submitterUsername);
         MultipartFile file = form.getFile();
         validateFile(file);
 
@@ -80,6 +87,18 @@ public class ReportSubmissionService {
         String extension = extensionOf(originalFileName);
         String storedFileName = UUID.randomUUID() + "." + extension;
         storedFileName = fileStorage.save(storedFileName, file);
+        // Only this new UUID-named upload is removed if its metadata transaction rolls back.
+        String newUpload = storedFileName;
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override public void afterCompletion(int status) {
+                    if (status == STATUS_ROLLED_BACK) {
+                        try { fileStorage.deleteNewUpload(newUpload); }
+                        catch (RuntimeException ex) { log.warn("Không thể dọn tập tin báo cáo sau rollback; cần kiểm tra kho lưu trữ"); }
+                    }
+                }
+            });
+        }
 
         ReportSubmission submission = new ReportSubmission();
         submission.setStudentGroup(registration.getStudentGroup());
@@ -109,6 +128,11 @@ public class ReportSubmissionService {
     @Transactional(readOnly = true)
     public TopicRegistration getRegistrationForSubmission(Long registrationId, String username) {
         TopicRegistration registration = getRegistration(registrationId);
+        ensureCanSubmit(registration, username);
+        return registration;
+    }
+
+    private void ensureCanSubmit(TopicRegistration registration, String username) {
         if (!registration.getStudentGroup().getLeader().getUsername().equalsIgnoreCase(username)) {
             throw new AccessDeniedException("Chỉ trưởng nhóm mới được quyền nộp báo cáo");
         }
@@ -116,7 +140,6 @@ public class ReportSubmissionService {
             throw new BusinessRuleException("Chỉ có thể nộp báo cáo khi đăng ký đề tài đã được duyệt");
         }
         ensureReportDeadline(registration.getRegistrationPeriod());
-        return registration;
     }
 
     @Transactional(readOnly = true)

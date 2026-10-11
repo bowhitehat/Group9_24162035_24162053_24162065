@@ -5,7 +5,6 @@ import com.group9.topicmanagement.model.council.CouncilAssignment;
 import com.group9.topicmanagement.model.enums.CouncilStatus;
 import com.group9.topicmanagement.model.enums.EvaluationStatus;
 import com.group9.topicmanagement.model.enums.TopicResultStatus;
-import com.group9.topicmanagement.model.enums.EvaluationType;
 import com.group9.topicmanagement.model.enums.RoleName;
 import com.group9.topicmanagement.model.evaluation.Evaluation;
 import com.group9.topicmanagement.model.evaluation.EvaluationCriterion;
@@ -32,41 +31,35 @@ import java.util.Optional;
 public class TopicResultService {
     private final TopicResultRepository resultRepository;
     private final TopicRepository topicRepository;
-    private final EvaluationRepository evaluationRepository;
     private final EvaluationScoreRepository scoreRepository;
     private final EvaluationCriterionRepository criterionRepository;
     private final UserRepository userRepository;
     private final CouncilAssignmentRepository councilAssignmentRepository;
     private final CouncilService councilService;
     private final TopicRegistrationService topicRegistrationService;
-    private final ReviewerAssignmentRepository reviewerAssignmentRepository;
-    private final CouncilMemberRepository councilMemberRepository;
     private final TransactionalNotificationService notifications;
+    private final EvaluationScopeService evaluationScope;
 
     public TopicResultService(TopicResultRepository resultRepository,
                               TopicRepository topicRepository,
-                              EvaluationRepository evaluationRepository,
                               EvaluationScoreRepository scoreRepository,
                               EvaluationCriterionRepository criterionRepository,
                               UserRepository userRepository,
                               CouncilAssignmentRepository councilAssignmentRepository,
                               CouncilService councilService,
                               TopicRegistrationService topicRegistrationService,
-                              ReviewerAssignmentRepository reviewerAssignmentRepository,
-                              CouncilMemberRepository councilMemberRepository,
-                              TransactionalNotificationService notifications) {
+                              TransactionalNotificationService notifications,
+                              EvaluationScopeService evaluationScope) {
         this.resultRepository = resultRepository;
         this.topicRepository = topicRepository;
-        this.evaluationRepository = evaluationRepository;
         this.scoreRepository = scoreRepository;
         this.criterionRepository = criterionRepository;
         this.userRepository = userRepository;
         this.councilAssignmentRepository = councilAssignmentRepository;
         this.councilService = councilService;
         this.topicRegistrationService = topicRegistrationService;
-        this.reviewerAssignmentRepository = reviewerAssignmentRepository;
-        this.councilMemberRepository = councilMemberRepository;
         this.notifications = notifications;
+        this.evaluationScope = evaluationScope;
     }
 
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
@@ -213,10 +206,15 @@ public class TopicResultService {
         List<TopicResult> dbResults = resultRepository.findAllByOrderByIdAsc();
         List<CouncilAssignment> assignments = councilAssignmentRepository.findAllByOrderByIdAsc();
 
-        return assignments.stream()
+        // Historical assignments must not duplicate the current topic in UI or exports.
+        return assignments.stream().map(a -> a.getTopic().getId()).distinct()
+            .map(id -> evaluationScope.currentAssignment(id)
+                    .or(() -> councilAssignmentRepository.findFirstByTopicIdOrderByIdDesc(id)).orElseThrow())
+            .filter(a -> a.getCouncil().getStatus() != CouncilStatus.CANCELLED)
             .filter(a -> isManager || councilService.isMemberOfCouncil(a.getCouncil().getId(), userId))
             .map(a -> {
-                Optional<TopicResult> opt = dbResults.stream().filter(r -> r.getTopic().getId().equals(a.getTopic().getId())).findFirst();
+                Optional<TopicResult> opt = dbResults.stream().filter(r -> r.getTopic().getId().equals(a.getTopic().getId())
+                        && r.getCouncilAssignment() != null && r.getCouncilAssignment().getId().equals(a.getId())).findFirst();
                 if (opt.isPresent()) {
                     return opt.get();
                 } else {
@@ -243,7 +241,9 @@ public class TopicResultService {
             throw new AccessDeniedException("Không có quyền xem kết quả đề tài này");
         }
 
-        return resultRepository.findByTopicId(topicId).orElseGet(() -> {
+        return resultRepository.findByTopicId(topicId)
+                .filter(r -> r.getCouncilAssignment() != null && r.getCouncilAssignment().getId().equals(assignment.getId()))
+                .orElseGet(() -> {
             TopicResult dummy = new TopicResult();
             dummy.setTopic(assignment.getTopic());
             dummy.setCouncilAssignment(assignment);
@@ -285,7 +285,7 @@ public class TopicResultService {
 
     @Transactional(readOnly = true)
     public boolean hasMissingMandatoryScores(Long topicId) {
-        List<Evaluation> evaluations = evaluationRepository.findByTopicId(topicId).stream()
+        List<Evaluation> evaluations = evaluationScope.currentEvaluations(topicId).stream()
                 .filter(e -> e.getStatus() == EvaluationStatus.SUBMITTED || e.getStatus() == EvaluationStatus.LOCKED)
                 .toList();
         if (evaluations.isEmpty()) {
@@ -309,35 +309,7 @@ public class TopicResultService {
 
     @Transactional(readOnly = true)
     public boolean areAllEvaluationsSubmitted(Long topicId) {
-        for (var reviewerAssignment : reviewerAssignmentRepository.findByTopicId(topicId)) {
-            if (reviewerAssignment.getStatus() == com.group9.topicmanagement.model.enums.ReviewerAssignmentStatus.CANCELLED) {
-                continue;
-            }
-            Optional<Evaluation> reviewerEvaluation = evaluationRepository
-                    .findByTopicIdAndEvaluatorIdAndEvaluationType(topicId,
-                            reviewerAssignment.getReviewer().getId(), EvaluationType.REVIEWER);
-            if (reviewerEvaluation.isEmpty() || !isSubmittedOrLocked(reviewerEvaluation.get())) {
-                return false;
-            }
-        }
-
-        // Check council members
-        Optional<CouncilAssignment> assignmentOpt = councilAssignmentRepository.findByTopicIdAndCouncil_StatusIn(
-            topicId, List.of(CouncilStatus.ACTIVE, CouncilStatus.COMPLETED)).stream().findFirst();
-
-        if (assignmentOpt.isEmpty()) return false;
-
-        Long councilId = assignmentOpt.get().getCouncil().getId();
-        List<Evaluation> councilEvaluations = evaluationRepository
-                .findByTopicIdAndEvaluationType(topicId, EvaluationType.COUNCIL_MEMBER);
-        for (var member : councilMemberRepository.findByCouncilId(councilId)) {
-            boolean submitted = councilEvaluations.stream()
-                    .anyMatch(e -> e.getCouncilMember() != null
-                            && e.getCouncilMember().getId().equals(member.getId())
-                            && isSubmittedOrLocked(e));
-            if (!submitted) return false;
-        }
-        return true;
+        return evaluationScope.allSubmitted(topicId);
     }
 
     public Optional<BigDecimal> averageOfValidEvaluations(Long topicId) {
@@ -349,7 +321,7 @@ public class TopicResultService {
                 .filter(c -> Boolean.TRUE.equals(c.getIsMandatory()))
                 .map(EvaluationCriterion::getId)
                 .toList();
-        List<Evaluation> evaluations = evaluationRepository.findByTopicId(topicId);
+        List<Evaluation> evaluations = evaluationScope.currentEvaluations(topicId);
         BigDecimal totalScore = BigDecimal.ZERO;
         int validEvaluationCount = 0;
 
@@ -384,14 +356,11 @@ public class TopicResultService {
         return Optional.of(totalScore.divide(BigDecimal.valueOf(validEvaluationCount), 2, RoundingMode.HALF_UP));
     }
 
-    private boolean isSubmittedOrLocked(Evaluation evaluation) {
-        return evaluation.getStatus() == EvaluationStatus.SUBMITTED
-                || evaluation.getStatus() == EvaluationStatus.LOCKED;
-    }
-
     private boolean isLockedAndCurrentResult(Long topicId, TopicResult result) {
-        return areAllEvaluationsSubmitted(topicId) && !hasMissingMandatoryScores(topicId)
-                && evaluationRepository.findByTopicId(topicId).stream().allMatch(e -> e.getStatus() == EvaluationStatus.LOCKED)
+        return result.getCouncilAssignment() != null && evaluationScope.currentAssignment(topicId)
+                .map(a -> a.getId().equals(result.getCouncilAssignment().getId())).orElse(false)
+                && areAllEvaluationsSubmitted(topicId) && !hasMissingMandatoryScores(topicId)
+                && evaluationScope.currentEvaluations(topicId).stream().allMatch(e -> e.getStatus() == EvaluationStatus.LOCKED)
                 && averageOfValidEvaluations(topicId)
                     .map(score -> result.getFinalScore() != null && score.compareTo(result.getFinalScore()) == 0).orElse(false);
     }

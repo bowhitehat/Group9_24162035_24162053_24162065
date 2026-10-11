@@ -156,6 +156,7 @@ class Member3BusinessRulesTest {
 
     @Test
     void councilMustHaveThreeToFiveMembersAndRoles() {
+        Topic topic = preparedApprovedTopic();
         Council council = councilService.createCouncil("HĐ 1", period.getId(), LocalDateTime.now().plusDays(7), "A1");
         councilService.addMember(council.getId(), lecturer2.getId(), CouncilMemberRole.CHAIR);
         assertThatThrownBy(() -> councilService.activateCouncil(council.getId()))
@@ -164,6 +165,7 @@ class Member3BusinessRulesTest {
 
         councilService.addMember(council.getId(), lecturer3.getId(), CouncilMemberRole.SECRETARY);
         councilService.addMember(council.getId(), lecturer4.getId(), CouncilMemberRole.MEMBER);
+        councilService.assignTopic(council.getId(), topic.getId());
         councilService.activateCouncil(council.getId());
         assertThat(councilService.getCouncil(council.getId()).getStatus().name()).isEqualTo("ACTIVE");
     }
@@ -466,8 +468,12 @@ class Member3BusinessRulesTest {
         authenticate(facultyManager.getUsername(), "FACULTY_MANAGER");
         councilService.activateCouncil(council.getId());
         authenticate(lecturer2.getUsername(), "LECTURER");
-        evaluationService.saveDraft(topic.getId(), lecturer2.getUsername(),
-                EvaluationType.COUNCIL_MEMBER, fullScores("8.00"), "active council");
+        for (var lecturer : List.of(lecturer2, lecturer3, lecturer4)) {
+            authenticate(lecturer.getUsername(), "LECTURER");
+            var ballot = evaluationService.saveDraft(topic.getId(), lecturer.getUsername(),
+                    EvaluationType.COUNCIL_MEMBER, fullScores("8.00"), "active council");
+            evaluationService.submitEvaluation(ballot.getId());
+        }
         authenticate(facultyManager.getUsername(), "FACULTY_MANAGER");
         councilService.completeCouncil(council.getId());
         authenticate(lecturer2.getUsername(), "LECTURER");

@@ -32,6 +32,41 @@ class ReportFileStorageTest {
         assertThat(local().read(name).getContentAsByteArray()).containsExactly(1, 2, 3);
     }
 
+    @Test void rollbackCleanupRemovesOnlyRequestedLocalFileAndRejectsTraversal() throws Exception {
+        var storage = local();
+        storage.save("kept.pdf", file());
+        storage.save("rollback.pdf", file());
+        storage.deleteNewUpload("rollback.pdf");
+        storage.deleteNewUpload("rollback.pdf"); // Idempotent for a vanished new file.
+        assertThat(storage.exists("kept.pdf")).isTrue();
+        assertThat(storage.exists("rollback.pdf")).isFalse();
+        assertThatThrownBy(() -> storage.deleteNewUpload("../kept.pdf")).isInstanceOf(NotFoundException.class);
+        assertThatThrownBy(() -> storage.deleteNewUpload("supabase:kept.pdf")).isInstanceOf(NotFoundException.class);
+        assertThat(storage.exists("kept.pdf")).isTrue();
+    }
+
+    @Test void cloudRollbackCleanupUsesExactObjectAndServerCredentials() throws Exception {
+        HttpServer server = HttpServer.create(new InetSocketAddress("127.0.0.1", 0), 0);
+        AtomicReference<String> requestBody = new AtomicReference<>();
+        AtomicReference<String> authorization = new AtomicReference<>();
+        server.createContext("/storage/v1/object/reports", exchange -> {
+            if (!exchange.getRequestMethod().equals("DELETE") || !exchange.getRequestURI().getPath().equals("/storage/v1/object/reports")) {
+                exchange.sendResponseHeaders(400, -1);
+            } else {
+                requestBody.set(new String(exchange.getRequestBody().readAllBytes(), java.nio.charset.StandardCharsets.UTF_8));
+                authorization.set(exchange.getRequestHeaders().getFirst("Authorization"));
+                exchange.sendResponseHeaders(200, -1);
+            }
+            exchange.close();
+        });
+        server.start();
+        try {
+            cloud(server).deleteNewUpload("supabase:rollback.pdf");
+            assertThat(requestBody.get()).isEqualTo("{\"prefixes\":[\"rollback.pdf\"]}");
+            assertThat(authorization.get()).isEqualTo("Bearer server-test-key");
+        } finally { server.stop(0); }
+    }
+
     @Test void missingFilesReturnNotFound() {
         assertThat(local().exists("missing.pdf")).isFalse();
         assertThatThrownBy(() -> local().read("missing.pdf")).isInstanceOf(NotFoundException.class);

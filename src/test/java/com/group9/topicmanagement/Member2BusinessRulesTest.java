@@ -71,6 +71,7 @@ class Member2BusinessRulesTest {
     @Autowired ReportSubmissionRepository reports;
     @Autowired EvaluationCriterionRepository criteria;
     @Autowired PlatformTransactionManager transactionManager;
+    @org.springframework.test.context.bean.override.mockito.MockitoSpyBean ReportFileStorage fileStorage;
 
     private User lecturer1;
     private User lecturer2;
@@ -587,6 +588,66 @@ class Member2BusinessRulesTest {
                         org.hamcrest.Matchers.containsString("nộp lại file gốc")));
         mvc.perform(get("/reports/download/" + missing.getId()).with(user(student4.getUsername()).roles("STUDENT")))
                 .andExpect(status().isForbidden());
+    }
+
+    @Test
+    void simultaneousUploadsSerializeVersionsAndKeepBothFiles() throws Exception {
+        var registration = createApprovedRegistration();
+        CountDownLatch firstSaving = new CountDownLatch(1);
+        CountDownLatch releaseFirst = new CountDownLatch(1);
+        CountDownLatch secondStarted = new CountDownLatch(1);
+        java.util.concurrent.atomic.AtomicInteger calls = new java.util.concurrent.atomic.AtomicInteger();
+        org.mockito.Mockito.doAnswer(invocation -> {
+            if (calls.incrementAndGet() == 1) {
+                firstSaving.countDown();
+                if (!releaseFirst.await(10, TimeUnit.SECONDS)) throw new IllegalStateException("QA upload timeout");
+            }
+            return invocation.callRealMethod();
+        }).when(fileStorage).save(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any());
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+        try {
+            var first = executor.submit(() -> reportService.submitReport(
+                    reportForm(registration.getId(), "first.pdf", "application/pdf"), student1.getUsername()));
+            assertThat(firstSaving.await(10, TimeUnit.SECONDS)).isTrue();
+            var second = executor.submit(() -> {
+                secondStarted.countDown();
+                return reportService.submitReport(reportForm(registration.getId(), "second.pdf", "application/pdf"), student1.getUsername());
+            });
+            assertThat(secondStarted.await(10, TimeUnit.SECONDS)).isTrue();
+            assertThatThrownBy(() -> second.get(300, TimeUnit.MILLISECONDS)).isInstanceOf(java.util.concurrent.TimeoutException.class);
+            assertThat(calls.get()).isEqualTo(1);
+            releaseFirst.countDown();
+            var a = first.get(15, TimeUnit.SECONDS);
+            var b = second.get(15, TimeUnit.SECONDS);
+            assertThat(List.of(a.getVersion(), b.getVersion())).containsExactly(1, 2);
+            assertThat(a.getStoredFileName()).isNotEqualTo(b.getStoredFileName());
+            assertThat(fileStorage.exists(a.getStoredFileName())).isTrue();
+            assertThat(fileStorage.exists(b.getStoredFileName())).isTrue();
+            assertThat(reports.findByTopicRegistration_IdOrderByVersionDesc(registration.getId())).hasSize(2);
+        } finally {
+            releaseFirst.countDown();
+            executor.shutdownNow();
+            org.mockito.Mockito.doCallRealMethod().when(fileStorage).save(
+                    org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.any());
+        }
+    }
+
+    @Test
+    void rolledBackUploadRemovesOnlyNewFileAndDoesNotConsumeVersion() {
+        var registration = createApprovedRegistration();
+        var previous = reportService.submitReport(reportForm(registration.getId(), "kept.pdf", "application/pdf"), student1.getUsername());
+        var rolledBackName = new java.util.concurrent.atomic.AtomicReference<String>();
+        TransactionTemplate transaction = new TransactionTemplate(transactionManager);
+        transaction.setIsolationLevel(TransactionDefinition.ISOLATION_READ_COMMITTED);
+        transaction.executeWithoutResult(status -> {
+            var uploaded = reportService.submitReport(reportForm(registration.getId(), "rollback.pdf", "application/pdf"), student1.getUsername());
+            rolledBackName.set(uploaded.getStoredFileName());
+            status.setRollbackOnly();
+        });
+        assertThat(fileStorage.exists(rolledBackName.get())).isFalse();
+        assertThat(fileStorage.exists(previous.getStoredFileName())).isTrue();
+        assertThat(reports.findByTopicRegistration_IdOrderByVersionDesc(registration.getId())).hasSize(1);
+        assertThat(reportService.submitReport(reportForm(registration.getId(), "next.pdf", "application/pdf"), student1.getUsername()).getVersion()).isEqualTo(2);
     }
 
     private TopicRegistration createApprovedRegistration() {

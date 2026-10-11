@@ -90,6 +90,11 @@ public class EvaluationService {
                     return e;
                 });
 
+        if (evaluation.getId() != null && type == EvaluationType.COUNCIL_MEMBER
+                && (evaluation.getCouncilMember() == null
+                || !evaluation.getCouncilMember().getId().equals(councilMember.getId()))) {
+            throw new BusinessRuleException("Phiếu chấm thuộc hội đồng cũ; không được ghi đè lịch sử điểm");
+        }
         if (evaluation.getStatus() == EvaluationStatus.LOCKED) {
             throw new BusinessRuleException("Đánh giá đã bị khóa, không thể sửa");
         }
@@ -164,8 +169,13 @@ public class EvaluationService {
             throw new AccessDeniedException("Bạn chỉ được nộp phiếu chấm của mình");
         }
 
-        requireEditableContext(evaluation.getTopic().getId(), evaluation.getEvaluator(),
+        EvaluationContext context = requireEditableContext(evaluation.getTopic().getId(), evaluation.getEvaluator(),
                 evaluation.getEvaluationType());
+        if (evaluation.getEvaluationType() == EvaluationType.COUNCIL_MEMBER
+                && (evaluation.getCouncilMember() == null
+                || !evaluation.getCouncilMember().getId().equals(context.councilMember().getId()))) {
+            throw new BusinessRuleException("Phiếu chấm thuộc hội đồng cũ; không được ghi đè lịch sử điểm");
+        }
 
         if (evaluation.getStatus() != EvaluationStatus.DRAFT && evaluation.getStatus() != EvaluationStatus.SUBMITTED) {
             throw new BusinessRuleException("Chỉ phiếu DRAFT hoặc SUBMITTED mới có thể nộp");
@@ -235,6 +245,11 @@ public class EvaluationService {
         Evaluation evaluation = evaluationRepository
                 .findByTopicIdAndEvaluatorIdAndEvaluationType(topicId, evaluator.getId(), type)
                 .orElseGet(Evaluation::new);
+        if (evaluation.getId() != null && type == EvaluationType.COUNCIL_MEMBER
+                && (evaluation.getCouncilMember() == null
+                || !evaluation.getCouncilMember().getId().equals(context.councilMember().getId()))) {
+            throw new BusinessRuleException("Phiếu chấm thuộc hội đồng cũ; không được ghi đè lịch sử điểm");
+        }
         if (type == EvaluationType.REVIEWER && canEdit(topicId, evaluatorUsername, type, evaluation)) {
             reviewerAssignmentService.markInProgress(topicId, evaluator.getId());
         }

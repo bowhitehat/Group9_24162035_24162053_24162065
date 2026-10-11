@@ -24,11 +24,173 @@ class Member3RegressionTest extends Member3BusinessRulesTest {
     @MockitoBean EmailService mail;
     @Autowired PlatformTransactionManager transactions;
 
+    @Test void emptyCouncilCannotActivateAndUiExplainsPrerequisites() throws Exception {
+        var council = councilService.createCouncil("Hội đồng rỗng", periods.findAll().get(0).getId(),
+                LocalDateTime.now().plusDays(3), "A1");
+        for (int i = 2; i <= 4; i++) {
+            var role = i == 2 ? com.group9.topicmanagement.model.enums.CouncilMemberRole.CHAIR
+                    : i == 3 ? com.group9.topicmanagement.model.enums.CouncilMemberRole.SECRETARY
+                    : com.group9.topicmanagement.model.enums.CouncilMemberRole.MEMBER;
+            councilService.addMember(council.getId(), users.findByUsernameIgnoreCase("lecturer" + i).orElseThrow().getId(), role);
+        }
+        assertThat(councilService.canActivate(council, true)).isFalse();
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> councilService.activateCouncil(council.getId()))
+                .isInstanceOf(com.group9.topicmanagement.exception.BusinessRuleException.class)
+                .hasMessageContaining("ít nhất một đề tài");
+        mvc.perform(get("/councils/" + council.getId()).with(user("faculty1").roles("FACULTY_MANAGER")))
+                .andExpect(status().isOk()).andExpect(content().string(org.hamcrest.Matchers.containsString("ít nhất một đề tài")))
+                .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString(
+                        "action=\"/councils/" + council.getId() + "/activate\""))));
+    }
+
+    @Test void incompleteCouncilCannotCompleteOrLoseGradingAccess() {
+        Topic topic = preparedApprovedTopic();
+        seedCriteria();
+        var council = createCouncilWithMembersAndTopic(topic);
+        councilService.activateCouncil(council.getId());
+        assertThat(councilService.canComplete(councilService.getCouncil(council.getId()), true)).isFalse();
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> councilService.completeCouncil(council.getId()))
+                .isInstanceOf(com.group9.topicmanagement.exception.BusinessRuleException.class);
+        authenticate("lecturer2", "LECTURER");
+        var ballot = evaluationService.saveDraft(topic.getId(), "lecturer2",
+                com.group9.topicmanagement.model.enums.EvaluationType.COUNCIL_MEMBER, fullScores("8.00"), "1/3");
+        evaluationService.submitEvaluation(ballot.getId());
+        authenticate("faculty1", "FACULTY_MANAGER");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> councilService.completeCouncil(council.getId()))
+                .isInstanceOf(com.group9.topicmanagement.exception.BusinessRuleException.class);
+        assertThat(councilService.getCouncil(council.getId()).getStatus())
+                .isEqualTo(com.group9.topicmanagement.model.enums.CouncilStatus.ACTIVE);
+        assertThat(councilService.canGradeCouncil(council.getId(), "lecturer3")).isTrue();
+    }
+
+    @Test void completionRequiresMandatoryScoresAndCanCompleteMatchesBackend() {
+        Topic topic = preparedApprovedTopic();
+        seedCriteria();
+        var council = createCouncilWithMembersAndTopic(topic);
+        councilService.activateCouncil(council.getId());
+        submitCurrentCouncil(topic, false);
+        assertThat(councilService.canComplete(councilService.getCouncil(council.getId()), true)).isTrue();
+        var ballot = evaluations.findByTopicId(topic.getId()).get(0);
+        var removed = scores.findByEvaluationId(ballot.getId()).get(0);
+        scores.delete(removed);
+        assertThat(councilService.canComplete(councilService.getCouncil(council.getId()), true)).isFalse();
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> councilService.completeCouncil(council.getId()))
+                .isInstanceOf(com.group9.topicmanagement.exception.BusinessRuleException.class);
+        removed.setId(null);
+        scores.save(removed);
+        councilService.completeCouncil(council.getId());
+        assertThat(councilService.getCouncil(council.getId()).getStatus())
+                .isEqualTo(com.group9.topicmanagement.model.enums.CouncilStatus.COMPLETED);
+    }
+
+    @Test void scoredCouncilCannotBeCancelledOrReassignedAndLockedHistoryIsPreserved() {
+        Topic topic = preparedApprovedTopic();
+        seedCriteria();
+        var council = createCouncilWithMembersAndTopic(topic);
+        councilService.activateCouncil(council.getId());
+        submitCurrentCouncil(topic, true);
+        assertThat(councilService.canCancel(councilService.getCouncil(council.getId()), true)).isFalse();
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> councilService.cancelCouncil(council.getId()))
+                .isInstanceOf(com.group9.topicmanagement.exception.BusinessRuleException.class);
+        councilService.completeCouncil(council.getId());
+        var other = councilService.createCouncil("Không ghi đè", topic.getRegistrationPeriod().getId(),
+                LocalDateTime.now().plusDays(3), "A2");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> councilService.assignTopic(other.getId(), topic.getId()))
+                .isInstanceOf(com.group9.topicmanagement.exception.BusinessRuleException.class)
+                .hasMessageContaining("đã có phiếu chấm");
+        assertThat(evaluations.findByTopicId(topic.getId())).hasSize(3)
+                .allMatch(e -> e.getStatus() == com.group9.topicmanagement.model.enums.EvaluationStatus.LOCKED);
+        assertThat(topicResultService.averageOfValidEvaluations(topic.getId())).hasValue(new BigDecimal("8.00"));
+    }
+
+    @Test void legacyHistoricalBallotsDoNotAffectCurrentScoreLockingOrExportRows() throws Exception {
+        Topic topic = preparedApprovedTopic();
+        seedCriteria();
+        var previous = createCouncilWithMembersAndTopic(topic);
+        previous.setStatus(com.group9.topicmanagement.model.enums.CouncilStatus.COMPLETED);
+        councils.save(previous);
+        var current = createCouncilWithMembersAndTopic(topic);
+        councilService.activateCouncil(current.getId());
+        submitCurrentCouncil(topic, true);
+        // Pre-existing historical data from older builds, not a new business operation.
+        var historicalUser = userService.create("historical", "GV lịch sử", "historical@test.local", null,
+                topic.getDepartment().getId(), java.util.Set.of(com.group9.topicmanagement.model.enums.RoleName.LECTURER), "Password@123");
+        var member = new com.group9.topicmanagement.model.council.CouncilMember();
+        member.setCouncil(previous); member.setMember(historicalUser);
+        member.setRole(com.group9.topicmanagement.model.enums.CouncilMemberRole.MEMBER);
+        member = councilMembers.save(member);
+        var old = new com.group9.topicmanagement.model.evaluation.Evaluation();
+        old.setTopic(topic); old.setEvaluator(historicalUser); old.setCouncilMember(member);
+        old.setEvaluationType(com.group9.topicmanagement.model.enums.EvaluationType.COUNCIL_MEMBER);
+        old.setStatus(com.group9.topicmanagement.model.enums.EvaluationStatus.SUBMITTED);
+        old = evaluations.save(old);
+        for (var score : fullScores("2.00")) { score.setEvaluation(old); scores.save(score); }
+        var result = topicResultService.calculateResult(topic.getId());
+        assertThat(result.getFinalScore()).isEqualByComparingTo("8.00");
+        var auth = org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication();
+        assertThat(topicResultService.listResults(auth)).hasSize(1);
+        authenticate("historical", "LECTURER");
+        assertThat(topicResultService.listResults(org.springframework.security.core.context.SecurityContextHolder.getContext().getAuthentication())).isEmpty();
+        authenticate("lecturer2", "LECTURER");
+        assertThat(topicResultService.canConfirm(topic.getId(), "lecturer2")).isTrue();
+        topicResultService.confirmResult(topic.getId(), "lecturer2");
+        authenticate("faculty1", "FACULTY_MANAGER");
+        topicResultService.publishResult(topic.getId(), "faculty1");
+        var bytes = mvc.perform(get("/evaluations/results/export/excel").with(user("faculty1").roles("FACULTY_MANAGER")))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsByteArray();
+        try (var workbook = new org.apache.poi.xssf.usermodel.XSSFWorkbook(new java.io.ByteArrayInputStream(bytes))) {
+            assertThat(workbook.getSheetAt(0).getLastRowNum()).isEqualTo(1);
+        }
+    }
+
+    @Test void legacyBallotOfSameLecturerIsNeverReusedByNewCouncil() {
+        Topic topic = preparedApprovedTopic();
+        seedCriteria();
+        var previous = createCouncilWithMembersAndTopic(topic);
+        previous.setStatus(com.group9.topicmanagement.model.enums.CouncilStatus.COMPLETED);
+        councils.save(previous);
+        var current = createCouncilWithMembersAndTopic(topic);
+        councilService.activateCouncil(current.getId());
+        authenticate("lecturer2", "LECTURER");
+        var ballot = evaluationService.saveDraft(topic.getId(), "lecturer2",
+                com.group9.topicmanagement.model.enums.EvaluationType.COUNCIL_MEMBER, fullScores("2.00"), "Lịch sử");
+        // Emulate the legacy combination of an old ballot and a newer assignment.
+        ballot.setCouncilMember(councilMembers.findByCouncilIdAndMemberId(previous.getId(),
+                users.findByUsernameIgnoreCase("lecturer2").orElseThrow().getId()).orElseThrow());
+        evaluations.save(ballot);
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> evaluationService.getForForm(topic.getId(), "lecturer2",
+                com.group9.topicmanagement.model.enums.EvaluationType.COUNCIL_MEMBER)).hasMessageContaining("hội đồng cũ");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> evaluationService.saveDraft(topic.getId(), "lecturer2",
+                com.group9.topicmanagement.model.enums.EvaluationType.COUNCIL_MEMBER, fullScores("9.00"), "Không được ghi đè"))
+                .hasMessageContaining("hội đồng cũ");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> evaluationService.submitEvaluation(ballot.getId()))
+                .hasMessageContaining("hội đồng cũ");
+        assertThat(evaluations.findById(ballot.getId()).orElseThrow().getStatus())
+                .isEqualTo(com.group9.topicmanagement.model.enums.EvaluationStatus.DRAFT);
+        assertThat(scores.findByEvaluationId(ballot.getId())).allMatch(s -> s.getScore().compareTo(new BigDecimal("2.00")) == 0);
+    }
+
+    private void submitCurrentCouncil(Topic topic, boolean lock) {
+        for (String lecturer : List.of("lecturer2", "lecturer3", "lecturer4")) {
+            authenticate(lecturer, "LECTURER");
+            var ballot = evaluationService.saveDraft(topic.getId(), lecturer,
+                    com.group9.topicmanagement.model.enums.EvaluationType.COUNCIL_MEMBER, fullScores("8.00"), "Hiện tại");
+            evaluationService.submitEvaluation(ballot.getId());
+            if (lock) {
+                authenticate("faculty1", "FACULTY_MANAGER");
+                evaluationService.lockEvaluation(ballot.getId());
+            }
+        }
+        authenticate("faculty1", "FACULTY_MANAGER");
+    }
+
     @Test void activeCouncilTakesPriorityAndHistoricalChairCannotConfirm() {
         Topic topic = preparedApprovedTopic();
         var previous = createCouncilWithMembersAndTopic(topic);
         councilService.activateCouncil(previous.getId());
-        councilService.completeCouncil(previous.getId());
+        // Legacy database fixture: old versions allowed completing an unmarked council.
+        previous.setStatus(com.group9.topicmanagement.model.enums.CouncilStatus.COMPLETED);
+        councils.save(previous);
         var current = createCouncilWithMembersAndTopic(topic);
         // Swap chair and secretary in the new council, while preserving the old council.
         var currentMembers = councilMembers.findByCouncilId(current.getId());
@@ -64,7 +226,8 @@ class Member3RegressionTest extends Member3BusinessRulesTest {
         seedCriteria();
         var previous = createCouncilWithMembersAndTopic(topic);
         councilService.activateCouncil(previous.getId());
-        councilService.completeCouncil(previous.getId());
+        previous.setStatus(com.group9.topicmanagement.model.enums.CouncilStatus.COMPLETED);
+        councils.save(previous);
         var current = createCouncilWithMembersAndTopic(topic);
         councilService.activateCouncil(current.getId());
         reviewerAssignmentService.assignReviewer(topic.getId(),

@@ -11,6 +11,10 @@ import java.util.List;
 import java.util.Optional;
 
 public interface TopicRegistrationRepository extends JpaRepository<TopicRegistration, Long> {
+    // Serialize version allocation for a single registration without locking joined users/groups.
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    Optional<TopicRegistration> findForUploadLockedById(Long id);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @EntityGraph(attributePaths = {"topic", "studentGroup", "studentGroup.leader", "studentGroup.members", "studentGroup.members.member", "registrationPeriod"})
     Optional<TopicRegistration> findLockedById(Long id);

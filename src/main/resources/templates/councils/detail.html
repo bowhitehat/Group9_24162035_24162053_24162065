@@ -21,6 +21,10 @@
         </div>
     </div>
 
+    <p sec:authorize="hasRole('FACULTY_MANAGER')" th:if="${council.status.name() == 'DRAFT' and !canActivate}"
+       class="alert alert-info">Trước khi kích hoạt: thêm 3–5 thành viên, đúng một Chủ tịch và một Thư ký, rồi chọn ít nhất một đề tài.</p>
+    <p sec:authorize="hasRole('FACULTY_MANAGER')" th:if="${council.status.name() == 'ACTIVE' and !canComplete}"
+       class="alert alert-info">Chỉ hoàn tất khi tất cả thành viên đã nộp đủ điểm bắt buộc cho từng đề tài. Hội đồng đã có phiếu chấm không thể hủy hoặc chuyển đề tài sang hội đồng khác.</p>
     <div class="row">
         <div class="col-lg-6 mb-4">
             <div class="card shadow-sm h-100">
