@@ -13,6 +13,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /** One consistent ballot scope for calculation, confirmation and council completion. */
 @Service
@@ -77,16 +80,15 @@ public class EvaluationScopeService {
         if (mandatory.isEmpty()) return false;
         var ballots = evaluations.findByTopicIdAndEvaluationType(
                 assignment.getTopic().getId(), EvaluationType.COUNCIL_MEMBER);
+        Map<Long, Set<Long>> scoredCriteria = ballots.isEmpty() ? Map.of() : scores.findByEvaluationIdIn(
+                        ballots.stream().map(Evaluation::getId).toList()).stream()
+                .filter(s -> s.getScore() != null)
+                .collect(Collectors.groupingBy(s -> s.getEvaluation().getId(),
+                        Collectors.mapping(s -> s.getCriterion().getId(), Collectors.toSet())));
         return councilMembers.stream().allMatch(m -> ballots.stream().anyMatch(e ->
                 e.getCouncilMember() != null && m.getId().equals(e.getCouncilMember().getId())
                         && m.getMember().getId().equals(e.getEvaluator().getId()) && submitted(e)
-                        && hasMandatoryScores(e, mandatory)));
-    }
-
-    private boolean hasMandatoryScores(Evaluation evaluation, List<Long> mandatory) {
-        var ballotScores = scores.findByEvaluationId(evaluation.getId());
-        return mandatory.stream().allMatch(id -> ballotScores.stream()
-                .anyMatch(s -> id.equals(s.getCriterion().getId()) && s.getScore() != null));
+                        && scoredCriteria.getOrDefault(e.getId(), Set.of()).containsAll(mandatory)));
     }
 
     private boolean submitted(Evaluation e) {

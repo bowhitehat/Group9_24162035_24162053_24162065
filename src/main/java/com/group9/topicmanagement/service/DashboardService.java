@@ -19,8 +19,10 @@ import com.group9.topicmanagement.repository.RegistrationPeriodRepository;
 import com.group9.topicmanagement.repository.ReportSubmissionRepository;
 import com.group9.topicmanagement.repository.ReviewerAssignmentRepository;
 import com.group9.topicmanagement.repository.StudentGroupRepository;
+import com.group9.topicmanagement.repository.TopicRegistrationRepository;
 import com.group9.topicmanagement.repository.TopicRepository;
 import com.group9.topicmanagement.repository.TopicResultRepository;
+import com.group9.topicmanagement.repository.EvaluationStatisticsRepository;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -46,6 +48,8 @@ public class DashboardService {
     private final AnnouncementService announcementService;
     private final UserService userService;
     private final TopicResultService topicResultService;
+    private final TopicRegistrationRepository registrationRepository;
+    private final EvaluationStatisticsRepository evaluationStatistics;
 
     public DashboardService(RegistrationPeriodRepository periodRepository,
                             TopicService topicService,
@@ -58,7 +62,9 @@ public class DashboardService {
                             StudentGroupRepository studentGroupRepository,
                             AnnouncementService announcementService,
                             UserService userService,
-                            TopicResultService topicResultService) {
+                            TopicResultService topicResultService,
+                            TopicRegistrationRepository registrationRepository,
+                            EvaluationStatisticsRepository evaluationStatistics) {
         this.periodRepository = periodRepository;
         this.topicService = topicService;
         this.topicRegistrationService = topicRegistrationService;
@@ -71,27 +77,24 @@ public class DashboardService {
         this.announcementService = announcementService;
         this.userService = userService;
         this.topicResultService = topicResultService;
+        this.registrationRepository = registrationRepository;
+        this.evaluationStatistics = evaluationStatistics;
     }
 
     public Map<String, Object> facultyStats() {
         Map<String, Object> stats = new HashMap<>();
-        long openPeriods = periodRepository.findAll().stream()
-                .filter(p -> p.getStatus() != PeriodStatus.CLOSED && p.getStatus() != PeriodStatus.DRAFT)
-                .count();
+        // count open periods at DB level
+        long openPeriods = periodRepository.countByStatusNotIn(List.of(PeriodStatus.CLOSED, PeriodStatus.DRAFT));
         stats.put("openPeriods", openPeriods);
         stats.put("pendingTopics", topicService.countByStatus(TopicStatus.PENDING));
         stats.put("approvedGroups", topicRegistrationService.countApprovedRegistrations());
         stats.put("submittedReports", reportSubmissionRepository.count());
-        long topicsWithoutReviewer = topicRegistrationService.listApprovedRegistrations().stream()
-                .filter(registration -> reviewerAssignmentRepository.findByTopicId(registration.getTopic().getId()).stream()
-                        .noneMatch(assignment -> assignment.getStatus() != ReviewerAssignmentStatus.CANCELLED))
-                .count();
+        // count topics without reviewer using a single DB query instead of N+1
+        long topicsWithoutReviewer = registrationRepository.countApprovedWithoutReviewer();
         stats.put("topicsWithoutReviewer", topicsWithoutReviewer);
         stats.put("reviewersPendingScore", reviewerAssignmentRepository.countByStatusIn(
                 List.of(ReviewerAssignmentStatus.ASSIGNED, ReviewerAssignmentStatus.IN_PROGRESS, ReviewerAssignmentStatus.OVERDUE)));
-        long missingScores = topicRegistrationService.listApprovedRegistrations().stream()
-                .filter(r -> topicResultService.hasMissingMandatoryScores(r.getTopic().getId()))
-                .count();
+        long missingScores = evaluationStatistics.countApprovedWithMissingMandatoryScores();
         stats.put("topicsMissingScores", missingScores);
         stats.put("activeCouncils", councilRepository.countByStatus(CouncilStatus.ACTIVE));
         stats.put("confirmedResults", topicResultRepository.countByStatus(TopicResultStatus.CONFIRMED));
@@ -123,9 +126,7 @@ public class DashboardService {
                 .stream().findFirst().orElse(null);
         StudentGroup group = registration != null ? registration.getStudentGroup() : null;
         if (group == null) {
-            group = studentGroupRepository.findAll().stream()
-                    .filter(g -> g.getMembers().stream().anyMatch(m -> m.getMember().getId().equals(student.getId())))
-                    .findFirst().orElse(null);
+            group = studentGroupRepository.findByMemberId(student.getId()).stream().findFirst().orElse(null);
         }
         stats.put("studentGroup", group);
         stats.put("registration", registration);

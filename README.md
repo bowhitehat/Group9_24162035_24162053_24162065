@@ -86,11 +86,19 @@ Initializer chỉ tạo tài khoản còn thiếu. Đổi `DEMO_PASSWORD` không
 ## Kiểm thử và đóng gói
 
 ```bash
-mvn -B clean verify
+mvn -B -Dspring.config.import= -Dapp.mail.enabled=false -Dapp.demo-password= -Dapp.storage.provider=local -Dspring.jpa.properties.hibernate.query.fail_on_pagination_over_collection_fetch=true clean verify
 node --test src/test/js/period-form.test.cjs src/test/js/date-form.test.cjs
 ```
 
 File JAR được tạo trong `target/`. Profile test dùng H2 và tạo schema trực tiếp từ entity. Kiểm thử HTTP/MySQL phải dùng database QA riêng, không chạy test xóa dữ liệu trên database local đang demo hoặc Aiven. Node.js chỉ cần để test JavaScript, không cần để chạy ứng dụng Java.
+
+### Rà soát kiến trúc và hiệu năng ngày 21/10/2026
+
+Bản rà soát mới đạt 266 test Java (28 regression tests mới), 35 test JavaScript,
+16 test transaction/concurrency trên MySQL riêng, 325 kiểm tra HTTP và 41 kiểm tra
+trình duyệt. Đã sửa phân trang/lọc trên RAM, truy vấn lặp và các lỗi cập nhật đồng
+thời; giữ nguyên phạm vi quyền xem và dữ liệu demo. Xem [chi tiết bản vá, giới hạn
+kiểm thử và cách chạy MySQL QA an toàn](docs/verification-20261021.md).
 
 ## Bản demo trên Internet
 

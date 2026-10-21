@@ -1,5 +1,6 @@
 package com.group9.topicmanagement.service;
 
+import com.group9.topicmanagement.dto.EvaluationSubmitDto;
 import com.group9.topicmanagement.model.User;
 import com.group9.topicmanagement.model.council.CouncilAssignment;
 import com.group9.topicmanagement.model.council.CouncilMember;
@@ -22,6 +23,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -29,6 +31,10 @@ import java.util.List;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
+import java.util.Map;
+import java.util.ArrayList;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -61,6 +67,33 @@ public class EvaluationService {
         this.councilAssignmentRepository = councilAssignmentRepository;
         this.councilMemberRepository = councilMemberRepository;
         this.resultRepository = resultRepository;
+    }
+
+    @PreAuthorize("hasRole('LECTURER')")
+    public Evaluation saveEvaluation(Long topicId, String evaluatorUsername, EvaluationSubmitDto form) {
+        if (!currentUsername().equalsIgnoreCase(evaluatorUsername)) {
+            throw new AccessDeniedException("Bạn chỉ được sửa phiếu chấm của mình");
+        }
+        if (form == null || form.getType() == null) {
+            throw new BusinessRuleException("Loại phiếu chấm không được để trống");
+        }
+        List<EvaluationScore> submittedScores = new ArrayList<>();
+        if (form.getScores() != null) {
+            form.getScores().forEach((criterionId, value) -> {
+                if (value != null) {
+                    EvaluationCriterion criterion = new EvaluationCriterion();
+                    criterion.setId(criterionId);
+                    EvaluationScore score = new EvaluationScore();
+                    score.setCriterion(criterion);
+                    score.setScore(value);
+                    submittedScores.add(score);
+                }
+            });
+        }
+        // Both steps join this service transaction; failed submission restores the old ballot.
+        Evaluation evaluation = saveDraft(topicId, evaluatorUsername, form.getType(), submittedScores, form.getComments());
+        if (form.isSubmitAction()) submitEvaluation(evaluation.getId());
+        return evaluation;
     }
 
     @PreAuthorize("hasAnyRole('LECTURER', 'FACULTY_MANAGER')")
@@ -114,15 +147,31 @@ public class EvaluationService {
         evaluation.setComments(comments);
         evaluation = evaluationRepository.save(evaluation);
 
+        if (scores == null) scores = List.of();
         Set<Long> submittedCriterionIds = new HashSet<>();
         for (EvaluationScore scoreDto : scores) {
+            if (scoreDto == null || scoreDto.getCriterion() == null || scoreDto.getCriterion().getId() == null) {
+                throw new BusinessRuleException("Tiêu chí chấm điểm không hợp lệ");
+            }
             if (scoreDto.getScore() == null
                     || scoreDto.getScore().compareTo(BigDecimal.ZERO) < 0
                     || scoreDto.getScore().compareTo(BigDecimal.TEN) > 0) {
                 throw new BusinessRuleException("Điểm phải từ 0 đến 10");
             }
-            EvaluationCriterion criterion = criterionRepository.findById(scoreDto.getCriterion().getId())
-                    .orElseThrow(() -> new NotFoundException("Không tìm thấy tiêu chí"));
+            if (!submittedCriterionIds.add(scoreDto.getCriterion().getId())) {
+                throw new BusinessRuleException("Mỗi tiêu chí chỉ được nhập một lần");
+            }
+        }
+
+        Map<Long, EvaluationCriterion> submittedCriteria = criterionRepository.findAllById(submittedCriterionIds).stream()
+                .collect(Collectors.toMap(EvaluationCriterion::getId, Function.identity()));
+        List<EvaluationScore> existingScores = scoreRepository.findByEvaluationId(evaluation.getId());
+        Map<Long, EvaluationScore> existingByCriterion = existingScores.stream()
+                .collect(Collectors.toMap(score -> score.getCriterion().getId(), Function.identity()));
+        List<EvaluationScore> updatedScores = new ArrayList<>();
+        for (EvaluationScore scoreDto : scores) {
+            EvaluationCriterion criterion = submittedCriteria.get(scoreDto.getCriterion().getId());
+            if (criterion == null) throw new NotFoundException("Không tìm thấy tiêu chí");
 
             if (!criterion.getRegistrationPeriod().getId().equals(topic.getRegistrationPeriod().getId())) {
                 throw new BusinessRuleException("Tiêu chí không thuộc đợt đăng ký của đề tài");
@@ -130,22 +179,16 @@ public class EvaluationService {
             if (!Boolean.TRUE.equals(criterion.getIsActive())) {
                 throw new BusinessRuleException("Tiêu chí không còn hoạt động");
             }
-            if (!submittedCriterionIds.add(criterion.getId())) {
-                throw new BusinessRuleException("Mỗi tiêu chí chỉ được nhập một lần");
-            }
-
-            Optional<EvaluationScore> existingScore = scoreRepository.findByEvaluationId(evaluation.getId()).stream()
-                    .filter(s -> s.getCriterion().getId().equals(criterion.getId())).findFirst();
-
-            EvaluationScore score = existingScore.orElse(new EvaluationScore());
+            EvaluationScore score = existingByCriterion.getOrDefault(criterion.getId(), new EvaluationScore());
             score.setEvaluation(evaluation);
             score.setCriterion(criterion);
             score.setScore(scoreDto.getScore());
             score.setNote(scoreDto.getNote());
-            scoreRepository.save(score);
+            updatedScores.add(score);
         }
+        scoreRepository.saveAll(updatedScores);
 
-        List<EvaluationScore> removedScores = scoreRepository.findByEvaluationId(evaluation.getId()).stream()
+        List<EvaluationScore> removedScores = existingScores.stream()
                 .filter(existing -> !submittedCriterionIds.contains(existing.getCriterion().getId()))
                 .toList();
         if (!removedScores.isEmpty()) {
@@ -157,12 +200,9 @@ public class EvaluationService {
     }
 
     @PreAuthorize("hasRole('LECTURER')")
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void submitEvaluation(Long evaluationId) {
-        Evaluation evaluation = evaluationRepository.findById(evaluationId)
-                .orElseThrow(() -> new NotFoundException("Không tìm thấy phiếu chấm"));
-
-        topicRepository.findLockedById(evaluation.getTopic().getId())
-                .orElseThrow(() -> new NotFoundException("Không tìm thấy đề tài"));
+        Evaluation evaluation = lockCurrentEvaluation(evaluationId);
 
         String currentUsername = currentUsername();
         if (!evaluation.getEvaluator().getUsername().equalsIgnoreCase(currentUsername)) {
@@ -205,17 +245,26 @@ public class EvaluationService {
     }
 
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public Evaluation lockEvaluation(Long evaluationId) {
-        Evaluation evaluation = evaluationRepository.findById(evaluationId)
-                .orElseThrow(() -> new NotFoundException("Không tìm thấy phiếu chấm"));
-        topicRepository.findLockedById(evaluation.getTopic().getId())
-                .orElseThrow(() -> new NotFoundException("Không tìm thấy đề tài"));
+        Evaluation evaluation = lockCurrentEvaluation(evaluationId);
         if (evaluation.getStatus() != EvaluationStatus.SUBMITTED) {
             throw new BusinessRuleException("Chỉ khóa phiếu đã nộp");
         }
         evaluation.setStatus(EvaluationStatus.LOCKED);
         evaluation.setLockedTime(LocalDateTime.now());
         return evaluationRepository.save(evaluation);
+    }
+
+    private Evaluation lockCurrentEvaluation(Long evaluationId) {
+        // Do not attach an Evaluation before waiting for the shared topic lock:
+        // a concurrent draft edit may otherwise leave a stale ballot in this session.
+        Long topicId = evaluationRepository.findTopicIdById(evaluationId)
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy phiếu chấm"));
+        topicRepository.findLockedById(topicId)
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy đề tài"));
+        return evaluationRepository.findLockedById(evaluationId)
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy phiếu chấm"));
     }
 
     @Transactional(readOnly = true)
@@ -274,10 +323,11 @@ public class EvaluationService {
     @Transactional(readOnly = true)
     public List<Evaluation> listByTopic(Long topicId) {
         List<Evaluation> list = evaluationRepository.findByTopicId(topicId);
+        Map<Long, List<EvaluationScore>> scoresByEvaluation = list.isEmpty() ? Map.of()
+                : scoreRepository.findByEvaluationIdIn(list.stream().map(Evaluation::getId).toList()).stream()
+                    .collect(Collectors.groupingBy(score -> score.getEvaluation().getId()));
         for (Evaluation evaluation : list) {
-            List<EvaluationScore> scores = scoreRepository.findByEvaluationId(evaluation.getId());
-            scores.forEach(score -> score.getCriterion().getName());
-            evaluation.setScores(scores);
+            evaluation.setScores(scoresByEvaluation.getOrDefault(evaluation.getId(), List.of()));
         }
         return list;
     }

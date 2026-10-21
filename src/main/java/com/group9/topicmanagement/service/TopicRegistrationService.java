@@ -11,7 +11,6 @@ import com.group9.topicmanagement.model.topic.TopicStatus;
 import com.group9.topicmanagement.exception.BusinessRuleException;
 import com.group9.topicmanagement.repository.*;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
@@ -151,7 +150,7 @@ public class TopicRegistrationService {
     }
 
     public void rejectRegistration(Long registrationId, String reason, String approverUsername) {
-        TopicRegistration registration = registrationRepository.findById(registrationId)
+        TopicRegistration registration = registrationRepository.findLockedById(registrationId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy thông tin đăng ký đề tài"));
 
         if (registration.getStatus() != RegistrationStatus.PENDING) {
@@ -173,11 +172,21 @@ public class TopicRegistrationService {
     }
 
     public Page<TopicRegistration> findRegistrationsWithFilters(Long periodId, Long departmentId, RegistrationStatus status, String keyword, Pageable pageable) {
-        return filterRegistrations(null, periodId, departmentId, status, keyword, pageable);
+        return hydratePage(registrationRepository.findWithFilters(periodId, departmentId, status, normalizeKeyword(keyword), pageable));
     }
 
     public Page<TopicRegistration> findRegistrationsForStudent(String username, Long periodId, RegistrationStatus status, String keyword, Pageable pageable) {
-        return filterRegistrations(username, periodId, null, status, keyword, pageable);
+        return hydratePage(registrationRepository.findWithFiltersForStudent(username, periodId, status, normalizeKeyword(keyword), pageable));
+    }
+
+    private Page<TopicRegistration> hydratePage(Page<TopicRegistration> page) {
+        if (page.hasContent()) registrationRepository.findDetailsByIdIn(page.map(TopicRegistration::getId).getContent());
+        return page;
+    }
+
+    @Transactional(readOnly = true)
+    public List<TopicRegistration> listApprovedWithoutReviewer() {
+        return registrationRepository.findApprovedWithoutReviewer();
     }
 
     public Set<Long> reviewableRegistrationIds(List<TopicRegistration> registrations, boolean manager) {
@@ -266,25 +275,7 @@ public class TopicRegistrationService {
     }
 
     private String normalizeKeyword(String keyword) {
-        return keyword == null || keyword.isBlank() ? null : keyword.trim();
-    }
-
-    private Page<TopicRegistration> filterRegistrations(String username, Long periodId, Long departmentId,
-                                                         RegistrationStatus status, String keyword,
-                                                         Pageable pageable) {
-        String normalized = normalizeKeyword(keyword);
-        List<TopicRegistration> matches = registrationRepository.findAllByOrderByIdDesc().stream()
-                .filter(registration -> username == null || registration.getStudentGroup().getMembers().stream()
-                        .anyMatch(member -> member.getMember().getUsername().equalsIgnoreCase(username)))
-                .filter(registration -> periodId == null || registration.getRegistrationPeriod().getId().equals(periodId))
-                .filter(registration -> departmentId == null || registration.getTopic().getDepartment().getId().equals(departmentId))
-                .filter(registration -> status == null || registration.getStatus() == status)
-                .filter(registration -> normalized == null
-                        || registration.getTopic().getTitle().toLowerCase().contains(normalized.toLowerCase()))
-                .toList();
-        if (pageable.isUnpaged()) return new PageImpl<>(matches);
-        int from = Math.min((int) pageable.getOffset(), matches.size());
-        int to = Math.min(from + pageable.getPageSize(), matches.size());
-        return new PageImpl<>(matches.subList(from, to), pageable, matches.size());
+        return keyword == null || keyword.isBlank() ? null
+                : keyword.trim().replace("!", "!!").replace("%", "!%").replace("_", "!_");
     }
 }

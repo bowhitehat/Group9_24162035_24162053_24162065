@@ -63,7 +63,7 @@ public class CouncilServiceTest {
 
     @Test
     void addMember_Success() {
-        when(councilRepository.findById(1L)).thenReturn(Optional.of(council));
+        when(councilRepository.findLockedById(1L)).thenReturn(Optional.of(council));
         when(userRepository.findById(10L)).thenReturn(Optional.of(lecturer));
         when(memberRepository.existsByCouncilIdAndMemberId(1L, 10L)).thenReturn(false);
         when(memberRepository.findByCouncilId(1L)).thenReturn(new ArrayList<>());
@@ -75,7 +75,7 @@ public class CouncilServiceTest {
 
     @Test
     void addMember_ThrowsException_IfAlreadyExists() {
-        when(councilRepository.findById(1L)).thenReturn(Optional.of(council));
+        when(councilRepository.findLockedById(1L)).thenReturn(Optional.of(council));
         when(userRepository.findById(10L)).thenReturn(Optional.of(lecturer));
         when(memberRepository.existsByCouncilIdAndMemberId(1L, 10L)).thenReturn(true);
 
@@ -87,7 +87,7 @@ public class CouncilServiceTest {
 
     @Test
     void addMember_ThrowsException_IfMoreThan5Members() {
-        when(councilRepository.findById(1L)).thenReturn(Optional.of(council));
+        when(councilRepository.findLockedById(1L)).thenReturn(Optional.of(council));
         when(userRepository.findById(10L)).thenReturn(Optional.of(lecturer));
         when(memberRepository.existsByCouncilIdAndMemberId(1L, 10L)).thenReturn(false);
         
@@ -103,7 +103,7 @@ public class CouncilServiceTest {
     
     @Test
     void addMember_ThrowsException_IfChairAlreadyExists() {
-        when(councilRepository.findById(1L)).thenReturn(Optional.of(council));
+        when(councilRepository.findLockedById(1L)).thenReturn(Optional.of(council));
         when(userRepository.findById(10L)).thenReturn(Optional.of(lecturer));
         when(memberRepository.existsByCouncilIdAndMemberId(1L, 10L)).thenReturn(false);
         

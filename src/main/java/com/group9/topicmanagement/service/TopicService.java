@@ -19,7 +19,6 @@ import com.group9.topicmanagement.repository.TopicResultRepository;
 import com.group9.topicmanagement.repository.UserRepository;
 import com.group9.topicmanagement.dto.TopicForm;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
@@ -30,7 +29,6 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Predicate;
 
 @Service
 @Transactional
@@ -73,20 +71,29 @@ public class TopicService {
     }
 
     public Page<Topic> findTopicsByProposer(Long proposerId, Pageable pageable) {
-        return topicRepository.findByProposerId(proposerId, pageable);
-    }
-    
-    public Page<Topic> findTopicsWithFilters(Long periodId, Long departmentId, TopicStatus status, String keyword, Pageable pageable) {
-        return filterTopics(periodId, departmentId, status, keyword, topic -> true, pageable);
+        return hydratePage(topicRepository.findByProposerId(proposerId, pageable));
     }
 
-    public Page<Topic> findTopicsForLecturer(Long proposerId, Long periodId, Long departmentId, TopicStatus status, String keyword, Pageable pageable) {
-        return filterTopics(periodId, departmentId, status, keyword,
-                topic -> isAccessibleToLecturer(topic, proposerId), pageable);
+    // findTopicsWithFilters – general (faculty/admin)
+    public Page<Topic> findTopicsWithFilters(Long periodId, Long departmentId, TopicStatus status, String keyword, Pageable pageable) {
+        return hydratePage(topicRepository.findWithFilters(periodId, departmentId, status, normalizeKeyword(keyword), pageable));
     }
-    
+
+    // Proposer, advisor, assigned reviewer and council member share the detail-view scope.
+    public Page<Topic> findTopicsForLecturer(Long proposerId, Long periodId, Long departmentId, TopicStatus status, String keyword, Pageable pageable) {
+        return hydratePage(topicRepository.findWithFiltersForLecturer(periodId, departmentId, status, normalizeKeyword(keyword), proposerId, pageable));
+    }
+
+    // findAvailableTopicsForStudents – only PUBLISHED
     public Page<Topic> findAvailableTopicsForStudents(Long periodId, Long departmentId, String keyword, Pageable pageable) {
-        return filterTopics(periodId, departmentId, TopicStatus.PUBLISHED, keyword, topic -> true, pageable);
+        return hydratePage(topicRepository.findWithFilters(periodId, departmentId, TopicStatus.PUBLISHED, normalizeKeyword(keyword), pageable));
+    }
+
+    private Page<Topic> hydratePage(Page<Topic> page) {
+        if (page.hasContent()) {
+            topicRepository.findDetailsByIdIn(page.map(Topic::getId).getContent());
+        }
+        return page;
     }
 
     public Topic getTopicById(Long id) {
@@ -100,7 +107,7 @@ public class TopicService {
     }
 
     public long countByStatus(TopicStatus status) {
-        return topicRepository.findAll().stream().filter(t -> t.getStatus() == status).count();
+        return topicRepository.countByStatus(status);
     }
 
     public Topic createTopic(TopicForm form, String proposerUsername) {
@@ -292,22 +299,8 @@ public class TopicService {
     }
 
     private String normalizeKeyword(String keyword) {
-        return keyword == null || keyword.isBlank() ? null : keyword.trim();
-    }
-
-    private Page<Topic> filterTopics(Long periodId, Long departmentId, TopicStatus status, String keyword,
-                                     Predicate<Topic> accessRule, Pageable pageable) {
-        String normalized = normalizeKeyword(keyword);
-        List<Topic> matches = topicRepository.findAllByOrderByIdDesc().stream()
-                .filter(topic -> periodId == null || topic.getRegistrationPeriod().getId().equals(periodId))
-                .filter(topic -> departmentId == null || topic.getDepartment().getId().equals(departmentId))
-                .filter(topic -> status == null || topic.getStatus() == status)
-                .filter(topic -> normalized == null
-                        || topic.getTitle().toLowerCase().contains(normalized.toLowerCase())
-                        || topic.getCode().toLowerCase().contains(normalized.toLowerCase()))
-                .filter(accessRule)
-                .toList();
-        return page(matches, pageable);
+        return keyword == null || keyword.isBlank() ? null
+                : keyword.trim().replace("!", "!!").replace("%", "!%").replace("_", "!_");
     }
 
     private boolean isAccessibleToLecturer(Topic topic, Long lecturerId) {
@@ -322,14 +315,6 @@ public class TopicService {
                         != com.group9.topicmanagement.model.enums.CouncilStatus.CANCELLED)
                 .anyMatch(assignment -> councilMemberRepository
                         .existsByCouncilIdAndMemberId(assignment.getCouncil().getId(), lecturerId));
-    }
-
-    private Page<Topic> page(List<Topic> items, Pageable pageable) {
-        if (pageable.isUnpaged()) return new PageImpl<>(items);
-        // Pageable offsets are longs; clamp before narrowing to prevent integer overflow.
-        int from = (int) Math.min(pageable.getOffset(), (long) items.size());
-        int to = (int) Math.min((long) from + pageable.getPageSize(), (long) items.size());
-        return new PageImpl<>(items.subList(from, to), pageable, items.size());
     }
 
     public void publishTopic(Long id) {

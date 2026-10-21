@@ -1,9 +1,12 @@
 package com.group9.topicmanagement.repository;
 
 import com.group9.topicmanagement.model.User;
+import com.group9.topicmanagement.model.enums.RoleName;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import jakarta.persistence.LockModeType;
 import java.util.List;
 import java.util.Optional;
@@ -27,4 +30,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @EntityGraph(attributePaths = {"roles", "department"})
     List<User> findAllByOrderByFullName();
     long countByDepartmentId(Long departmentId);
+
+    @EntityGraph(attributePaths = {"roles", "department"})
+    @Query("SELECT u FROM User u JOIN u.roles r WHERE r.name = :roleName ORDER BY u.fullName ASC")
+    List<User> findByRoleName(@Param("roleName") RoleName roleName);
 }

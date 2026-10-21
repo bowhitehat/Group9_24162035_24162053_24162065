@@ -94,22 +94,8 @@ public class EvaluationController {
             return "redirect:/evaluations/topic/" + topicId + "?type=" + type;
         }
         try {
-            List<EvaluationScore> scores = new ArrayList<>();
-            if (formDto.getScores() != null) {
-                for (Map.Entry<Long, BigDecimal> entry : formDto.getScores().entrySet()) {
-                    if (entry.getValue() != null) {
-                        EvaluationScore score = new EvaluationScore();
-                        EvaluationCriterion crit = new EvaluationCriterion();
-                        crit.setId(entry.getKey());
-                        score.setCriterion(crit);
-                        score.setScore(entry.getValue());
-                        scores.add(score);
-                    }
-                }
-            }
-            Evaluation eval = evaluationService.saveDraft(topicId, auth.getName(), formDto.getType(), scores, formDto.getComments());
+            evaluationService.saveEvaluation(topicId, auth.getName(), formDto);
             if (formDto.isSubmitAction()) {
-                evaluationService.submitEvaluation(eval.getId());
                 redirectAttributes.addFlashAttribute("successMessage", "Nộp điểm thành công!");
             } else {
                 redirectAttributes.addFlashAttribute("successMessage", "Lưu nháp thành công!");

@@ -53,9 +53,13 @@ public class UserService {
     }
 
     public List<User> findUsersByRole(String roleName) {
-        return users.findAll().stream()
-                .filter(u -> u.getRoles().stream().anyMatch(r -> r.getName().name().equalsIgnoreCase(roleName) || r.getName().toString().equalsIgnoreCase(roleName)))
-                .toList();
+        if (roleName == null || roleName.isBlank()) return List.of();
+        try {
+            RoleName role = RoleName.valueOf(roleName.toUpperCase(java.util.Locale.ROOT));
+            return users.findByRoleName(role);
+        } catch (IllegalArgumentException e) {
+            return List.of();
+        }
     }
 
     @Transactional

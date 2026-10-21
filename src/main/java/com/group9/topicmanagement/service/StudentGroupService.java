@@ -13,6 +13,7 @@ import com.group9.topicmanagement.repository.TopicRegistrationRepository;
 import com.group9.topicmanagement.repository.UserRepository;
 import com.group9.topicmanagement.model.enums.RegistrationStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Clock;
@@ -49,6 +50,9 @@ public class StudentGroupService {
         this.clock = clock;
     }
 
+    // The membership check after the user lock must observe the preceding editor's commit.
+    // MySQL REPEATABLE_READ could otherwise retain the snapshot from the username lookup.
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public StudentGroup createGroup(Long periodId, String leaderUsername) {
         User leaderCandidate = userRepository.findByUsernameIgnoreCase(leaderUsername)
                 .orElseThrow(() -> new BusinessRuleException("Không tìm thấy thông tin sinh viên"));
@@ -85,6 +89,7 @@ public class StudentGroupService {
         return groupRepository.save(group);
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void addMember(Long groupId, String memberUsernameToAdd, String currentUsername) {
         StudentGroup group = groupRepository.findLockedById(groupId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy nhóm sinh viên"));
@@ -122,6 +127,7 @@ public class StudentGroupService {
         groupRepository.save(group);
     }
 
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void removeMember(Long groupId, Long memberIdToRemove, String currentUsername) {
         StudentGroup group = groupRepository.findLockedById(groupId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy nhóm sinh viên"));

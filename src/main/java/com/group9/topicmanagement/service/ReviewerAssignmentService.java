@@ -16,9 +16,9 @@ import com.group9.topicmanagement.repository.UserRepository;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.annotation.Isolation;
 
 import java.time.LocalDateTime;
-import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -47,8 +47,9 @@ public class ReviewerAssignmentService {
     }
 
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public ReviewerAssignment assignReviewer(Long topicId, Long reviewerId, String assignerUsername, LocalDateTime deadline) {
-        Topic topic = topicRepository.findById(topicId)
+        Topic topic = topicRepository.findLockedById(topicId)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy đề tài"));
         User reviewer = userRepository.findById(reviewerId)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy giảng viên"));
@@ -100,9 +101,9 @@ public class ReviewerAssignmentService {
     }
 
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public ReviewerAssignment changeReviewer(Long assignmentId, Long newReviewerId, LocalDateTime deadline) {
-        ReviewerAssignment assignment = assignmentRepository.findById(assignmentId)
-                .orElseThrow(() -> new NotFoundException("Không tìm thấy phân công"));
+        ReviewerAssignment assignment = lockAssignment(assignmentId);
         if (assignment.getStatus() == ReviewerAssignmentStatus.SUBMITTED) {
             throw new BusinessRuleException("Không thể đổi giảng viên khi đã nộp điểm");
         }
@@ -139,14 +140,22 @@ public class ReviewerAssignmentService {
     }
 
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
+    @Transactional(isolation = Isolation.READ_COMMITTED)
     public void cancelAssignment(Long assignmentId) {
-        ReviewerAssignment assignment = assignmentRepository.findById(assignmentId)
-                .orElseThrow(() -> new NotFoundException("Không tìm thấy phân công"));
+        ReviewerAssignment assignment = lockAssignment(assignmentId);
         if (assignment.getStatus() == ReviewerAssignmentStatus.SUBMITTED) {
             throw new BusinessRuleException("Không thể hủy khi giảng viên đã nộp điểm");
         }
         assignment.setStatus(ReviewerAssignmentStatus.CANCELLED);
         assignmentRepository.save(assignment);
+    }
+
+    private ReviewerAssignment lockAssignment(Long id) {
+        Long topicId = assignmentRepository.findTopicIdById(id)
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy phân công"));
+        topicRepository.findLockedById(topicId).orElseThrow(() -> new NotFoundException("Không tìm thấy đề tài"));
+        return assignmentRepository.findLockedById(id)
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy phân công"));
     }
 
     @PreAuthorize("hasRole('LECTURER')")
@@ -182,24 +191,15 @@ public class ReviewerAssignmentService {
     public List<ReviewerAssignment> listAssignments(Long periodId, Long departmentId, Long reviewerId,
                                                     ReviewerAssignmentStatus status, boolean missingReviewer,
                                                     boolean pendingScore) {
-        List<ReviewerAssignment> all = assignmentRepository.findAllByOrderByIdAsc();
+        List<ReviewerAssignment> all = assignmentRepository.findWithFilters(
+                periodId, departmentId, reviewerId, status, pendingScore, LocalDateTime.now());
         markOverdue(all);
-        return all.stream()
-                .filter(a -> periodId == null || a.getTopic().getRegistrationPeriod().getId().equals(periodId))
-                .filter(a -> departmentId == null || a.getTopic().getDepartment().getId().equals(departmentId))
-                .filter(a -> reviewerId == null || a.getReviewer().getId().equals(reviewerId))
-                .filter(a -> status == null || a.getStatus() == status)
-                .filter(a -> !pendingScore || EnumSet.of(ReviewerAssignmentStatus.ASSIGNED,
-                        ReviewerAssignmentStatus.IN_PROGRESS, ReviewerAssignmentStatus.OVERDUE).contains(a.getStatus()))
-                .toList();
+        return all;
     }
 
     @Transactional(readOnly = true)
     public List<com.group9.topicmanagement.model.registration.TopicRegistration> topicsWithoutReviewer() {
-        return topicRegistrationService.listApprovedRegistrations().stream()
-                .filter(reg -> assignmentRepository.findByTopicId(reg.getTopic().getId()).stream()
-                        .noneMatch(a -> a.getStatus() != ReviewerAssignmentStatus.CANCELLED))
-                .toList();
+        return topicRegistrationService.listApprovedWithoutReviewer();
     }
 
     public void markSubmitted(Long topicId, Long reviewerId) {

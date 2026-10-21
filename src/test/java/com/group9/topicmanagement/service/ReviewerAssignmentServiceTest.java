@@ -66,7 +66,7 @@ public class ReviewerAssignmentServiceTest {
 
     @Test
     void assignReviewer_Success() {
-        when(topicRepository.findById(1L)).thenReturn(Optional.of(topic));
+        when(topicRepository.findLockedById(1L)).thenReturn(Optional.of(topic));
         when(userRepository.findById(10L)).thenReturn(Optional.of(reviewer));
         when(userRepository.findByUsernameIgnoreCase("FMANAGER")).thenReturn(Optional.of(assigner));
         when(topicRegistrationService.findApprovedForTopic(1L)).thenReturn(Optional.of(new TopicRegistration()));
@@ -82,7 +82,7 @@ public class ReviewerAssignmentServiceTest {
     void assignReviewer_ThrowsException_IfReviewerIsAdvisor() {
         topic.getAdvisors().add(reviewer);
 
-        when(topicRepository.findById(1L)).thenReturn(Optional.of(topic));
+        when(topicRepository.findLockedById(1L)).thenReturn(Optional.of(topic));
         when(userRepository.findById(10L)).thenReturn(Optional.of(reviewer));
         when(userRepository.findByUsernameIgnoreCase("FMANAGER")).thenReturn(Optional.of(assigner));
         when(topicRegistrationService.findApprovedForTopic(1L)).thenReturn(Optional.of(new TopicRegistration()));

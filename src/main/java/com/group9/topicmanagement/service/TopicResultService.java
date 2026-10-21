@@ -25,6 +25,10 @@ import java.math.RoundingMode;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.Map;
+import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -192,10 +196,7 @@ public class TopicResultService {
     public List<TopicResult> listStudentResults(String username) {
         User student = userRepository.findByUsernameIgnoreCase(username)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy người dùng"));
-        return resultRepository.findAllByOrderByIdAsc().stream()
-                .filter(r -> r.getStatus() == TopicResultStatus.PUBLISHED)
-                .filter(r -> topicRegistrationService.isStudentOnApprovedTopic(r.getTopic().getId(), student.getId()))
-                .toList();
+        return resultRepository.findPublishedResultsForStudent(student.getId());
     }
 
     @Transactional(readOnly = true)
@@ -203,20 +204,17 @@ public class TopicResultService {
         boolean isManager = auth.getAuthorities().stream().anyMatch(a -> a.getAuthority().equals("ROLE_FACULTY_MANAGER"));
         Long userId = userRepository.findByUsernameIgnoreCase(auth.getName()).orElseThrow().getId();
 
-        List<TopicResult> dbResults = resultRepository.findAllByOrderByIdAsc();
-        List<CouncilAssignment> assignments = councilAssignmentRepository.findAllByOrderByIdAsc();
+        List<CouncilAssignment> assignments = councilAssignmentRepository.findCurrentVisibleAssignments(isManager, userId);
+        if (assignments.isEmpty()) return List.of();
+        Map<Long, TopicResult> resultsByAssignment = resultRepository.findByCouncilAssignment_IdIn(
+                        assignments.stream().map(CouncilAssignment::getId).toList()).stream()
+                .collect(Collectors.toMap(r -> r.getCouncilAssignment().getId(), Function.identity()));
 
-        // Historical assignments must not duplicate the current topic in UI or exports.
-        return assignments.stream().map(a -> a.getTopic().getId()).distinct()
-            .map(id -> evaluationScope.currentAssignment(id)
-                    .or(() -> councilAssignmentRepository.findFirstByTopicIdOrderByIdDesc(id)).orElseThrow())
-            .filter(a -> a.getCouncil().getStatus() != CouncilStatus.CANCELLED)
-            .filter(a -> isManager || councilService.isMemberOfCouncil(a.getCouncil().getId(), userId))
+        return assignments.stream()
             .map(a -> {
-                Optional<TopicResult> opt = dbResults.stream().filter(r -> r.getTopic().getId().equals(a.getTopic().getId())
-                        && r.getCouncilAssignment() != null && r.getCouncilAssignment().getId().equals(a.getId())).findFirst();
-                if (opt.isPresent()) {
-                    return opt.get();
+                TopicResult result = resultsByAssignment.get(a.getId());
+                if (result != null) {
+                    return result;
                 } else {
                     TopicResult dummy = new TopicResult();
                     dummy.setTopic(a.getTopic());
@@ -295,8 +293,9 @@ public class TopicResultService {
         List<EvaluationCriterion> criteria = criterionRepository
                 .findByRegistrationPeriodIdAndIsActiveTrueOrderByDisplayOrderAsc(topic.getRegistrationPeriod().getId())
                 .stream().filter(c -> Boolean.TRUE.equals(c.getIsMandatory())).toList();
+        Map<Long, List<EvaluationScore>> scoresByEvaluation = loadScores(evaluations);
         for (Evaluation evaluation : evaluations) {
-            List<EvaluationScore> scores = scoreRepository.findByEvaluationId(evaluation.getId());
+            List<EvaluationScore> scores = scoresByEvaluation.getOrDefault(evaluation.getId(), List.of());
             for (EvaluationCriterion criterion : criteria) {
                 boolean has = scores.stream().anyMatch(s -> s.getCriterion().getId().equals(criterion.getId()));
                 if (!has) {
@@ -315,13 +314,14 @@ public class TopicResultService {
     public Optional<BigDecimal> averageOfValidEvaluations(Long topicId) {
         Topic topic = topicRepository.findById(topicId)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy đề tài"));
-        List<Long> activeMandatoryCriterionIds = criterionRepository
+        Set<Long> activeMandatoryCriterionIds = criterionRepository
                 .findByRegistrationPeriodIdAndIsActiveTrueOrderByDisplayOrderAsc(
                         topic.getRegistrationPeriod().getId()).stream()
                 .filter(c -> Boolean.TRUE.equals(c.getIsMandatory()))
                 .map(EvaluationCriterion::getId)
-                .toList();
+                .collect(Collectors.toSet());
         List<Evaluation> evaluations = evaluationScope.currentEvaluations(topicId);
+        Map<Long, List<EvaluationScore>> scoresByEvaluation = loadScores(evaluations);
         BigDecimal totalScore = BigDecimal.ZERO;
         int validEvaluationCount = 0;
 
@@ -329,7 +329,7 @@ public class TopicResultService {
             if (eval.getStatus() != EvaluationStatus.SUBMITTED && eval.getStatus() != EvaluationStatus.LOCKED) {
                 continue;
             }
-            List<EvaluationScore> scores = scoreRepository.findByEvaluationId(eval.getId());
+            List<EvaluationScore> scores = scoresByEvaluation.getOrDefault(eval.getId(), List.of());
             boolean complete = activeMandatoryCriterionIds.stream()
                     .allMatch(criterionId -> scores.stream()
                             .anyMatch(score -> score.getCriterion().getId().equals(criterionId)));
@@ -354,6 +354,12 @@ public class TopicResultService {
             return Optional.empty();
         }
         return Optional.of(totalScore.divide(BigDecimal.valueOf(validEvaluationCount), 2, RoundingMode.HALF_UP));
+    }
+
+    private Map<Long, List<EvaluationScore>> loadScores(List<Evaluation> evaluations) {
+        if (evaluations.isEmpty()) return Map.of();
+        return scoreRepository.findByEvaluationIdIn(evaluations.stream().map(Evaluation::getId).toList()).stream()
+                .collect(Collectors.groupingBy(s -> s.getEvaluation().getId()));
     }
 
     private boolean isLockedAndCurrentResult(Long topicId, TopicResult result) {

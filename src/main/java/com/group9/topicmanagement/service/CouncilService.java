@@ -22,7 +22,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
-@Transactional
+@Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
 public class CouncilService {
     private final CouncilRepository councilRepository;
     private final CouncilMemberRepository memberRepository;
@@ -61,9 +61,7 @@ public class CouncilService {
 
     @Transactional(readOnly = true)
     public List<Council> listCouncilsForUser(Long userId) {
-        return councilRepository.findAllByOrderByIdAsc().stream()
-                .filter(c -> memberRepository.findByCouncilIdAndMemberId(c.getId(), userId).isPresent())
-                .toList();
+        return councilRepository.findForMember(userId);
     }
 
     @Transactional(readOnly = true)
@@ -103,7 +101,7 @@ public class CouncilService {
 
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
     public Council updateCouncil(Long councilId, String name, LocalDateTime reportDate, String location) {
-        Council council = getCouncil(councilId);
+        Council council = lockCouncil(councilId);
         checkEditable(council);
         validateCouncilDetails(name, location, reportDate);
         validateReportDate(council.getRegistrationPeriod(), reportDate);
@@ -115,7 +113,7 @@ public class CouncilService {
 
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
     public void addMember(Long councilId, Long userId, CouncilMemberRole role) {
-        Council council = getCouncil(councilId);
+        Council council = lockCouncil(councilId);
         checkDraftForMemberAndTopic(council);
 
         User user = userRepository.findById(userId)
@@ -156,7 +154,7 @@ public class CouncilService {
 
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
     public void removeMember(Long councilId, Long memberRowId) {
-        Council council = getCouncil(councilId);
+        Council council = lockCouncil(councilId);
         checkDraftForMemberAndTopic(council);
         CouncilMember member = memberRepository.findById(memberRowId)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy thành viên hội đồng"));
@@ -168,7 +166,7 @@ public class CouncilService {
 
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
     public void assignTopic(Long councilId, Long topicId) {
-        Council council = getCouncil(councilId);
+        Council council = lockCouncil(councilId);
         checkDraftForMemberAndTopic(council);
 
         Topic topic = topicRepository.findLockedById(topicId)
@@ -214,7 +212,7 @@ public class CouncilService {
 
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
     public void removeTopic(Long councilId, Long assignmentId) {
-        Council council = getCouncil(councilId);
+        Council council = lockCouncil(councilId);
         checkDraftForMemberAndTopic(council);
         CouncilAssignment assignment = assignmentRepository.findById(assignmentId)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy phân công đề tài"));
@@ -226,7 +224,7 @@ public class CouncilService {
 
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
     public void activateCouncil(Long councilId) {
-        Council council = getCouncil(councilId);
+        Council council = lockCouncil(councilId);
         if (council.getStatus() != CouncilStatus.DRAFT) {
             throw new BusinessRuleException("Chỉ hội đồng nháp mới được kích hoạt");
         }
@@ -258,7 +256,7 @@ public class CouncilService {
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
     @Transactional(isolation = org.springframework.transaction.annotation.Isolation.READ_COMMITTED)
     public void completeCouncil(Long councilId) {
-        Council council = getCouncil(councilId);
+        Council council = lockCouncil(councilId);
         if (council.getStatus() != CouncilStatus.ACTIVE) {
             throw new BusinessRuleException("Chỉ hội đồng đang hoạt động mới được hoàn tất");
         }
@@ -274,11 +272,12 @@ public class CouncilService {
 
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
     public void cancelCouncil(Long councilId) {
-        Council council = getCouncil(councilId);
+        Council council = lockCouncil(councilId);
         if (council.getStatus() == CouncilStatus.COMPLETED) {
             throw new BusinessRuleException("Không thể hủy hội đồng đã hoàn tất");
         }
-        for (var assignment : assignmentRepository.findByCouncilId(councilId)) {
+        for (var assignment : assignmentRepository.findByCouncilId(councilId).stream()
+                .sorted(java.util.Comparator.comparing(a -> a.getTopic().getId())).toList()) {
             topicRepository.findLockedById(assignment.getTopic().getId()).orElseThrow();
             if (hasCouncilBallots(councilId, assignment.getTopic().getId())) {
                 throw new BusinessRuleException("Hội đồng đã có phiếu chấm; không thể hủy để bảo toàn lịch sử điểm");
@@ -394,6 +393,12 @@ public class CouncilService {
         if (council.getStatus() == CouncilStatus.CANCELLED) {
             throw new BusinessRuleException("Không thể thay đổi hội đồng đã hủy");
         }
+    }
+
+    private Council lockCouncil(Long id) {
+        // All structural edits and lifecycle transitions serialize on the same row.
+        return councilRepository.findLockedById(id)
+                .orElseThrow(() -> new NotFoundException("Không tìm thấy hội đồng"));
     }
 
     private void checkDraftForMemberAndTopic(Council council) {
