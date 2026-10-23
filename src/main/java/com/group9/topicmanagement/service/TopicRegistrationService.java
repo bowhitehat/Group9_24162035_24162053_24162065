@@ -65,8 +65,11 @@ public class TopicRegistrationService {
         }
 
         LocalDateTime now = LocalDateTime.now(clock);
-        if (now.isBefore(period.getStudentStart()) || now.isAfter(period.getStudentEnd())) {
-            throw new BusinessRuleException("Đã hết thời hạn đăng ký đề tài");
+        if (now.isBefore(period.getStudentStart())) {
+            throw new BusinessRuleException("Chưa đến thời gian đăng ký đề tài");
+        }
+        if (now.isAfter(period.getStudentEnd())) {
+            throw new BusinessRuleException("Đã quá thời hạn đăng ký đề tài");
         }
 
         Topic topic = topicRepository.findById(topicId)
