@@ -25,12 +25,12 @@
             <div class="card-body">
                 <p><strong>Đề tài:</strong> <span th:text="${result.topic.code + ' - ' + result.topic.title}"></span></p>
                 <p><strong>Điểm trung bình:</strong> <span th:text="${result.finalScore}"></span></p>
-                <p><strong>Trạng thái:</strong> <span th:text="${result.status}"></span></p>
+                <p><strong>Trạng thái:</strong> <span th:text="${result.status.displayName}"></span></p>
             </div>
         </div>
         <h5>Điểm thành phần</h5>
         <div class="card mb-3" th:each="e : ${evaluations}">
-            <div class="card-header" th:text="${e.evaluator.fullName + ' · ' + e.evaluationType + ' · ' + e.status}"></div>
+            <div class="card-header" th:text="${e.evaluator.fullName + ' · ' + e.evaluationType.displayName + ' · ' + e.status.displayName}"></div>
             <div class="card-body">
                 <p th:if="${e.comments != null}"><strong>Nhận xét:</strong> <span th:text="${e.comments}"></span></p>
                 <ul>

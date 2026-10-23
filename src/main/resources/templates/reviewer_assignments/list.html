@@ -24,7 +24,7 @@
         <div class="col-md-2">
             <select name="status" class="form-select">
                 <option value="">Tất cả trạng thái</option>
-                <option th:each="s : ${statuses}" th:value="${s}" th:text="${s}" th:selected="${status == s}"></option>
+                <option th:each="s : ${statuses}" th:value="${s}" th:text="${s.displayName}" th:selected="${status == s}"></option>
             </select>
         </div>
         <div class="col-md-2 form-check mt-2">
@@ -59,7 +59,7 @@
                 <td th:text="${a.reviewer.fullName}"></td>
                 <td th:text="${#temporals.format(a.assignedAt, 'dd/MM/yyyy')}"></td>
                 <td th:text="${#temporals.format(a.deadline, 'dd/MM/yyyy HH:mm')}"></td>
-                <td th:text="${a.status}"></td>
+                <td th:text="${a.status.displayName}"></td>
                 <td>
                     <form th:if="${modifiableAssignmentIds.contains(a.id)}" class="d-flex gap-1"
                           th:action="@{/reviewer-assignments/{id}/change(id=${a.id})}" method="post">

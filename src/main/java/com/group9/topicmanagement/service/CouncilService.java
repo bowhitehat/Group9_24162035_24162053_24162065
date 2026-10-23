@@ -135,7 +135,8 @@ public class CouncilService {
         if (role == CouncilMemberRole.CHAIR || role == CouncilMemberRole.SECRETARY) {
             boolean hasRole = currentMembers.stream().anyMatch(m -> m.getRole() == role);
             if (hasRole) {
-                throw new BusinessRuleException("Hội đồng đã có " + role);
+                throw new BusinessRuleException("Hội đồng đã có " + (role == CouncilMemberRole.CHAIR ? "Chủ tịch" : "Thư ký")
+                        + ". Mỗi hội đồng chỉ được có một người giữ vai trò này.");
             }
         }
 
@@ -370,7 +371,9 @@ public class CouncilService {
     private void validateReportDate(RegistrationPeriod period, LocalDateTime reportDate) {
         if (period.getType() == PeriodType.KLTN && period.getCouncilDate() != null && reportDate != null
                 && !reportDate.toLocalDate().equals(period.getCouncilDate())) {
-            throw new BusinessRuleException("Ngày hội đồng phải khớp ngày báo cáo của đợt KLTN");
+            throw new BusinessRuleException("Ngày hội đồng phải là "
+                    + period.getCouncilDate().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy"))
+                    + " theo lịch báo cáo của đợt KLTN. Vui lòng chọn giờ báo cáo trong ngày này.");
         }
     }
 

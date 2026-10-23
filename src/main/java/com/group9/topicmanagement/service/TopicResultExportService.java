@@ -53,7 +53,7 @@ public class TopicResultExportService {
                     scoreCell.setCellValue(result.getFinalScore().doubleValue());
                     scoreCell.setCellStyle(scoreStyle);
                 }
-                row.createCell(4).setCellValue(result.getStatus() != null ? result.getStatus().name() : "");
+                row.createCell(4).setCellValue(result.getStatus() != null ? result.getStatus().getDisplayName() : "Chưa tính điểm");
             }
             for (int column = 0; column < 5; column++) sheet.autoSizeColumn(column);
             sheet.setColumnWidth(1, Math.min(sheet.getColumnWidth(1), 60 * 256));
@@ -98,7 +98,7 @@ public class TopicResultExportService {
                 table.addCell(new Phrase(result.getTopic().getTitle(), font));
                 table.addCell(new Phrase(result.getCouncilAssignment() != null ? result.getCouncilAssignment().getCouncil().getName() : "", font));
                 table.addCell(new Phrase(result.getFinalScore() != null ? result.getFinalScore().toString() : "", font));
-                table.addCell(new Phrase(result.getStatus() != null ? result.getStatus().name() : "", font));
+                table.addCell(new Phrase(result.getStatus() != null ? result.getStatus().getDisplayName() : "Chưa tính điểm", font));
             }
 
             document.add(table);

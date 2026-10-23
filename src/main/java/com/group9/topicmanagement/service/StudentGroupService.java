@@ -62,9 +62,6 @@ public class StudentGroupService {
         RegistrationPeriod period = periodRepository.findById(periodId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đợt đăng ký"));
 
-        if (period.getStatus() != PeriodStatus.STUDENT_REGISTRATION) {
-            throw new BusinessRuleException("Đợt đăng ký không trong thời gian cho phép tạo nhóm");
-        }
         requireStudentWindow(period);
 
         boolean isStudent = leader.getRoles().stream()
@@ -198,9 +195,9 @@ public class StudentGroupService {
     }
 
     private void requireStudentWindow(RegistrationPeriod period) {
-        if (period.getStatus() != PeriodStatus.STUDENT_REGISTRATION || !isInsideStudentWindow(period)) {
-            throw new BusinessRuleException("Ngoài giai đoạn sinh viên được phép quản lý nhóm");
-        }
+        RegistrationWindowMessages.requireStudentPhase(period, "tạo nhóm hoặc thay đổi thành viên");
+        RegistrationWindowMessages.requireWindow(period.getStudentStart(), period.getStudentEnd(), clock,
+                "sinh viên quản lý nhóm");
     }
 
     private boolean isInsideStudentWindow(RegistrationPeriod period) {

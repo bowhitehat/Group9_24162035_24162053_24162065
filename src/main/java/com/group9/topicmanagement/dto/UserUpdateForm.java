@@ -8,13 +8,13 @@ import java.util.Set;
 
 /** Editing profile/roles does not accept or change a password hash. */
 public class UserUpdateForm {
-    @NotBlank(message="Tên đăng nhập là bắt buộc") @Size(max=80)
+    @NotBlank(message="Tên đăng nhập là bắt buộc") @Size(max=80, message="Tên đăng nhập tối đa 80 ký tự")
     private String username;
-    @NotBlank(message="Họ tên là bắt buộc") @Size(max=160)
+    @NotBlank(message="Họ tên là bắt buộc") @Size(max=160, message="Họ tên tối đa 160 ký tự")
     private String fullName;
-    @NotBlank(message="Email là bắt buộc") @Email(message="Email không hợp lệ") @Size(max=160)
+    @NotBlank(message="Email là bắt buộc") @Email(message="Email không hợp lệ") @Size(max=160, message="Email tối đa 160 ký tự")
     private String email;
-    @Size(max=30) private String studentCode;
+    @Size(max=30, message="MSSV tối đa 30 ký tự") private String studentCode;
     private Long departmentId;
     @NotEmpty(message="Chọn ít nhất một vai trò")
     private Set<RoleName> roles = new LinkedHashSet<>();

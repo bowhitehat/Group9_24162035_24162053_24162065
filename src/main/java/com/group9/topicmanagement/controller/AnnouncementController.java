@@ -63,7 +63,7 @@ public class AnnouncementController {
                                      Authentication auth,
                                      RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
-            redirectAttributes.addFlashAttribute("errorMessage", bindingResult.getAllErrors().get(0).getDefaultMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", String.join("; ", ValidationMessages.describe(bindingResult, java.util.Map.of())));
             return "redirect:/announcements/create";
         }
         try {
@@ -125,7 +125,7 @@ public class AnnouncementController {
                                      BindingResult bindingResult,
                                      RedirectAttributes redirectAttributes) {
         if (bindingResult.hasErrors()) {
-            redirectAttributes.addFlashAttribute("errorMessage", bindingResult.getAllErrors().get(0).getDefaultMessage());
+            redirectAttributes.addFlashAttribute("errorMessage", String.join("; ", ValidationMessages.describe(bindingResult, java.util.Map.of())));
             return "redirect:/announcements/" + id + "/edit";
         }
         try {

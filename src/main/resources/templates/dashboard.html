@@ -52,7 +52,7 @@
             <div class="card metric-card">
                 <strong th:text="${registration != null ? registration.topic.title : 'Chưa đăng ký'}">Chưa đăng ký</strong>
                 <span>Đề tài / trạng thái
-                    <span th:if="${registration != null}" th:text="${registration.status}"></span>
+                    <span th:if="${registration != null}" th:text="${registration.status.displayName}"></span>
                 </span>
             </div>
         </div>

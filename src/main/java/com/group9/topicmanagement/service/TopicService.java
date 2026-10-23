@@ -121,7 +121,7 @@ public class TopicService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đợt đăng ký"));
                 
         Department department = departmentRepository.findById(form.getDepartmentId())
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy khoa"));
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bộ môn"));
 
         requireLecturerWindow(period);
 
@@ -158,7 +158,7 @@ public class TopicService {
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đợt đăng ký"));
                 
         Department department = departmentRepository.findById(form.getDepartmentId())
-                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy khoa"));
+                .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy bộ môn"));
 
         requireLecturerWindow(period);
 
@@ -281,9 +281,8 @@ public class TopicService {
     }
 
     private void requireLecturerWindow(RegistrationPeriod period) {
-        if (!isInsideLecturerWindow(period)) {
-            throw new BusinessRuleException("Ngoài thời gian giảng viên đề xuất đề tài");
-        }
+        RegistrationWindowMessages.requireWindow(period.getLecturerStart(), period.getLecturerEnd(), clock,
+                "giảng viên đề xuất đề tài");
     }
 
     private void requireUniqueCode(String code, Long periodId, Long topicId) {

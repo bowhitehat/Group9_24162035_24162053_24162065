@@ -82,19 +82,21 @@ public class RegistrationPeriodService {
     public void transition(Long id, PeriodStatus next) {
         RegistrationPeriod period = get(id);
         if (!period.getStatus().canTransitionTo(next)) {
-            throw new BusinessRuleException("Không thể chuyển từ " + period.getStatus() + " sang " + next);
+            throw new BusinessRuleException("Không thể chuyển từ " + period.getStatus().getDisplayName()
+                    + " sang " + (next == null ? "trạng thái chưa chọn" : next.getDisplayName())
+                    + ". " + period.getStatus().transitionHint());
         }
         period.setStatus(next);
     }
 
     public void requireLecturerWindow(RegistrationPeriod period) {
-        LocalDateTime now = LocalDateTime.now(clock);
-        if (now.isBefore(period.getLecturerStart()) || now.isAfter(period.getLecturerEnd())) throw new BusinessRuleException("Ngoài thời gian giảng viên đăng ký đề tài");
+        RegistrationWindowMessages.requireWindow(period.getLecturerStart(), period.getLecturerEnd(), clock,
+                "giảng viên đăng ký đề tài");
     }
 
     public void requireStudentWindow(RegistrationPeriod period) {
-        LocalDateTime now = LocalDateTime.now(clock);
-        if (now.isBefore(period.getStudentStart()) || now.isAfter(period.getStudentEnd())) throw new BusinessRuleException("Ngoài thời gian sinh viên đăng ký đề tài");
+        RegistrationWindowMessages.requireWindow(period.getStudentStart(), period.getStudentEnd(), clock,
+                "sinh viên đăng ký đề tài");
     }
 
     public void validate(RegistrationPeriod period) {

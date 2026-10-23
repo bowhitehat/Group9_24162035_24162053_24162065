@@ -20,10 +20,11 @@
                 <tr th:each="a : ${assignments}">
                     <td th:text="${a.topic.code + ' - ' + a.topic.title}"></td>
                     <td th:text="${#temporals.format(a.deadline, 'dd/MM/yyyy HH:mm')}"></td>
-                    <td th:text="${a.status}"></td>
+                    <td th:text="${a.status.displayName}"></td>
                     <td>
                         <a th:if="${gradableAssignmentIds.contains(a.id)}" th:href="@{/evaluations/topic/{id}?type=REVIEWER(id=${a.topic.id})}" class="btn btn-sm btn-primary">Chấm điểm</a>
-                        <span th:unless="${gradableAssignmentIds.contains(a.id)}" class="text-muted">Không thể chấm</span>
+                        <span th:unless="${gradableAssignmentIds.contains(a.id)}" class="text-muted"
+                              th:text="${gradingBlockReasons[a.id]}">Không thể chấm</span>
                     </td>
                 </tr>
             </tbody>

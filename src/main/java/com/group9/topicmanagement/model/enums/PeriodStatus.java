@@ -13,6 +13,24 @@ public enum PeriodStatus {
     RESULT_PUBLISHED,
     CLOSED;
 
+    public String getDisplayName() {
+        return switch (this) {
+            case DRAFT -> "Nháp";
+            case LECTURER_REGISTRATION -> "Giảng viên đăng ký đề tài";
+            case TOPIC_PUBLISHED -> "Công bố đề tài";
+            case STUDENT_REGISTRATION -> "Sinh viên đăng ký đề tài";
+            case IN_PROGRESS -> "Đang thực hiện";
+            case GRADING -> "Đang chấm điểm";
+            case RESULT_PUBLISHED -> "Đã công bố kết quả";
+            case CLOSED -> "Đã đóng đợt";
+        };
+    }
+
+    public String transitionHint() {
+        return allowedNext().isEmpty() ? "Đợt đã đóng, không còn bước chuyển tiếp."
+                : "Bước tiếp theo hợp lệ: " + allowedNext().iterator().next().getDisplayName() + ".";
+    }
+
     public boolean canTransitionTo(PeriodStatus next) {
         return allowedNext().contains(next);
     }

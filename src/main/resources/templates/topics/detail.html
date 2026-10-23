@@ -21,7 +21,7 @@
                     </div>
                 </div>
                 <div>
-                    <span class="badge fs-6" th:classappend="${topic.status.name() == 'PUBLISHED' ? 'bg-success' : (topic.status.name() == 'APPROVED' ? 'bg-info' : (topic.status.name() == 'PENDING' ? 'bg-warning text-dark' : (topic.status.name() == 'REJECTED' ? 'bg-danger' : 'bg-secondary')))}" th:text="${topic.status}"></span>
+                    <span class="badge fs-6" th:classappend="${topic.status.name() == 'PUBLISHED' ? 'bg-success' : (topic.status.name() == 'APPROVED' ? 'bg-info' : (topic.status.name() == 'PENDING' ? 'bg-warning text-dark' : (topic.status.name() == 'REJECTED' ? 'bg-danger' : 'bg-secondary')))}" th:text="${topic.status.displayName}"></span>
                 </div>
             </div>
 

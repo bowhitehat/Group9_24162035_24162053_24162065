@@ -31,7 +31,7 @@
                 <div class="card-header bg-white fw-bold">Thông tin chung</div>
                 <div class="card-body">
                     <p><strong>Trạng thái:</strong>
-                        <span th:text="${council.status}" class="badge bg-secondary"></span>
+                        <span th:text="${council.status.displayName}" class="badge bg-secondary"></span>
                     </p>
                     <p><strong>Đợt:</strong> <span th:text="${council.registrationPeriod.name}"></span></p>
                     <form sec:authorize="hasRole('FACULTY_MANAGER')" th:if="${canEditCouncil}" th:object="${updateForm}"
@@ -58,7 +58,7 @@
                 <div class="card-body">
                     <ul class="list-group mb-3">
                         <li class="list-group-item d-flex justify-content-between" th:each="m : ${members}">
-                            <span><span th:text="${m.member.fullName}"></span> - <strong th:text="${m.role}"></strong></span>
+                            <span><span th:text="${m.member.fullName}"></span> - <strong th:text="${m.role.displayName}"></strong></span>
                             <form sec:authorize="hasRole('FACULTY_MANAGER')" th:if="${canEditStructure}"
                                   th:action="@{/councils/{id}/members/{memberId}/remove(id=${council.id},memberId=${m.id})}" method="post">
                                 <button class="btn btn-sm btn-outline-danger">Xóa</button>
@@ -74,7 +74,7 @@
                                 <option th:each="gv : ${allLecturers}" th:value="${gv.id}" th:text="${gv.fullName}"></option>
                             </select>
                             <select th:field="*{role}" class="form-select" required>
-                                <option th:each="r : ${memberRoles}" th:value="${r}" th:text="${r}"></option>
+                                <option th:each="r : ${memberRoles}" th:value="${r}" th:text="${r.displayName}"></option>
                             </select>
                             <button type="submit" class="btn btn-outline-primary">Thêm</button>
                         </div>

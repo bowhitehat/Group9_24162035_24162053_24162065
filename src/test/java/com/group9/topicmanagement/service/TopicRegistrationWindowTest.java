@@ -82,7 +82,7 @@ class TopicRegistrationWindowTest {
 
         assertThatThrownBy(() -> service.registerTopic(2L, 3L, "student1"))
                 .isInstanceOf(BusinessRuleException.class)
-                .hasMessage("Chưa đến thời gian đăng ký đề tài");
+                .hasMessage("Chưa đến thời gian đăng ký đề tài. Mở từ 23/10/2026 10:00.");
         verifyNoInteractions(topics);
         verify(registrations, never()).save(any());
     }
@@ -93,7 +93,7 @@ class TopicRegistrationWindowTest {
 
         assertThatThrownBy(() -> service.registerTopic(2L, 3L, "student1"))
                 .isInstanceOf(BusinessRuleException.class)
-                .hasMessage("Đã quá thời hạn đăng ký đề tài");
+                .hasMessage("Đã quá thời hạn đăng ký đề tài. Hạn cuối là 23/10/2026 09:59.");
         verifyNoInteractions(topics);
         verify(registrations, never()).save(any());
     }
@@ -104,7 +104,8 @@ class TopicRegistrationWindowTest {
 
         assertThatThrownBy(() -> service.registerTopic(2L, 3L, "student1"))
                 .isInstanceOf(BusinessRuleException.class)
-                .hasMessage("Hiện tại không trong thời hạn đăng ký đề tài cho sinh viên");
+                .hasMessageContaining("Khoa chưa mở giai đoạn sinh viên đăng ký đề tài")
+                .hasMessageContaining("Trạng thái đợt: Nháp");
         verifyNoInteractions(topics);
         verify(registrations, never()).save(any());
     }

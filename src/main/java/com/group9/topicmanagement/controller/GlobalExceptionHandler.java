@@ -25,7 +25,13 @@ import org.slf4j.LoggerFactory;
 public class GlobalExceptionHandler {
     private static final Logger log = LoggerFactory.getLogger(GlobalExceptionHandler.class);
     @ExceptionHandler(AccessDeniedException.class) @ResponseStatus(HttpStatus.FORBIDDEN)
-    String forbidden(AccessDeniedException error, Model model) { model.addAttribute("message", error.getMessage()); return "error/403"; }
+    String forbidden(AccessDeniedException error, Model model) {
+        String message = error.getMessage();
+        model.addAttribute("message", message == null || message.equalsIgnoreCase("Access Denied")
+                ? "Tài khoản của bạn không được phép sử dụng chức năng này. Vui lòng liên hệ quản trị viên nếu cần hỗ trợ."
+                : message);
+        return "error/403";
+    }
     @ExceptionHandler(BusinessRuleException.class) @ResponseStatus(HttpStatus.BAD_REQUEST)
     String business(BusinessRuleException error, Model model) { model.addAttribute("message", error.getMessage()); return "error/400"; }
     @ExceptionHandler(NotFoundException.class) @ResponseStatus(HttpStatus.NOT_FOUND)
@@ -39,7 +45,15 @@ public class GlobalExceptionHandler {
             BindException.class, ConstraintViolationException.class, IllegalArgumentException.class})
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     String invalidInput(Exception error, Model model) {
-        model.addAttribute("message", "Dữ liệu không hợp lệ hoặc thiếu thông tin bắt buộc. Vui lòng kiểm tra lại.");
+        String message = "Dữ liệu không hợp lệ hoặc thiếu thông tin bắt buộc. Vui lòng quay lại biểu mẫu và kiểm tra các trường đã nhập.";
+        if (error instanceof BindException binding) {
+            message = String.join("; ", ValidationMessages.describe(binding.getBindingResult(), java.util.Map.of()));
+        } else if (error instanceof MissingServletRequestParameterException missing) {
+            message = "Vui lòng chọn hoặc nhập: " + ValidationMessages.label(missing.getParameterName()) + ".";
+        } else if (error instanceof MethodArgumentTypeMismatchException mismatch) {
+            message = ValidationMessages.label(mismatch.getName()) + " không hợp lệ. Vui lòng chọn hoặc nhập lại trên biểu mẫu.";
+        }
+        model.addAttribute("message", message);
         return "error/400";
     }
 

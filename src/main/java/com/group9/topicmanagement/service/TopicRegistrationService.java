@@ -60,17 +60,8 @@ public class TopicRegistrationService {
         requireEligibleGroup(group);
 
         RegistrationPeriod period = group.getRegistrationPeriod();
-        if (period.getStatus() != PeriodStatus.STUDENT_REGISTRATION) {
-            throw new BusinessRuleException("Hiện tại không trong thời hạn đăng ký đề tài cho sinh viên");
-        }
-
-        LocalDateTime now = LocalDateTime.now(clock);
-        if (now.isBefore(period.getStudentStart())) {
-            throw new BusinessRuleException("Chưa đến thời gian đăng ký đề tài");
-        }
-        if (now.isAfter(period.getStudentEnd())) {
-            throw new BusinessRuleException("Đã quá thời hạn đăng ký đề tài");
-        }
+        RegistrationWindowMessages.requireStudentPhase(period, "đăng ký đề tài");
+        RegistrationWindowMessages.requireWindow(period.getStudentStart(), period.getStudentEnd(), clock, "đăng ký đề tài");
 
         Topic topic = topicRepository.findById(topicId)
                 .orElseThrow(() -> new IllegalArgumentException("Không tìm thấy đề tài"));
@@ -94,7 +85,9 @@ public class TopicRegistrationService {
         if (groupRegistration.isPresent()) {
             TopicRegistration existingReg = groupRegistration.get();
             if (existingReg.getStatus() == RegistrationStatus.APPROVED || existingReg.getStatus() == RegistrationStatus.PENDING) {
-                throw new BusinessRuleException("Nhóm đã đăng ký đề tài trong đợt này và đang chờ duyệt hoặc đã được phê duyệt");
+                throw new BusinessRuleException(existingReg.getStatus() == RegistrationStatus.PENDING
+                        ? "Nhóm đã đăng ký đề tài và đang chờ khoa duyệt. Không thể đăng ký thêm đề tài trong đợt này."
+                        : "Nhóm đã được duyệt đăng ký đề tài. Không thể đăng ký thêm đề tài trong đợt này.");
             }
         }
 
@@ -123,11 +116,8 @@ public class TopicRegistrationService {
                 .orElseThrow(() -> new BusinessRuleException("Không tìm thấy người phê duyệt"));
 
         RegistrationPeriod period = registration.getRegistrationPeriod();
-        LocalDateTime now = LocalDateTime.now(clock);
-        if (period.getStatus() != PeriodStatus.STUDENT_REGISTRATION
-                || now.isBefore(period.getStudentStart()) || now.isAfter(period.getStudentEnd())) {
-            throw new BusinessRuleException("Chỉ được duyệt đăng ký trong giai đoạn đăng ký của sinh viên");
-        }
+        RegistrationWindowMessages.requireStudentPhase(period, "duyệt đăng ký đề tài");
+        RegistrationWindowMessages.requireWindow(period.getStudentStart(), period.getStudentEnd(), clock, "duyệt đăng ký đề tài");
         if (registration.getTopic().getStatus() != TopicStatus.PUBLISHED) {
             throw new BusinessRuleException("Chỉ được duyệt đề tài đã công bố");
         }

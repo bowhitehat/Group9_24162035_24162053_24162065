@@ -239,7 +239,8 @@ public class ReportSubmissionService {
     private void ensureReportDeadline(RegistrationPeriod period) {
         LocalDateTime deadline = effectiveReportDeadline(period);
         if (deadline != null && LocalDateTime.now(clock).isAfter(deadline)) {
-            throw new BusinessRuleException("Đã hết hạn nộp báo cáo");
+            throw new BusinessRuleException("Đã hết hạn nộp báo cáo. Hạn cuối: "
+                    + RegistrationWindowMessages.date(deadline) + ". Vui lòng liên hệ khoa nếu cần gia hạn.");
         }
     }
 

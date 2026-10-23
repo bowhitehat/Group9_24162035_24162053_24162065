@@ -30,7 +30,11 @@
             hint = `Hạn nộp điểm phải sau thời điểm hiện tại${max ? ' và không sau ' + displayDate(max) : ''}.`;
             if (value && new Date(value).getTime() <= now.getTime()) error = 'Hạn nộp điểm phải ở tương lai.';
             else if (value && max && new Date(value).getTime() > new Date(context.reviewDeadline).getTime()) error = `Hạn nộp điểm không được sau ${displayDate(max)} của đợt.`;
-            if (context.status && !['IN_PROGRESS', 'GRADING'].includes(context.status)) error = 'Đợt chưa cho phép phản biện. Chỉ phân công khi đợt ở IN_PROGRESS hoặc GRADING.';
+            if (context.status && !['IN_PROGRESS', 'GRADING'].includes(context.status)) {
+                const ended = ['RESULT_PUBLISHED', 'CLOSED'].includes(context.status);
+                error = (ended ? 'Đợt đã kết thúc giai đoạn phản biện.' : 'Đợt chưa mở giai đoạn phản biện.')
+                    + ' Chỉ được phân công khi đợt đang thực hiện hoặc đang chấm điểm.';
+            }
             if (max && max < min) hint += ' Thời hạn phản biện đã hết; không có thời điểm hợp lệ để phân công mới.';
         } else if (kind === 'announcement') {
             hint = 'Có thể để trống. Khi công bố, thời điểm hết hạn phải ở tương lai.';

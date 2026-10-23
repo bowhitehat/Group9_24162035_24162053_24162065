@@ -29,7 +29,7 @@
                     <label class="form-label">Trạng thái</label>
                     <select name="status" class="form-select" onchange="this.form.submit()">
                         <option value="">-- Tất cả trạng thái --</option>
-                        <option th:each="s : ${statuses}" th:value="${s}" th:text="${s}" th:selected="${s == selectedStatus}"></option>
+                        <option th:each="s : ${statuses}" th:value="${s}" th:text="${s.displayName}" th:selected="${s == selectedStatus}"></option>
                     </select>
                 </div>
                 <div class="col-md-3">
@@ -67,7 +67,7 @@
                         <td th:text="${reg.studentGroup.leader.fullName}"></td>
                         <td th:text="${reg.studentGroup.members.size()}"></td>
                         <td>
-                            <span class="badge" th:classappend="${reg.status.name() == 'APPROVED' ? 'bg-success' : (reg.status.name() == 'PENDING' ? 'bg-warning text-dark' : 'bg-danger')}" th:text="${reg.status}"></span>
+                            <span class="badge" th:classappend="${reg.status.name() == 'APPROVED' ? 'bg-success' : (reg.status.name() == 'PENDING' ? 'bg-warning text-dark' : 'bg-danger')}" th:text="${reg.status.displayName}"></span>
                         </td>
                         <td>
                             <a th:href="@{/reports/history/{id}(id=${reg.id})}" class="btn btn-sm btn-outline-info">Xem báo cáo</a>

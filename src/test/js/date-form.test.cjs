@@ -34,6 +34,16 @@ test('course reviewer deadline has no artificial period maximum', () => {
     assert.equal(rules('reviewer', '2026-11-01T08:00', {...review, type: 'MON_HOC'}, now).error, '');
     assert.equal(rules('reviewer', '', {...review, type: 'MON_HOC'}, now).max, '');
 });
+test('reviewer phase messages distinguish unopened and already closed periods', () => {
+    for (const status of ['DRAFT', 'LECTURER_REGISTRATION', 'TOPIC_PUBLISHED', 'STUDENT_REGISTRATION']) {
+        assert.match(rules('reviewer', '', {...review, status}, now).error, /chưa mở/);
+    }
+    for (const status of ['RESULT_PUBLISHED', 'CLOSED']) {
+        const error = rules('reviewer', '', {...review, status}, now).error;
+        assert.match(error, /đã kết thúc/);
+        assert.doesNotMatch(error, /chưa mở|IN_PROGRESS|GRADING/);
+    }
+});
 test('announcement draft can have past expiration; publishing cannot', () => {
     assert.equal(rules('announcement', '2026-10-10T10:00', {publish: false}, now).error, '');
     assert.ok(rules('announcement', '2026-10-10T10:00', {publish: true}, now).error);

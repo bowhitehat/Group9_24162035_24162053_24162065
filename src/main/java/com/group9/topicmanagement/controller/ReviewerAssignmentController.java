@@ -70,7 +70,10 @@ public class ReviewerAssignmentController {
     public String myAssignments(Authentication auth, Model model) {
         var assignments = assignmentService.getMyAssignments(auth.getName());
         model.addAttribute("assignments", assignments);
-        model.addAttribute("gradableAssignmentIds", assignmentService.gradableAssignmentIds(assignments));
+        var blockedReasons = assignmentService.gradingBlockReasons(assignments);
+        model.addAttribute("gradingBlockReasons", blockedReasons);
+        model.addAttribute("gradableAssignmentIds", assignments.stream().map(a -> a.getId())
+                .filter(id -> !blockedReasons.containsKey(id)).collect(java.util.stream.Collectors.toSet()));
         return "reviewer_assignments/my-assignments";
     }
 
@@ -136,7 +139,7 @@ public class ReviewerAssignmentController {
 
     private String firstError(BindingResult bindingResult) {
         return bindingResult.getAllErrors().isEmpty()
-                ? "Thông tin nhập không hợp lệ"
-                : bindingResult.getAllErrors().get(0).getDefaultMessage();
+                ? "Vui lòng kiểm tra thông tin phân công phản biện đã nhập."
+                : String.join("; ", ValidationMessages.describe(bindingResult, java.util.Map.of()));
     }
 }

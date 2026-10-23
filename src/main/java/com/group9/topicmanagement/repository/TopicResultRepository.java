@@ -15,6 +15,7 @@ import java.util.Collection;
 @Repository
 public interface TopicResultRepository extends JpaRepository<TopicResult, Long> {
     boolean existsByTopicId(Long topicId);
+    List<TopicResult> findByTopicIdIn(Collection<Long> topicIds);
     @EntityGraph(attributePaths = {"topic", "topic.registrationPeriod", "confirmer", "publisher"})
     Optional<TopicResult> findByTopicId(Long topicId);
 

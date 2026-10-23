@@ -48,11 +48,15 @@ const scripts = path.resolve(__dirname, '../../main/resources/static/js');
         await load(`<form data-date-form="reviewer"><select data-date-context>
             <option value="1" data-type="KLTN" data-status="GRADING" data-review-deadline="2026-10-30T17:00:00">KLTN</option>
             <option value="2" data-type="KLTN" data-status="DRAFT" data-review-deadline="2026-10-30T17:00:00">Draft</option>
+            <option value="3" data-type="KLTN" data-status="CLOSED" data-review-deadline="2026-10-30T17:00:00">Closed</option>
             </select><input name="deadline" type="datetime-local" required><button>Lưu</button></form>`);
         await page.locator('input[type="text"]').fill('11/10/2026 15:30'); assert.equal(await invalid(), true);
         await page.locator('input[type="text"]').fill('30/10/2026 17:01'); assert.equal(await invalid(), true);
         await page.locator('input[type="text"]').fill('30/10/2026 17:00'); assert.equal(await invalid(), false);
         await page.locator('select').selectOption('2'); assert.equal(await invalid(), true);
+        assert.match(await page.locator('.invalid-feedback').textContent(), /chưa mở/);
+        await page.locator('select').selectOption('3'); assert.equal(await invalid(), true);
+        assert.match(await page.locator('.invalid-feedback').textContent(), /đã kết thúc/);
         await page.locator('select').selectOption('1'); assert.equal(await invalid(), false);
 
         await load(`<form data-date-form="announcement"><input type="datetime-local" name="expirationTime">

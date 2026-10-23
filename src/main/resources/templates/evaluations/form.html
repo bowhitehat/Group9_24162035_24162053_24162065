@@ -7,12 +7,17 @@
         <h4>Chấm điểm Đề tài</h4>
         <p class="text-muted" th:text="${topic.code + ' - ' + topic.title}"></p>
         <p>Vai trò: <span th:text="${evalType}" class="fw-bold"></span></p>
-        <p>Trạng thái phiếu chấm: <span th:text="${evaluation.status != null ? evaluation.status : 'DRAFT'}" class="badge bg-info"></span></p>
+        <p>Trạng thái phiếu chấm: <span th:text="${evaluation.status != null ? evaluation.status.displayName : 'Nháp'}" class="badge bg-info"></span></p>
         <a th:if="${reportRegistrationId != null}" class="btn btn-outline-primary"
            th:href="@{/reports/history/{id}(id=${reportRegistrationId})}">Xem / tải báo cáo của nhóm</a>
     </div>
     <div class="card shadow-sm">
         <div class="card-body p-4">
+            <div class="alert alert-info" th:if="${editingBlockReason != null}" th:text="${editingBlockReason}" role="status"></div>
+            <div class="alert alert-danger" th:if="${validationMessages != null}" role="alert">
+                <p>Chưa thể lưu phiếu chấm. Vui lòng kiểm tra:</p>
+                <ul class="mb-0"><li th:each="message : ${validationMessages}" th:text="${message}"></li></ul>
+            </div>
             <form th:action="@{/evaluations/topic/{id}(id=${topic.id})}" th:object="${formDto}" method="post">
                 <input type="hidden" th:field="*{type}" />
                 <table class="table table-bordered">
@@ -45,7 +50,7 @@
                     <textarea th:field="*{comments}" class="form-control" rows="3" th:disabled="${!canEdit}"></textarea>
                 </div>
                 <div th:if="${canEdit}">
-                    <button type="submit" class="btn btn-secondary">Lưu nháp</button>
+                    <button type="submit" class="btn btn-secondary" formnovalidate>Lưu nháp</button>
                     <button type="submit" name="submitAction" value="true" class="btn btn-primary" onclick="return confirm('Nộp điểm?')">Nộp điểm</button>
                 </div>
             </form>

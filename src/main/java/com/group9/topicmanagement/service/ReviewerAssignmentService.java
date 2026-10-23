@@ -21,6 +21,8 @@ import org.springframework.transaction.annotation.Isolation;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.stream.Collectors;
 
 @Service
@@ -31,6 +33,8 @@ public class ReviewerAssignmentService {
     private final UserRepository userRepository;
     private final TopicRegistrationService topicRegistrationService;
     private final TransactionalNotificationService notifications;
+    private final com.group9.topicmanagement.repository.EvaluationRepository evaluations;
+    private final com.group9.topicmanagement.repository.TopicResultRepository results;
     @org.springframework.beans.factory.annotation.Value("${app.base-url:http://localhost:8090}")
     private String baseUrl;
 
@@ -38,12 +42,16 @@ public class ReviewerAssignmentService {
                                      TopicRepository topicRepository,
                                      UserRepository userRepository,
                                      TopicRegistrationService topicRegistrationService,
-                                     TransactionalNotificationService notifications) {
+                                     TransactionalNotificationService notifications,
+                                     com.group9.topicmanagement.repository.EvaluationRepository evaluations,
+                                     com.group9.topicmanagement.repository.TopicResultRepository results) {
         this.assignmentRepository = assignmentRepository;
         this.topicRepository = topicRepository;
         this.userRepository = userRepository;
         this.topicRegistrationService = topicRegistrationService;
         this.notifications = notifications;
+        this.evaluations = evaluations;
+        this.results = results;
     }
 
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
@@ -73,7 +81,7 @@ public class ReviewerAssignmentService {
 
         PeriodStatus periodStatus = topic.getRegistrationPeriod().getStatus();
         if (periodStatus != PeriodStatus.IN_PROGRESS && periodStatus != PeriodStatus.GRADING) {
-            throw new BusinessRuleException("Đợt đăng ký chưa trong giai đoạn cho phép phản biện");
+            throw new BusinessRuleException(RegistrationWindowMessages.reviewerPhase(periodStatus));
         }
 
         validateDeadline(topic.getRegistrationPeriod(), deadline);
@@ -169,13 +177,37 @@ public class ReviewerAssignmentService {
 
     @Transactional(readOnly = true)
     public Set<Long> gradableAssignmentIds(List<ReviewerAssignment> assignments) {
-        LocalDateTime now = LocalDateTime.now();
-        return assignments.stream()
-                .filter(a -> a.getStatus() != ReviewerAssignmentStatus.CANCELLED)
-                .filter(a -> a.getStatus() != ReviewerAssignmentStatus.OVERDUE)
-                .filter(a -> a.getDeadline() == null || !now.isAfter(a.getDeadline()))
+        Map<Long, String> blocked = gradingBlockReasons(assignments);
+        return assignments.stream().filter(a -> !blocked.containsKey(a.getId()))
                 .map(ReviewerAssignment::getId)
                 .collect(Collectors.toSet());
+    }
+
+    @Transactional(readOnly = true)
+    public Map<Long, String> gradingBlockReasons(List<ReviewerAssignment> assignments) {
+        Map<Long, String> blocked = new HashMap<>();
+        if (assignments.isEmpty()) return blocked;
+        var lockedIds = evaluations.findByReviewerAssignmentIdIn(assignments.stream().map(ReviewerAssignment::getId).toList())
+                .stream().filter(e -> e.getStatus() == com.group9.topicmanagement.model.enums.EvaluationStatus.LOCKED)
+                .map(e -> e.getReviewerAssignment().getId()).collect(Collectors.toSet());
+        var finalTopicIds = results.findByTopicIdIn(assignments.stream().map(a -> a.getTopic().getId()).distinct().toList())
+                .stream().filter(r -> r.getStatus() == com.group9.topicmanagement.model.enums.TopicResultStatus.CONFIRMED
+                        || r.getStatus() == com.group9.topicmanagement.model.enums.TopicResultStatus.PUBLISHED)
+                .map(r -> r.getTopic().getId()).collect(Collectors.toSet());
+        LocalDateTime now = LocalDateTime.now();
+        for (var assignment : assignments) {
+            String reason = null;
+            if (assignment.getStatus() == ReviewerAssignmentStatus.CANCELLED) reason = "Phân công phản biện của bạn đã bị hủy.";
+            else if (lockedIds.contains(assignment.getId())) reason = "Phiếu chấm đã được khoa khóa; chỉ được xem, không thể sửa hoặc nộp lại.";
+            else if (finalTopicIds.contains(assignment.getTopic().getId())) reason = "Kết quả đã được xác nhận hoặc công bố; không thể sửa phiếu chấm.";
+            else if (assignment.getStatus() == ReviewerAssignmentStatus.OVERDUE
+                    || (assignment.getDeadline() != null && now.isAfter(assignment.getDeadline()))) {
+                reason = "Đã quá hạn nộp điểm phản biện. Hạn cuối: " + RegistrationWindowMessages.date(assignment.getDeadline())
+                        + ". Vui lòng liên hệ khoa nếu cần gia hạn.";
+            }
+            if (reason != null) blocked.put(assignment.getId(), reason);
+        }
+        return blocked;
     }
 
     @Transactional(readOnly = true)
@@ -235,7 +267,7 @@ public class ReviewerAssignmentService {
         ReviewerAssignment assignment = assignmentRepository.findByTopicIdAndReviewerId(topicId, reviewerId)
                 .orElseThrow(() -> new BusinessRuleException("Không được chấm đề tài chưa được phân công"));
         if (assignment.getStatus() == ReviewerAssignmentStatus.CANCELLED) {
-            throw new BusinessRuleException("Không được chấm đề tài chưa được phân công");
+            throw new BusinessRuleException("Phân công phản biện của bạn đã bị hủy. Không thể chấm hoặc nộp điểm cho phân công này.");
         }
         return assignment;
     }
@@ -262,7 +294,8 @@ public class ReviewerAssignmentService {
         if ((period.getType() == PeriodType.TLCN || period.getType() == PeriodType.KLTN)
                 && period.getReviewDeadline() != null
                 && deadline.isAfter(period.getReviewDeadline())) {
-            throw new BusinessRuleException("Hạn nộp điểm không được sau hạn GVPB của đợt");
+            throw new BusinessRuleException("Hạn nộp điểm không được sau hạn phản biện của đợt: "
+                    + RegistrationWindowMessages.date(period.getReviewDeadline()) + ".");
         }
     }
 

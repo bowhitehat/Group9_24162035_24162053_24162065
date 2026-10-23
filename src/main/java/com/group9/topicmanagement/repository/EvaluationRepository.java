@@ -28,6 +28,7 @@ public interface EvaluationRepository extends JpaRepository<Evaluation, Long> {
     @EntityGraph(attributePaths = {"evaluator"})
     List<Evaluation> findByTopicId(Long topicId);
     List<Evaluation> findByEvaluatorId(Long evaluatorId);
+    List<Evaluation> findByReviewerAssignmentIdIn(List<Long> assignmentIds);
     Optional<Evaluation> findByTopicIdAndEvaluatorIdAndEvaluationType(Long topicId, Long evaluatorId, EvaluationType evaluationType);
 
     long countByTopicIdAndStatusIn(Long topicId, List<EvaluationStatus> statuses);

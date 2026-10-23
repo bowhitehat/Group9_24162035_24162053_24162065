@@ -176,11 +176,11 @@ class Member3BusinessRulesTest {
         councilService.addMember(council.getId(), lecturer1.getId(), CouncilMemberRole.CHAIR);
         assertThatThrownBy(() -> councilService.addMember(council.getId(), lecturer2.getId(), CouncilMemberRole.CHAIR))
                 .isInstanceOf(BusinessRuleException.class)
-                .hasMessageContaining("CHAIR");
+                .hasMessageContaining("Chủ tịch");
         councilService.addMember(council.getId(), lecturer2.getId(), CouncilMemberRole.SECRETARY);
         assertThatThrownBy(() -> councilService.addMember(council.getId(), lecturer3.getId(), CouncilMemberRole.SECRETARY))
                 .isInstanceOf(BusinessRuleException.class)
-                .hasMessageContaining("SECRETARY");
+                .hasMessageContaining("Thư ký");
         councilService.addMember(council.getId(), lecturer3.getId(), CouncilMemberRole.MEMBER);
         councilService.addMember(council.getId(), lecturer4.getId(), CouncilMemberRole.MEMBER);
         User extra = userService.create("lecturer5", "GV E", "lec5@test.local", null, dept.getId(), Set.of(RoleName.LECTURER), "Password@123");
@@ -603,6 +603,61 @@ class Member3BusinessRulesTest {
         BigDecimal avg = new BigDecimal("8.125").add(new BigDecimal("8.125"))
                 .divide(BigDecimal.valueOf(2), 2, RoundingMode.HALF_UP);
         assertThat(avg).isEqualTo(new BigDecimal("8.13"));
+    }
+
+    @Test
+    void invalidScoreShowsCriterionNameAndKeepsInputWithoutSaving() throws Exception {
+        Topic topic = preparedApprovedTopic(); seedCriteria();
+        reviewerAssignmentService.assignReviewer(topic.getId(), lecturer2.getId(), facultyManager.getUsername(), LocalDateTime.now().plusDays(2));
+        var criterion = criteria.findByRegistrationPeriodIdAndIsActiveTrueOrderByDisplayOrderAsc(period.getId()).getFirst();
+        String html = mvc.perform(org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post("/evaluations/topic/" + topic.getId())
+                        .with(user(lecturer2.getUsername()).roles("LECTURER"))
+                        .with(org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf())
+                        .param("type", "REVIEWER").param("scores[" + criterion.getId() + "]", "11")
+                        .param("comments", "Nhận xét cần giữ lại"))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(org.springframework.web.util.HtmlUtils.htmlUnescape(html))
+                .contains("Điểm Nội dung", "0 đến 10", "Nhận xét cần giữ lại", "value=\"11\"");
+        assertThat(evaluations.findByTopicId(topic.getId())).isEmpty();
+    }
+
+    @Test
+    void missingMandatoryScoreNamesTheCriterionAndRollsBack() {
+        Topic topic = preparedApprovedTopic(); seedCriteria();
+        reviewerAssignmentService.assignReviewer(topic.getId(), lecturer2.getId(), facultyManager.getUsername(), LocalDateTime.now().plusDays(2));
+        authenticate(lecturer2.getUsername(), "LECTURER");
+        var form = new com.group9.topicmanagement.dto.EvaluationSubmitDto();
+        form.setType(EvaluationType.REVIEWER); form.setSubmitAction(true);
+        assertThatThrownBy(() -> evaluationService.saveEvaluation(topic.getId(), lecturer2.getUsername(), form))
+                .isInstanceOf(BusinessRuleException.class).hasMessageContaining("tiêu chí: Nội dung");
+        assertThat(evaluations.findByTopicId(topic.getId())).isEmpty();
+    }
+
+    @Test
+    void lockedReviewerListAndFormExplainWhyEditingIsDisabled() throws Exception {
+        Topic topic = preparedApprovedTopic(); seedCriteria();
+        reviewerAssignmentService.assignReviewer(topic.getId(), lecturer2.getId(), facultyManager.getUsername(), LocalDateTime.now().plusDays(2));
+        authenticate(lecturer2.getUsername(), "LECTURER");
+        var ballot = evaluationService.saveDraft(topic.getId(), lecturer2.getUsername(), EvaluationType.REVIEWER, fullScores("8"), "tốt");
+        evaluationService.submitEvaluation(ballot.getId());
+        authenticate(facultyManager.getUsername(), "FACULTY_MANAGER"); evaluationService.lockEvaluation(ballot.getId());
+        String list = mvc.perform(get("/reviewer-assignments/my-assignments")
+                        .with(user(lecturer2.getUsername()).roles("LECTURER")))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(list).contains("được khoa khóa").doesNotContain(">Chấm điểm</a>");
+        String form = mvc.perform(get("/evaluations/topic/" + topic.getId()).param("type", "REVIEWER")
+                        .with(user(lecturer2.getUsername()).roles("LECTURER")))
+                .andExpect(status().isOk()).andReturn().getResponse().getContentAsString();
+        assertThat(form).contains("được khoa khóa", "Đã khóa").doesNotContain(">Nộp điểm</button>");
+    }
+
+    @Test
+    void forbiddenPageKeepsBusinessExplanationButDoesNotRenderItAsHtml() throws Exception {
+        Topic topic = preparedApprovedTopic();
+        String html = mvc.perform(get("/evaluations/topic/" + topic.getId()).param("type", "REVIEWER")
+                        .with(user(lecturer3.getUsername()).roles("LECTURER")))
+                .andExpect(status().isForbidden()).andReturn().getResponse().getContentAsString();
+        assertThat(html).contains("Không được chấm đề tài chưa được phân công");
     }
 
     protected Topic preparedApprovedTopic() {

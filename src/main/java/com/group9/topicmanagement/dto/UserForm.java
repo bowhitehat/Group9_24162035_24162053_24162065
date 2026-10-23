@@ -9,10 +9,10 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 public class UserForm {
-    @NotBlank(message = "Tên đăng nhập là bắt buộc") @Size(max = 80) private String username;
-    @NotBlank(message = "Họ tên là bắt buộc") @Size(max = 160) private String fullName;
-    @NotBlank(message = "Email là bắt buộc") @Email(message = "Email không hợp lệ") @Size(max = 160) private String email;
-    @Size(max = 30) private String studentCode;
+    @NotBlank(message = "Tên đăng nhập là bắt buộc") @Size(max = 80, message = "Tên đăng nhập tối đa 80 ký tự") private String username;
+    @NotBlank(message = "Họ tên là bắt buộc") @Size(max = 160, message = "Họ tên tối đa 160 ký tự") private String fullName;
+    @NotBlank(message = "Email là bắt buộc") @Email(message = "Email không hợp lệ") @Size(max = 160, message = "Email tối đa 160 ký tự") private String email;
+    @Size(max = 30, message = "MSSV tối đa 30 ký tự") private String studentCode;
     private Long departmentId;
     @NotEmpty(message = "Chọn ít nhất một vai trò") private Set<RoleName> roles = new LinkedHashSet<>();
     @NotBlank(message = "Mật khẩu là bắt buộc") @Size(min = 8, message = "Mật khẩu tối thiểu 8 ký tự") private String password;

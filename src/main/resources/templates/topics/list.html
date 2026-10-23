@@ -32,7 +32,7 @@
                     <label class="form-label">Trạng thái</label>
                     <select name="status" class="form-select" onchange="this.form.submit()">
                         <option value="">-- Tất cả trạng thái --</option>
-                        <option th:each="s : ${statuses}" th:value="${s}" th:text="${s}" th:selected="${s == selectedStatus}"></option>
+                        <option th:each="s : ${statuses}" th:value="${s}" th:text="${s.displayName}" th:selected="${s == selectedStatus}"></option>
                     </select>
                 </div>
                 <div class="col-md-3">
@@ -68,7 +68,7 @@
                         <td th:text="${topic.department != null ? topic.department.name : ''}"></td>
                         <td th:text="${topic.proposer != null ? topic.proposer.fullName : ''}"></td>
                         <td>
-                            <span class="badge" th:classappend="${topic.status.name() == 'PUBLISHED' ? 'bg-success' : (topic.status.name() == 'APPROVED' ? 'bg-info' : (topic.status.name() == 'PENDING' ? 'bg-warning text-dark' : (topic.status.name() == 'REJECTED' ? 'bg-danger' : 'bg-secondary')))}" th:text="${topic.status}"></span>
+                            <span class="badge" th:classappend="${topic.status.name() == 'PUBLISHED' ? 'bg-success' : (topic.status.name() == 'APPROVED' ? 'bg-info' : (topic.status.name() == 'PENDING' ? 'bg-warning text-dark' : (topic.status.name() == 'REJECTED' ? 'bg-danger' : 'bg-secondary')))}" th:text="${topic.status.displayName}"></span>
                         </td>
                         <td>
                             <a th:href="@{/topics/detail/{id}(id=${topic.id})}" class="btn btn-sm btn-outline-primary">Chi tiết</a>

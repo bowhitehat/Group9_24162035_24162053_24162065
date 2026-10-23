@@ -257,7 +257,7 @@ class Member2BusinessRulesTest {
 
         assertThatThrownBy(() -> groupService.addMember(group.getId(), student2.getUsername(), student1.getUsername()))
                 .isInstanceOf(BusinessRuleException.class)
-                .hasMessageContaining("Ngoài giai đoạn");
+                .hasMessageContaining("Đã kết thúc giai đoạn sinh viên đăng ký đề tài");
         assertThat(groupService.getGroupById(group.getId()).getMembers()).hasSize(1);
     }
 
@@ -484,7 +484,7 @@ class Member2BusinessRulesTest {
 
         assertThatThrownBy(() -> topicService.createTopic(topicForm("DT07", "Đề tài trễ hạn"), lecturer1.getUsername()))
                 .isInstanceOf(BusinessRuleException.class)
-                .hasMessageContaining("Ngoài thời gian giảng viên");
+                .hasMessageContaining("Đã quá thời hạn giảng viên đề xuất đề tài");
     }
 
     @Test

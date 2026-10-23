@@ -129,7 +129,7 @@ public class EvaluationService {
             throw new BusinessRuleException("Phiếu chấm thuộc hội đồng cũ; không được ghi đè lịch sử điểm");
         }
         if (evaluation.getStatus() == EvaluationStatus.LOCKED) {
-            throw new BusinessRuleException("Đánh giá đã bị khóa, không thể sửa");
+            throw new BusinessRuleException("Phiếu chấm đã được khoa khóa; bạn chỉ có thể xem, không thể sửa hoặc nộp lại.");
         }
 
         if (evaluation.getStatus() == EvaluationStatus.SUBMITTED) {
@@ -218,7 +218,7 @@ public class EvaluationService {
         }
 
         if (evaluation.getStatus() != EvaluationStatus.DRAFT && evaluation.getStatus() != EvaluationStatus.SUBMITTED) {
-            throw new BusinessRuleException("Chỉ phiếu DRAFT hoặc SUBMITTED mới có thể nộp");
+            throw new BusinessRuleException("Phiếu chấm đã bị khóa; không thể nộp lại. Vui lòng liên hệ khoa nếu cần hỗ trợ.");
         }
 
         List<EvaluationCriterion> criteria = criterionRepository
@@ -230,7 +230,8 @@ public class EvaluationService {
             if (Boolean.TRUE.equals(criterion.getIsMandatory())) {
                 boolean hasScore = scores.stream().anyMatch(s -> s.getCriterion().getId().equals(criterion.getId()));
                 if (!hasScore) {
-                    throw new BusinessRuleException("Chưa chấm đủ các tiêu chí bắt buộc");
+                    throw new BusinessRuleException("Chưa chấm đủ các tiêu chí bắt buộc. Vui lòng nhập điểm cho tiêu chí: "
+                            + criterion.getName() + ".");
                 }
             }
         }
@@ -307,16 +308,21 @@ public class EvaluationService {
 
     @Transactional(readOnly = true)
     public boolean canEdit(Long topicId, String evaluatorUsername, EvaluationType type, Evaluation evaluation) {
+        return editingBlockReason(topicId, evaluatorUsername, type, evaluation) == null;
+    }
+
+    @Transactional(readOnly = true)
+    public String editingBlockReason(Long topicId, String evaluatorUsername, EvaluationType type, Evaluation evaluation) {
         if (evaluation.getStatus() == EvaluationStatus.LOCKED) {
-            return false;
+            return "Phiếu chấm đã được khoa khóa; bạn chỉ có thể xem, không thể sửa hoặc nộp lại.";
         }
         try {
             User evaluator = userRepository.findByUsernameIgnoreCase(evaluatorUsername)
                     .orElseThrow(() -> new NotFoundException("Không tìm thấy người đánh giá"));
             requireEditableContext(topicId, evaluator, type);
-            return true;
+            return null;
         } catch (BusinessRuleException | AccessDeniedException ex) {
-            return false;
+            return ex.getMessage();
         }
     }
 
@@ -359,14 +365,15 @@ public class EvaluationService {
         if (resultRepository.findByTopicId(topicId)
                 .map(result -> result.getStatus() == TopicResultStatus.CONFIRMED
                         || result.getStatus() == TopicResultStatus.PUBLISHED).orElse(false)) {
-            throw new BusinessRuleException("Kết quả đã xác nhận hoặc công bố, không thể sửa phiếu chấm");
+            throw new BusinessRuleException("Kết quả đã xác nhận hoặc công bố, không thể sửa phiếu chấm. Vui lòng liên hệ khoa nếu cần điều chỉnh.");
         }
         EvaluationContext context = requireAssignedContext(topicId, evaluator, type);
         if (type == EvaluationType.REVIEWER) {
             ReviewerAssignment assignment = context.reviewerAssignment();
             if (assignment.getStatus() == ReviewerAssignmentStatus.OVERDUE
                     || (assignment.getDeadline() != null && LocalDateTime.now().isAfter(assignment.getDeadline()))) {
-                throw new BusinessRuleException("Đã quá hạn nộp điểm phản biện");
+                throw new BusinessRuleException("Đã quá hạn nộp điểm phản biện. Hạn cuối: "
+                        + RegistrationWindowMessages.date(assignment.getDeadline()) + ". Vui lòng liên hệ khoa nếu cần gia hạn.");
             }
         } else {
             CouncilMember member = context.councilMember();

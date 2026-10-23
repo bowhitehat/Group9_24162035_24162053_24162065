@@ -242,8 +242,8 @@ public class CouncilController {
 
     private String firstError(BindingResult bindingResult) {
         return bindingResult.getAllErrors().isEmpty()
-                ? "Thông tin nhập không hợp lệ"
-                : bindingResult.getAllErrors().get(0).getDefaultMessage();
+                ? "Vui lòng kiểm tra thông tin hội đồng đã nhập."
+                : String.join("; ", ValidationMessages.describe(bindingResult, java.util.Map.of()));
     }
 
     private boolean hasRole(Authentication authentication, String role) {

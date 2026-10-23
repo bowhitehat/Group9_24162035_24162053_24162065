@@ -27,7 +27,7 @@
             <div class="card shadow-sm h-100">
                 <div class="card-body">
                     <p><strong>Điểm tổng kết:</strong> <span class="fs-4 text-primary" th:text="${result.finalScore != null ? result.finalScore : 'Chưa có'}"></span></p>
-                    <p><strong>Trạng thái:</strong> <span class="badge bg-secondary" th:text="${result.status != null ? result.status : 'Chưa tính điểm'}"></span></p>
+                    <p><strong>Trạng thái:</strong> <span class="badge bg-secondary" th:text="${result.status != null ? result.status.displayName : 'Chưa tính điểm'}"></span></p>
                     <p th:if="${result.confirmer != null}"><strong>Người xác nhận:</strong> <span th:text="${result.confirmer.fullName}"></span></p>
                     <p th:if="${result.publisher != null}"><strong>Người công bố:</strong> <span th:text="${result.publisher.fullName}"></span></p>
                 </div>
@@ -52,9 +52,9 @@
                 <tbody>
                 <tr th:each="eval : ${evaluations}">
                     <td th:text="${eval.evaluator.fullName}"></td>
-                    <td th:text="${eval.evaluationType}"></td>
+                    <td th:text="${eval.evaluationType.displayName}"></td>
                     <td>
-                        <span class="badge bg-secondary" th:text="${eval.status}"></span>
+                        <span class="badge bg-secondary" th:text="${eval.status.displayName}"></span>
                     </td>
                     <td th:text="${eval.submissionTime != null ? #temporals.format(eval.submissionTime, 'dd/MM/yyyy HH:mm') : ''}"></td>
                     <td>

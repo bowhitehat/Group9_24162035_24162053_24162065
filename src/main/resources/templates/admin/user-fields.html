@@ -5,6 +5,6 @@
 <label for="email" class="form-label">Email</label><input class="form-control mb-2" required type="email" maxlength="160" th:errorclass="is-invalid" th:field="*{email}">
 <label for="studentCode" class="form-label">MSSV (nếu có)</label><input class="form-control mb-2" maxlength="30" th:errorclass="is-invalid" th:field="*{studentCode}">
 <label for="departmentId" class="form-label">Bộ môn</label><select class="form-select mb-2" th:field="*{departmentId}"><option value="">Không chọn bộ môn</option><option th:each="d:${departments}" th:value="${d.id}" th:text="${d.code+' · '+d.name}"></option></select>
-<label for="roles" class="form-label">Vai trò</label><select class="form-select mb-2" required th:errorclass="is-invalid" th:field="*{roles}" multiple size="4" aria-describedby="roles-help"><option th:each="r:${roleNames}" th:value="${r}" th:text="${r}"></option></select>
+<label for="roles" class="form-label">Vai trò</label><select class="form-select mb-2" required th:errorclass="is-invalid" th:field="*{roles}" multiple size="4" aria-describedby="roles-help"><option th:each="r:${roleNames}" th:value="${r}" th:text="${r.displayName}"></option></select>
 <p class="form-text" id="roles-help">Có thể chọn nhiều quyền. GVHD, phản biện và chủ tịch được xác định bằng phân công.</p>
 </div></body></html>

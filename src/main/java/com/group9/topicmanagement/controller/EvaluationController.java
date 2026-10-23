@@ -65,7 +65,7 @@ public class EvaluationController {
         model.addAttribute("criteria", evaluationService.getActiveCriteria(topic.getRegistrationPeriod().getId()));
         model.addAttribute("evaluation", evaluation.getId() == null ? new Evaluation() : evaluation);
         model.addAttribute("existingScores", scores);
-        model.addAttribute("evalType", evaluationType.name());
+        model.addAttribute("evalType", evaluationType.getDisplayName());
 
         com.group9.topicmanagement.dto.EvaluationSubmitDto form = new com.group9.topicmanagement.dto.EvaluationSubmitDto();
         form.setType(evaluationType);
@@ -77,7 +77,9 @@ public class EvaluationController {
         form.setScores(scoreMap);
         model.addAttribute("formDto", form);
 
-        model.addAttribute("canEdit", evaluationService.canEdit(topicId, auth.getName(), evaluationType, evaluation));
+        String editingBlockReason = evaluationService.editingBlockReason(topicId, auth.getName(), evaluationType, evaluation);
+        model.addAttribute("canEdit", editingBlockReason == null);
+        model.addAttribute("editingBlockReason", editingBlockReason);
         return "evaluations/form";
     }
 
@@ -87,11 +89,18 @@ public class EvaluationController {
                                  @jakarta.validation.Valid @org.springframework.web.bind.annotation.ModelAttribute("formDto") com.group9.topicmanagement.dto.EvaluationSubmitDto formDto,
                                  org.springframework.validation.BindingResult bindingResult,
                                  Authentication auth,
-                                 RedirectAttributes redirectAttributes) {
+                                 RedirectAttributes redirectAttributes, Model model) {
         if (bindingResult.hasErrors()) {
-            redirectAttributes.addFlashAttribute("errorMessage", "Thông tin nhập không hợp lệ");
             String type = formDto.getType() == null ? EvaluationType.REVIEWER.name() : formDto.getType().name();
-            return "redirect:/evaluations/topic/" + topicId + "?type=" + type;
+            String view = showEvaluationForm(topicId, type, auth, model);
+            Map<String, String> labels = new java.util.HashMap<>();
+            for (var criterion : evaluationService.getActiveCriteria(((Topic) model.getAttribute("topic")).getRegistrationPeriod().getId())) {
+                labels.put("scores[" + criterion.getId() + "]", "Điểm " + criterion.getName());
+            }
+            model.addAttribute("formDto", formDto);
+            model.addAttribute(org.springframework.validation.BindingResult.MODEL_KEY_PREFIX + "formDto", bindingResult);
+            model.addAttribute("validationMessages", ValidationMessages.describe(bindingResult, labels));
+            return view;
         }
         try {
             evaluationService.saveEvaluation(topicId, auth.getName(), formDto);
@@ -100,7 +109,7 @@ public class EvaluationController {
             } else {
                 redirectAttributes.addFlashAttribute("successMessage", "Lưu nháp thành công!");
             }
-        } catch (BusinessRuleException | IllegalArgumentException e) {
+        } catch (BusinessRuleException e) {
             redirectAttributes.addFlashAttribute("errorMessage", e.getMessage());
         }
         return "redirect:/evaluations/topic/" + topicId + "?type=" + formDto.getType().name();

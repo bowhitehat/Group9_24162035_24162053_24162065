@@ -22,7 +22,7 @@ public class TopicForm {
     
     private String requirement;
 
-    @NotNull(message = "Khoa phụ trách không được để trống")
+    @NotNull(message = "Vui lòng chọn bộ môn phụ trách đề tài")
     private Long departmentId;
 
     @NotNull(message = "Đợt đăng ký không được để trống")

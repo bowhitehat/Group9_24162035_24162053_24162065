@@ -11,10 +11,10 @@ import java.time.LocalDateTime;
 public class PeriodForm {
     @NotBlank(message = "Tên đợt là bắt buộc") private String name;
     @NotNull(message = "Loại đợt là bắt buộc") private PeriodType type;
-    @NotNull @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm") private LocalDateTime lecturerStart;
-    @NotNull @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm") private LocalDateTime lecturerEnd;
-    @NotNull @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm") private LocalDateTime studentStart;
-    @NotNull @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm") private LocalDateTime studentEnd;
+    @NotNull(message = "Vui lòng nhập thời gian giảng viên bắt đầu đăng ký") @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm") private LocalDateTime lecturerStart;
+    @NotNull(message = "Vui lòng nhập thời gian giảng viên kết thúc đăng ký") @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm") private LocalDateTime lecturerEnd;
+    @NotNull(message = "Vui lòng nhập thời gian sinh viên bắt đầu đăng ký") @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm") private LocalDateTime studentStart;
+    @NotNull(message = "Vui lòng nhập thời gian sinh viên kết thúc đăng ký") @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm") private LocalDateTime studentEnd;
     @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm") private LocalDateTime reportSubmissionDeadline;
     @DateTimeFormat(pattern = "yyyy-MM-dd'T'HH:mm") private LocalDateTime reviewDeadline;
     @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) private LocalDate councilDate;

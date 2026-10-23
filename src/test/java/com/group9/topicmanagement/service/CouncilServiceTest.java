@@ -116,6 +116,6 @@ public class CouncilServiceTest {
         BusinessRuleException e = assertThrows(BusinessRuleException.class, () -> {
             councilService.addMember(1L, 10L, CouncilMemberRole.CHAIR);
         });
-        assertTrue(e.getMessage().contains("đã có CHAIR"));
+        assertTrue(e.getMessage().contains("đã có Chủ tịch"));
     }
 }

@@ -372,8 +372,24 @@ public class TopicResultService {
     }
 
     private void requireLockedAndCurrentResult(Long topicId, TopicResult result) {
-        if (!isLockedAndCurrentResult(topicId, result)) {
-            throw new BusinessRuleException("Phải khóa tất cả phiếu chấm và tính lại điểm đúng trước khi xác nhận hoặc công bố");
+        if (result.getCouncilAssignment() == null || evaluationScope.currentAssignment(topicId)
+                .map(a -> !a.getId().equals(result.getCouncilAssignment().getId())).orElse(true)) {
+            throw new BusinessRuleException("Kết quả đang thuộc hội đồng cũ. Khoa cần tính lại điểm theo hội đồng hiện hành trước khi xác nhận hoặc công bố.");
+        }
+        if (!areAllEvaluationsSubmitted(topicId)) {
+            throw new BusinessRuleException("Còn phản biện hoặc thành viên hội đồng chưa nộp đủ phiếu chấm hợp lệ. Vui lòng kiểm tra danh sách phiếu của hội đồng hiện hành.");
+        }
+        if (hasMissingMandatoryScores(topicId)) {
+            throw new BusinessRuleException("Còn phiếu thiếu điểm tiêu chí bắt buộc. Người chấm cần bổ sung và nộp lại trước khi xác nhận hoặc công bố.");
+        }
+        long unlocked = evaluationScope.currentEvaluations(topicId).stream()
+                .filter(e -> e.getStatus() != EvaluationStatus.LOCKED).count();
+        if (unlocked > 0) {
+            throw new BusinessRuleException("Khoa phải khóa tất cả phiếu chấm trước khi xác nhận hoặc công bố. Còn " + unlocked + " phiếu chưa khóa.");
+        }
+        if (averageOfValidEvaluations(topicId)
+                .map(score -> result.getFinalScore() == null || score.compareTo(result.getFinalScore()) != 0).orElse(true)) {
+            throw new BusinessRuleException("Điểm tổng kết chưa khớp với các phiếu hiện tại. Khoa cần tính lại điểm đúng trước khi Chủ tịch xác nhận và khoa công bố.");
         }
     }
 
