@@ -19,6 +19,14 @@ public interface CouncilAssignmentRepository extends JpaRepository<CouncilAssign
     List<CouncilAssignment> findByTopicId(Long topicId);
     boolean existsByCouncilIdAndTopicId(Long councilId, Long topicId);
 
+    @Query("""
+        select (count(a) > 0) from CouncilAssignment a, CouncilMember m
+        where a.topic.id = :topicId and a.council.status in :statuses
+          and m.council = a.council and m.member.id = :memberId
+        """)
+    boolean existsCouncilMembershipForTopic(@Param("topicId") Long topicId,
+            @Param("memberId") Long memberId, @Param("statuses") List<CouncilStatus> statuses);
+
     @EntityGraph(attributePaths = {"topic", "council"})
     @Query("""
             select a from CouncilAssignment a join a.council c

@@ -35,6 +35,7 @@ public class ReviewerAssignmentService {
     private final TransactionalNotificationService notifications;
     private final com.group9.topicmanagement.repository.EvaluationRepository evaluations;
     private final com.group9.topicmanagement.repository.TopicResultRepository results;
+    private final EvaluationScopeService evaluationScope;
     @org.springframework.beans.factory.annotation.Value("${app.base-url:http://localhost:8090}")
     private String baseUrl;
 
@@ -44,7 +45,8 @@ public class ReviewerAssignmentService {
                                      TopicRegistrationService topicRegistrationService,
                                      TransactionalNotificationService notifications,
                                      com.group9.topicmanagement.repository.EvaluationRepository evaluations,
-                                     com.group9.topicmanagement.repository.TopicResultRepository results) {
+                                     com.group9.topicmanagement.repository.TopicResultRepository results,
+                                     EvaluationScopeService evaluationScope) {
         this.assignmentRepository = assignmentRepository;
         this.topicRepository = topicRepository;
         this.userRepository = userRepository;
@@ -52,6 +54,7 @@ public class ReviewerAssignmentService {
         this.notifications = notifications;
         this.evaluations = evaluations;
         this.results = results;
+        this.evaluationScope = evaluationScope;
     }
 
     @PreAuthorize("hasRole('FACULTY_MANAGER')")
@@ -62,6 +65,7 @@ public class ReviewerAssignmentService {
         User reviewer = userRepository.findById(reviewerId)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy giảng viên"));
         requireLecturer(reviewer);
+        evaluationScope.requireNotCouncilMember(topicId, reviewerId);
         User assigner = userRepository.findByUsernameIgnoreCase(assignerUsername)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy người phân công"));
 
@@ -121,6 +125,7 @@ public class ReviewerAssignmentService {
         User reviewer = userRepository.findById(newReviewerId)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy giảng viên"));
         requireLecturer(reviewer);
+        evaluationScope.requireNotCouncilMember(assignment.getTopic().getId(), newReviewerId);
         if (assignment.getTopic().getAdvisors().stream().anyMatch(a -> a.getId().equals(reviewer.getId()))) {
             throw new BusinessRuleException("Giảng viên không được phản biện đề tài mình đang hướng dẫn");
         }

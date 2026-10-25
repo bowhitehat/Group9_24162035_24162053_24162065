@@ -231,7 +231,7 @@ class Member3RegressionTest extends Member3BusinessRulesTest {
         var current = createCouncilWithMembersAndTopic(topic);
         councilService.activateCouncil(current.getId());
         reviewerAssignmentService.assignReviewer(topic.getId(),
-                users.findByUsernameIgnoreCase("lecturer2").orElseThrow().getId(),
+                independentReviewer.getId(),
                 "faculty1", LocalDateTime.now().plusDays(2));
         assertThat(topicResultService.canCalculate(topic.getId(), "faculty1")).isFalse();
         for (String lecturer : List.of("lecturer2", "lecturer3", "lecturer4")) {
@@ -243,8 +243,8 @@ class Member3RegressionTest extends Member3BusinessRulesTest {
             // The outstanding reviewer ballot must still block calculation.
             assertThat(topicResultService.canCalculate(topic.getId(), "faculty1")).isFalse();
         }
-        authenticate("lecturer2", "LECTURER");
-        var review = evaluationService.saveDraft(topic.getId(), "lecturer2",
+        authenticate(independentReviewer.getUsername(), "LECTURER");
+        var review = evaluationService.saveDraft(topic.getId(), independentReviewer.getUsername(),
                 com.group9.topicmanagement.model.enums.EvaluationType.REVIEWER,
                 fullScores("10.00"), "Phản biện");
         evaluationService.submitEvaluation(review.getId());
@@ -386,7 +386,7 @@ class Member3RegressionTest extends Member3BusinessRulesTest {
         seedCriteria();
         var council = createCouncilWithMembersAndTopic(topic);
         councilService.activateCouncil(council.getId());
-        reviewerAssignmentService.assignReviewer(topic.getId(), users.findByUsernameIgnoreCase("lecturer2").orElseThrow().getId(),
+        reviewerAssignmentService.assignReviewer(topic.getId(), independentReviewer.getId(),
                 "faculty1", LocalDateTime.now().plusDays(2));
         for (String lecturer : List.of("lecturer2", "lecturer3", "lecturer4")) {
             authenticate(lecturer, "LECTURER");
@@ -394,8 +394,8 @@ class Member3RegressionTest extends Member3BusinessRulesTest {
                     com.group9.topicmanagement.model.enums.EvaluationType.COUNCIL_MEMBER, fullScores("8.13"), "Tốt");
             evaluationService.submitEvaluation(ballot.getId());
         }
-        authenticate("lecturer2", "LECTURER");
-        var review = evaluationService.saveDraft(topic.getId(), "lecturer2",
+        authenticate(independentReviewer.getUsername(), "LECTURER");
+        var review = evaluationService.saveDraft(topic.getId(), independentReviewer.getUsername(),
                 com.group9.topicmanagement.model.enums.EvaluationType.REVIEWER, fullScores("8.13"), "Tốt");
         evaluationService.submitEvaluation(review.getId());
         authenticate("faculty1", "FACULTY_MANAGER");

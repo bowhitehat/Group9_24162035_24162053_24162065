@@ -15,7 +15,7 @@ class ReviewerMessageTest {
         var ballots = mock(EvaluationRepository.class);
         var results = mock(TopicResultRepository.class);
         var service = new ReviewerAssignmentService(mock(ReviewerAssignmentRepository.class), mock(TopicRepository.class),
-                mock(UserRepository.class), mock(TopicRegistrationService.class), mock(TransactionalNotificationService.class), ballots, results);
+                mock(UserRepository.class), mock(TopicRegistrationService.class), mock(TransactionalNotificationService.class), ballots, results, mock(EvaluationScopeService.class));
         var cancelled = assignment(1, ReviewerAssignmentStatus.CANCELLED);
         var expired = assignment(2, ReviewerAssignmentStatus.ASSIGNED); expired.setDeadline(LocalDateTime.now().minusDays(1));
         var locked = assignment(3, ReviewerAssignmentStatus.SUBMITTED);
@@ -38,7 +38,7 @@ class ReviewerMessageTest {
     @Test void emptyListDoesNotQueryBallotsOrResults() {
         var ballots = mock(EvaluationRepository.class); var results = mock(TopicResultRepository.class);
         var service = new ReviewerAssignmentService(mock(ReviewerAssignmentRepository.class), mock(TopicRepository.class),
-                mock(UserRepository.class), mock(TopicRegistrationService.class), mock(TransactionalNotificationService.class), ballots, results);
+                mock(UserRepository.class), mock(TopicRegistrationService.class), mock(TransactionalNotificationService.class), ballots, results, mock(EvaluationScopeService.class));
         assertThat(service.gradingBlockReasons(List.of())).isEmpty();
         verifyNoInteractions(ballots, results);
     }

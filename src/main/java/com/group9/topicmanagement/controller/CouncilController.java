@@ -108,6 +108,7 @@ public class CouncilController {
         model.addAttribute("canComplete", councilService.canComplete(council, isManager));
         model.addAttribute("canCancel", councilService.canCancel(council, isManager));
         model.addAttribute("canGrade", councilService.canGradeCouncil(id, auth.getName()));
+        model.addAttribute("gradingRoleConflicts", councilService.roleConflictMessages(id));
         return "councils/detail";
     }
 

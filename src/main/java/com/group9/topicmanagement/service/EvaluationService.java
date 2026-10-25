@@ -48,6 +48,7 @@ public class EvaluationService {
     private final CouncilAssignmentRepository councilAssignmentRepository;
     private final CouncilMemberRepository councilMemberRepository;
     private final TopicResultRepository resultRepository;
+    private final EvaluationScopeService evaluationScope;
 
     public EvaluationService(EvaluationRepository evaluationRepository,
                              EvaluationScoreRepository scoreRepository,
@@ -57,7 +58,7 @@ public class EvaluationService {
                              ReviewerAssignmentService reviewerAssignmentService,
                              CouncilAssignmentRepository councilAssignmentRepository,
                              CouncilMemberRepository councilMemberRepository,
-                             TopicResultRepository resultRepository) {
+                             TopicResultRepository resultRepository, EvaluationScopeService evaluationScope) {
         this.evaluationRepository = evaluationRepository;
         this.scoreRepository = scoreRepository;
         this.criterionRepository = criterionRepository;
@@ -67,6 +68,7 @@ public class EvaluationService {
         this.councilAssignmentRepository = councilAssignmentRepository;
         this.councilMemberRepository = councilMemberRepository;
         this.resultRepository = resultRepository;
+        this.evaluationScope = evaluationScope;
     }
 
     @PreAuthorize("hasRole('LECTURER')")
@@ -362,6 +364,7 @@ public class EvaluationService {
     }
 
     private EvaluationContext requireEditableContext(Long topicId, User evaluator, EvaluationType type) {
+        evaluationScope.requireDistinctRoles(topicId);
         if (resultRepository.findByTopicId(topicId)
                 .map(result -> result.getStatus() == TopicResultStatus.CONFIRMED
                         || result.getStatus() == TopicResultStatus.PUBLISHED).orElse(false)) {
@@ -390,10 +393,12 @@ public class EvaluationService {
 
     private EvaluationContext requireAssignedContext(Long topicId, User evaluator, EvaluationType type) {
         if (type == EvaluationType.REVIEWER) {
+            evaluationScope.requireNotCouncilMember(topicId, evaluator.getId());
             ReviewerAssignment assignment = reviewerAssignmentService.requireActiveAssignment(topicId, evaluator.getId());
             return new EvaluationContext(assignment, null);
         }
         if (type == EvaluationType.COUNCIL_MEMBER) {
+            evaluationScope.requireNotReviewer(topicId, evaluator.getId());
             return new EvaluationContext(null, requireCouncilMember(topicId, evaluator.getId()));
         }
         throw new BusinessRuleException("Loại nhiệm vụ chấm không hợp lệ");

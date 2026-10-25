@@ -85,7 +85,7 @@ class TransactionConcurrencyRegressionTest {
             var role = roles.findByName(RoleName.LECTURER).orElseThrow();
             var department = departments.findByCodeIgnoreCase("CNPM").orElseThrow();
             List<User> actors = new ArrayList<>();
-            for (int i = 0; i < 7; i++) {
+            for (int i = 0; i < 8; i++) {
                 User actor = new User();
                 actor.setUsername(prefix + "_" + i); actor.setFullName("QA " + i);
                 actor.setEmail(prefix + i + "@example.test"); actor.setPasswordHash("unused-test-hash");
@@ -117,11 +117,11 @@ class TransactionConcurrencyRegressionTest {
                 criterion.setRegistrationPeriod(period); criterion.setDisplayOrder(i);
                 criterion.setIsActive(true); criterion.setIsMandatory(true); criterionIds.add(criteria.save(criterion).getId());
             }
-            var reviewer = new ReviewerAssignment(); reviewer.setTopic(topic); reviewer.setReviewer(actors.get(0));
+            var reviewer = new ReviewerAssignment(); reviewer.setTopic(topic); reviewer.setReviewer(actors.get(7));
             reviewer.setStatus(ReviewerAssignmentStatus.ASSIGNED); reviewer.setDeadline(LocalDateTime.now().plusDays(3));
             reviewer = reviewers.save(reviewer);
             return new Fixture(period.getId(), topic.getId(), actors.stream().map(User::getId).toList(),
-                    actors.get(0).getUsername(), council.getId(), criterionIds, reviewer.getId());
+                    actors.get(7).getUsername(), council.getId(), criterionIds, reviewer.getId());
         });
         authenticate(fixture.evaluator(), "LECTURER");
         clearInvocations(scores);
@@ -234,7 +234,9 @@ class TransactionConcurrencyRegressionTest {
             });
             assertThat(paused.await(10, TimeUnit.SECONDS)).isTrue();
             var ballotForm = form(true, true); ballotForm.setType(EvaluationType.COUNCIL_MEMBER);
-            evaluationService.saveEvaluation(fixture.topicId(), fixture.evaluator(), ballotForm);
+            String councilEvaluator = users.findById(fixture.users().getFirst()).orElseThrow().getUsername();
+            authenticate(councilEvaluator, "LECTURER");
+            evaluationService.saveEvaluation(fixture.topicId(), councilEvaluator, ballotForm);
             release.countDown();
             assertThat(cancellation.get(15, TimeUnit.SECONDS)).contains("đã có phiếu chấm");
             assertThat(councils.findById(fixture.councilId()).orElseThrow().getStatus()).isEqualTo(CouncilStatus.ACTIVE);
@@ -274,7 +276,7 @@ class TransactionConcurrencyRegressionTest {
             assertThat(manager.get(15, TimeUnit.SECONDS)).contains("đã nộp điểm");
             var stored = reviewers.findById(fixture.reviewerId()).orElseThrow();
             assertThat(stored.getStatus()).isEqualTo(ReviewerAssignmentStatus.SUBMITTED);
-            assertThat(stored.getReviewer().getId()).isEqualTo(fixture.users().getFirst());
+            assertThat(stored.getReviewer().getId()).isEqualTo(fixture.users().get(7));
         } finally {
             release.countDown(); pool.shutdownNow(); pool.awaitTermination(5, TimeUnit.SECONDS); advised.removeAdvice(pause);
         }

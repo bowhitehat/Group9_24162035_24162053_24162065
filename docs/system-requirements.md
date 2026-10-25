@@ -29,7 +29,7 @@ Chủ tịch/thư ký không phải role tài khoản riêng: CHAIR/SECRETARY/ME
 | FR06 | Đăng ký cùng đợt trong giai đoạn SV; duyệt một đề tài cho một nhóm | TV2 |
 | FR07 | Trưởng nhóm nộp trong hạn, lịch sử phiên bản, tải báo cáo theo quan hệ | TV2 |
 | FR08 | Phân công phản biện đúng đề tài đã được chấp thuận; theo dõi hạn/phiếu | TV3 |
-| FR09 | Hội đồng 3–5 GV, một chủ tịch/thư ký, không trùng, không chấm đề tài đang hướng dẫn | TV3 |
+| FR09 | Hội đồng 3–5 GV, một chủ tịch/thư ký, không trùng, không chấm đề tài đang hướng dẫn; một GV không được vừa phản biện vừa chấm hội đồng cùng đề tài (kiểm tra cả hai chiều và khi xử lý đồng thời) | TV3 |
 | FR10 | Điểm 0–10, trung bình cộng, đủ điểm, khóa, chủ tịch xác nhận, khoa công bố | TV3 |
 | FR11 | SV tra cứu điểm theo đợt đã đăng ký, chỉ xem kết quả nhóm mình sau công bố | TV3 |
 | FR12 | Thông báo theo role và dashboard theo phạm vi quyền | TV3 |

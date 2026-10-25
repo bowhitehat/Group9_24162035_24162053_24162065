@@ -123,6 +123,8 @@ kiểm thử và cách chạy MySQL QA an toàn](docs/verification-20261021.md).
 
 Điểm tổng kết là trung bình các phiếu phản biện còn hiệu lực và các phiếu của hội đồng hiện tại; mỗi phiếu lấy trung bình tiêu chí bắt buộc đang hoạt động. Phiếu hội đồng cũ/phân công đã hủy không tham gia tính điểm. Danh sách kết quả và Excel/PDF chỉ có một dòng cho mỗi đề tài. Nộp báo cáo đồng thời được tuần tự hóa số phiên bản; giao dịch rollback dọn riêng file vừa tải lên (có ghi cảnh báo nếu kho lưu trữ không cho dọn).
 
+Một giảng viên không được vừa phản biện vừa tham gia hội đồng chấm cùng đề tài. Hệ thống chặn cả hai thứ tự phân công và các request đồng thời; vẫn cho phép hai vai trò trên các đề tài khác nhau. Dữ liệu cũ bị trùng sẽ có cảnh báo và bị chặn chấm/tính/xác nhận/công bố, không tự xóa phiếu. Chi tiết: [quy tắc và kiểm thử](docs/grading-role-exclusivity-20261025.md).
+
 ## Email khi chạy localhost
 
 Mặc định `MAIL_ENABLED=false`, không gửi email thật. Có thể chọn một trong hai cấu hình trong `.env`, rồi **khởi động lại ứng dụng**:

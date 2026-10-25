@@ -10,6 +10,7 @@ import com.group9.topicmanagement.model.evaluation.EvaluationCriterion;
 import com.group9.topicmanagement.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.group9.topicmanagement.exception.BusinessRuleException;
 
 import java.util.List;
 import java.util.Optional;
@@ -21,6 +22,8 @@ import java.util.stream.Collectors;
 @Service
 @Transactional(readOnly = true)
 public class EvaluationScopeService {
+    private static final List<CouncilStatus> ROLE_COUNCILS =
+            List.of(CouncilStatus.DRAFT, CouncilStatus.ACTIVE, CouncilStatus.COMPLETED);
     private final CouncilAssignmentRepository assignments;
     private final CouncilMemberRepository members;
     private final ReviewerAssignmentRepository reviewers;
@@ -44,6 +47,41 @@ public class EvaluationScopeService {
                 List.of(CouncilStatus.ACTIVE, CouncilStatus.COMPLETED)).stream().findFirst();
     }
 
+    public void requireNotReviewer(Long topicId, Long userId) {
+        if (reviewers.existsByTopicIdAndReviewerIdAndStatusNot(topicId, userId, ReviewerAssignmentStatus.CANCELLED)) {
+            throw new BusinessRuleException("Giảng viên đã được phân công phản biện đề tài này; không được đồng thời chấm hội đồng cùng đề tài. Vui lòng chọn giảng viên khác.");
+        }
+    }
+
+    public void requireNotCouncilMember(Long topicId, Long userId) {
+        if (assignments.existsCouncilMembershipForTopic(topicId, userId, ROLE_COUNCILS)) {
+            throw new BusinessRuleException("Giảng viên đang là thành viên hội đồng của đề tài này; không được đồng thời làm phản biện cùng đề tài. Vui lòng chọn giảng viên khác.");
+        }
+    }
+
+    /** One batch query for a council's topics; never load all assignments to filter in RAM. */
+    public Map<Long, String> roleConflictReasons(List<Long> topicIds) {
+        if (topicIds.isEmpty()) return Map.of();
+        return reviewers.findCouncilRoleConflicts(topicIds, ROLE_COUNCILS, ReviewerAssignmentStatus.CANCELLED).stream()
+                .collect(Collectors.groupingBy(r -> r.getTopic().getId(),
+                        Collectors.collectingAndThen(Collectors.toList(), conflicts -> {
+                            String people = conflicts.stream()
+                                    .map(r -> r.getReviewer().getFullName() + " (" + r.getReviewer().getUsername() + ")")
+                                    .distinct().sorted().collect(Collectors.joining(", "));
+                            return "Đề tài " + conflicts.get(0).getTopic().getCode() + ": " + people
+                                    + " đang đồng thời là phản biện và thành viên hội đồng. Không được chấm, tính, xác nhận hoặc công bố điểm khi còn trùng vai trò. Khoa cần điều chỉnh phân công; các phiếu cũ được giữ nguyên.";
+                        })));
+    }
+
+    public String roleConflictReason(Long topicId) {
+        return roleConflictReasons(List.of(topicId)).get(topicId);
+    }
+
+    public void requireDistinctRoles(Long topicId) {
+        String reason = roleConflictReason(topicId);
+        if (reason != null) throw new BusinessRuleException(reason);
+    }
+
     public List<Evaluation> currentEvaluations(Long topicId) {
         var currentMembers = currentAssignment(topicId)
                 .map(a -> members.findByCouncilId(a.getCouncil().getId())).orElse(List.of());
@@ -62,6 +100,7 @@ public class EvaluationScopeService {
     }
 
     public boolean allSubmitted(Long topicId) {
+        if (roleConflictReason(topicId) != null) return false;
         var assignment = currentAssignment(topicId);
         if (assignment.isEmpty() || !councilSubmitted(assignment.get())) return false;
         var ballots = currentEvaluations(topicId);
@@ -72,6 +111,7 @@ public class EvaluationScopeService {
     }
 
     public boolean councilSubmitted(CouncilAssignment assignment) {
+        if (roleConflictReason(assignment.getTopic().getId()) != null) return false;
         var councilMembers = members.findByCouncilId(assignment.getCouncil().getId());
         if (councilMembers.size() < 3 || councilMembers.size() > 5) return false;
         var mandatory = criteria.findByRegistrationPeriodIdAndIsActiveTrueOrderByDisplayOrderAsc(

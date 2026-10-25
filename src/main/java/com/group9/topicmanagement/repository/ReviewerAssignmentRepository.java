@@ -26,6 +26,19 @@ public interface ReviewerAssignmentRepository extends JpaRepository<ReviewerAssi
     @EntityGraph(attributePaths = {"topic", "topic.department", "topic.registrationPeriod", "reviewer"})
     List<ReviewerAssignment> findByReviewerId(Long reviewerId);
     boolean existsByTopicIdAndReviewerId(Long topicId, Long reviewerId);
+    boolean existsByTopicIdAndReviewerIdAndStatusNot(Long topicId, Long reviewerId, ReviewerAssignmentStatus status);
+
+    @EntityGraph(attributePaths = {"topic", "reviewer"})
+    @Query("""
+        select distinct r from ReviewerAssignment r, CouncilAssignment a, CouncilMember m
+        where r.topic.id in :topicIds and r.status <> :cancelled
+          and a.topic = r.topic and a.council.status in :councilStatuses
+          and m.council = a.council and m.member = r.reviewer
+        """)
+    List<ReviewerAssignment> findCouncilRoleConflicts(
+            @Param("topicIds") List<Long> topicIds,
+            @Param("councilStatuses") List<com.group9.topicmanagement.model.enums.CouncilStatus> councilStatuses,
+            @Param("cancelled") ReviewerAssignmentStatus cancelled);
     Optional<ReviewerAssignment> findByTopicIdAndReviewerId(Long topicId, Long reviewerId);
 
     @EntityGraph(attributePaths = {"topic", "topic.department", "topic.registrationPeriod", "reviewer"})

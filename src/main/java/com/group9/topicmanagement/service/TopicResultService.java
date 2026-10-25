@@ -70,6 +70,7 @@ public class TopicResultService {
     public TopicResult calculateResult(Long topicId) {
         Topic topic = topicRepository.findLockedById(topicId)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy đề tài"));
+        evaluationScope.requireDistinctRoles(topicId);
 
         CouncilAssignment assignment = councilAssignmentRepository
                 .findByTopicIdAndCouncil_StatusIn(topicId, List.of(CouncilStatus.ACTIVE, CouncilStatus.COMPLETED))
@@ -109,6 +110,7 @@ public class TopicResultService {
     public void confirmResult(Long topicId, String confirmerUsername) {
         topicRepository.findLockedById(topicId)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy đề tài"));
+        evaluationScope.requireDistinctRoles(topicId);
         TopicResult result = resultRepository.findByTopicId(topicId)
                 .orElseThrow(() -> new NotFoundException("Chưa có kết quả để xác nhận"));
         if (result.getFinalScore() == null) {
@@ -136,6 +138,7 @@ public class TopicResultService {
     public void publishResult(Long topicId, String publisherUsername) {
         topicRepository.findLockedById(topicId)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy đề tài"));
+        evaluationScope.requireDistinctRoles(topicId);
         TopicResult result = resultRepository.findByTopicId(topicId)
                 .orElseThrow(() -> new NotFoundException("Chưa có kết quả để công bố"));
         if (result.getStatus() != TopicResultStatus.CONFIRMED) {
@@ -395,5 +398,10 @@ public class TopicResultService {
 
     private boolean hasRole(User user, RoleName roleName) {
         return user.getRoles().stream().anyMatch(role -> role.getName() == roleName);
+    }
+
+    @Transactional(readOnly = true)
+    public String gradingRoleConflict(Long topicId) {
+        return evaluationScope.roleConflictReason(topicId);
     }
 }

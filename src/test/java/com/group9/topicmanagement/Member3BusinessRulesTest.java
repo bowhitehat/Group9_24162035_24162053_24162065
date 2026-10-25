@@ -87,6 +87,7 @@ class Member3BusinessRulesTest {
     private User lecturer2;
     private User lecturer3;
     private User lecturer4;
+    protected User independentReviewer;
     private User student1;
     private User student2;
     private User student3;
@@ -130,6 +131,7 @@ class Member3BusinessRulesTest {
         lecturer2 = userService.create("lecturer2", "GV B", "lec2@test.local", null, dept.getId(), Set.of(RoleName.LECTURER), "Password@123");
         lecturer3 = userService.create("lecturer3", "GV C", "lec3@test.local", null, dept.getId(), Set.of(RoleName.LECTURER), "Password@123");
         lecturer4 = userService.create("lecturer4", "GV D", "lec4@test.local", null, dept.getId(), Set.of(RoleName.LECTURER), "Password@123");
+        independentReviewer = userService.create("independent-reviewer", "GV phản biện riêng", "independent@test.local", null, dept.getId(), Set.of(RoleName.LECTURER), "Password@123");
         student1 = userService.create("student1", "SV 1", "sv1@test.local", null, dept.getId(), Set.of(RoleName.STUDENT), "Password@123");
         student2 = userService.create("student2", "SV 2", "sv2@test.local", null, dept.getId(), Set.of(RoleName.STUDENT), "Password@123");
         student3 = userService.create("student3", "SV 3", "sv3@test.local", null, dept.getId(), Set.of(RoleName.STUDENT), "Password@123");
@@ -220,7 +222,7 @@ class Member3BusinessRulesTest {
         Topic topic = preparedApprovedTopic();
         seedCriteria();
         authenticate(facultyManager.getUsername(), "FACULTY_MANAGER");
-        reviewerAssignmentService.assignReviewer(topic.getId(), lecturer2.getId(), facultyManager.getUsername(), LocalDateTime.now().plusDays(3));
+        reviewerAssignmentService.assignReviewer(topic.getId(), independentReviewer.getId(), facultyManager.getUsername(), LocalDateTime.now().plusDays(3));
         Council council = councilService.createCouncil("HĐ chấm", period.getId(), LocalDateTime.now().plusDays(7), "B1");
         councilService.addMember(council.getId(), lecturer2.getId(), CouncilMemberRole.CHAIR);
         councilService.addMember(council.getId(), lecturer3.getId(), CouncilMemberRole.SECRETARY);
@@ -230,13 +232,13 @@ class Member3BusinessRulesTest {
 
         EvaluationCriterion c1 = criteria.findByRegistrationPeriodIdAndIsActiveTrueOrderByDisplayOrderAsc(period.getId()).get(0);
         EvaluationScore invalid = score(c1, new BigDecimal("11"));
-        authenticate(lecturer2.getUsername(), "LECTURER");
-        assertThatThrownBy(() -> evaluationService.saveDraft(topic.getId(), lecturer2.getUsername(), EvaluationType.REVIEWER, List.of(invalid), "bad"))
+        authenticate(independentReviewer.getUsername(), "LECTURER");
+        assertThatThrownBy(() -> evaluationService.saveDraft(topic.getId(), independentReviewer.getUsername(), EvaluationType.REVIEWER, List.of(invalid), "bad"))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("0 đến 10");
 
         EvaluationScore ok = score(c1, new BigDecimal("8.00"));
-        Evaluation draft = evaluationService.saveDraft(topic.getId(), lecturer2.getUsername(), EvaluationType.REVIEWER, List.of(ok), "tốt");
+        Evaluation draft = evaluationService.saveDraft(topic.getId(), independentReviewer.getUsername(), EvaluationType.REVIEWER, List.of(ok), "tốt");
         assertThatThrownBy(() -> evaluationService.submitEvaluation(draft.getId()))
                 .isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("tiêu chí bắt buộc");
@@ -244,10 +246,11 @@ class Member3BusinessRulesTest {
         List<EvaluationScore> full = criteria.findByRegistrationPeriodIdAndIsActiveTrueOrderByDisplayOrderAsc(period.getId()).stream()
                 .map(c -> score(c, new BigDecimal("8.125")))
                 .toList();
-        Evaluation submitted = evaluationService.saveDraft(topic.getId(), lecturer2.getUsername(), EvaluationType.REVIEWER, full, "đủ");
+        Evaluation submitted = evaluationService.saveDraft(topic.getId(), independentReviewer.getUsername(), EvaluationType.REVIEWER, full, "đủ");
         evaluationService.submitEvaluation(submitted.getId());
         
         // Need to submit for council members too to allow publishing
+        authenticate(lecturer2.getUsername(), "LECTURER");
         Evaluation c1Eval = evaluationService.saveDraft(topic.getId(), lecturer2.getUsername(), EvaluationType.COUNCIL_MEMBER, full, "ok");
         evaluationService.submitEvaluation(c1Eval.getId());
         
@@ -262,8 +265,8 @@ class Member3BusinessRulesTest {
         authenticate(facultyManager.getUsername(), "FACULTY_MANAGER");
         evaluationService.lockEvaluation(submitted.getId());
         assertThatThrownBy(() -> {
-            authenticate(lecturer2.getUsername(), "LECTURER");
-            evaluationService.saveDraft(topic.getId(), lecturer2.getUsername(), EvaluationType.REVIEWER, full, "sửa");
+            authenticate(independentReviewer.getUsername(), "LECTURER");
+            evaluationService.saveDraft(topic.getId(), independentReviewer.getUsername(), EvaluationType.REVIEWER, full, "sửa");
         }).isInstanceOf(BusinessRuleException.class)
                 .hasMessageContaining("khóa");
 
@@ -318,8 +321,8 @@ class Member3BusinessRulesTest {
         Evaluation legacy = evaluations.findById(submitted.getId()).orElseThrow();
         legacy.setStatus(EvaluationStatus.SUBMITTED);
         evaluations.save(legacy);
-        authenticate(lecturer2.getUsername(), "LECTURER");
-        assertThatThrownBy(() -> evaluationService.saveDraft(topic.getId(), lecturer2.getUsername(),
+        authenticate(independentReviewer.getUsername(), "LECTURER");
+        assertThatThrownBy(() -> evaluationService.saveDraft(topic.getId(), independentReviewer.getUsername(),
                 EvaluationType.REVIEWER, full, "sửa sau công bố"))
                 .isInstanceOf(BusinessRuleException.class).hasMessageContaining("đã xác nhận hoặc công bố");
         assertThatThrownBy(() -> evaluationService.submitEvaluation(legacy.getId()))
@@ -367,7 +370,7 @@ class Member3BusinessRulesTest {
         councilService.addMember(council.getId(), lecturer3.getId(), CouncilMemberRole.SECRETARY);
         councilService.addMember(council.getId(), lecturer4.getId(), CouncilMemberRole.MEMBER);
         councilService.assignTopic(council.getId(), topic.getId());
-        reviewerAssignmentService.assignReviewer(topic.getId(), lecturer2.getId(),
+        reviewerAssignmentService.assignReviewer(topic.getId(), independentReviewer.getId(),
                 facultyManager.getUsername(), LocalDateTime.now().plusDays(2));
 
         mvc.perform(get("/councils/{id}", council.getId())
@@ -391,9 +394,9 @@ class Member3BusinessRulesTest {
                 .andExpect(status().isOk());
         mvc.perform(get("/evaluations/topic/{id}", topic.getId())
                         .param("type", "REVIEWER")
-                        .with(user(lecturer2.getUsername()).roles("LECTURER")))
+                        .with(user(independentReviewer.getUsername()).roles("LECTURER")))
                 .andExpect(status().isOk());
-        assertThat(reviewerAssignments.findByTopicIdAndReviewerId(topic.getId(), lecturer2.getId())
+        assertThat(reviewerAssignments.findByTopicIdAndReviewerId(topic.getId(), independentReviewer.getId())
                 .orElseThrow().getStatus()).isEqualTo(ReviewerAssignmentStatus.IN_PROGRESS);
     }
 

@@ -227,6 +227,7 @@ public class EvaluationController {
         List<Evaluation> evaluations = evaluationService.listByTopic(topicId);
         model.addAttribute("result", result);
         model.addAttribute("evaluations", evaluations);
+        model.addAttribute("gradingRoleConflict", topicResultService.gradingRoleConflict(topicId));
 
         model.addAttribute("canConfirm", topicResultService.canConfirm(topicId, auth.getName()));
         model.addAttribute("canPublish", topicResultService.canPublish(topicId, auth.getName()));

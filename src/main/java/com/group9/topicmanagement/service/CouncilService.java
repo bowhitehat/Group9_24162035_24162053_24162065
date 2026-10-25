@@ -140,7 +140,12 @@ public class CouncilService {
             }
         }
 
-        for (CouncilAssignment assignment : assignmentRepository.findByCouncilId(councilId)) {
+        List<CouncilAssignment> councilTopics = assignmentRepository.findByCouncilId(councilId);
+        // Share the topic lock with reviewer assignment, including when the member is added last.
+        councilTopics.stream().map(a -> a.getTopic().getId()).distinct().sorted()
+                .forEach(id -> topicRepository.findLockedById(id).orElseThrow(() -> new NotFoundException("Không tìm thấy đề tài")));
+        for (CouncilAssignment assignment : councilTopics) {
+            evaluationScope.requireNotReviewer(assignment.getTopic().getId(), userId);
             if (assignment.getTopic().getAdvisors().stream().anyMatch(a -> a.getId().equals(user.getId()))) {
                 throw new BusinessRuleException("Không phân công giảng viên chấm đề tài họ đang hướng dẫn");
             }
@@ -199,6 +204,7 @@ public class CouncilService {
 
         List<CouncilMember> members = memberRepository.findByCouncilId(councilId);
         for (CouncilMember m : members) {
+            evaluationScope.requireNotReviewer(topicId, m.getMember().getId());
             if (topic.getAdvisors().stream().anyMatch(a -> a.getId().equals(m.getMember().getId()))) {
                 throw new BusinessRuleException("Không thể thêm đề tài: Giảng viên " + m.getMember().getFullName()
                         + " trong hội đồng đang hướng dẫn đề tài này.");
@@ -250,6 +256,12 @@ public class CouncilService {
             throw new BusinessRuleException("Phải phân công ít nhất một đề tài trước khi kích hoạt hội đồng");
         }
 
+        assignmentRepository.findByCouncilId(councilId).stream().map(a -> a.getTopic().getId()).distinct().sorted()
+                .forEach(id -> {
+                    topicRepository.findLockedById(id).orElseThrow(() -> new NotFoundException("Không tìm thấy đề tài"));
+                    evaluationScope.requireDistinctRoles(id);
+                });
+
         council.setStatus(CouncilStatus.ACTIVE);
         councilRepository.save(council);
     }
@@ -263,7 +275,10 @@ public class CouncilService {
         }
         assignmentRepository.findByCouncilId(councilId).stream()
                 .map(a -> a.getTopic().getId()).sorted()
-                .forEach(id -> topicRepository.findLockedById(id).orElseThrow());
+                .forEach(id -> {
+                    topicRepository.findLockedById(id).orElseThrow();
+                    evaluationScope.requireDistinctRoles(id);
+                });
         if (!councilReadyToComplete(councilId)) {
             throw new BusinessRuleException("Chưa thể hoàn tất: cần có đề tài và tất cả thành viên nộp đủ điểm bắt buộc cho từng đề tài");
         }
@@ -342,7 +357,14 @@ public class CouncilService {
         return members.size() >= 3 && members.size() <= 5
                 && members.stream().filter(m -> m.getRole() == CouncilMemberRole.CHAIR).count() == 1
                 && members.stream().filter(m -> m.getRole() == CouncilMemberRole.SECRETARY).count() == 1
-                && !assignmentRepository.findByCouncilId(council.getId()).isEmpty();
+                && !assignmentRepository.findByCouncilId(council.getId()).isEmpty()
+                && roleConflictMessages(council.getId()).isEmpty();
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> roleConflictMessages(Long councilId) {
+        return evaluationScope.roleConflictReasons(assignmentRepository.findByCouncilId(councilId).stream()
+                .map(a -> a.getTopic().getId()).toList()).values().stream().toList();
     }
 
     public boolean canComplete(Council council, boolean manager) {

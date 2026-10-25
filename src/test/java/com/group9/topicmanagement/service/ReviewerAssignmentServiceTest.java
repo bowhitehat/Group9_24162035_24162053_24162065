@@ -35,6 +35,7 @@ public class ReviewerAssignmentServiceTest {
     @Mock private TopicRepository topicRepository;
     @Mock private UserRepository userRepository;
     @Mock private TopicRegistrationService topicRegistrationService;
+    @Mock private EvaluationScopeService evaluationScope;
 
     @InjectMocks
     private ReviewerAssignmentService assignmentService;
