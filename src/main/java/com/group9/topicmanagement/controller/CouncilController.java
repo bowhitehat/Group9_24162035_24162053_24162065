@@ -90,25 +90,25 @@ public class CouncilController {
     @PreAuthorize("hasAnyRole('FACULTY_MANAGER', 'LECTURER')")
     public String viewCouncil(@PathVariable Long id, Authentication auth, Model model) {
         boolean isManager = hasRole(auth, "FACULTY_MANAGER");
-        Council council = councilService.getCouncilForViewer(id, auth.getName(), isManager);
+        var detail = councilService.detailForViewer(id, auth.getName(), isManager);
+        Council council = detail.council();
         model.addAttribute("council", council);
-        model.addAttribute("members", councilService.membersOf(id));
-        model.addAttribute("assignments", councilService.assignmentsOf(id));
-        model.addAttribute("allLecturers", isManager ? userService.findUsersByRole("LECTURER") : List.of());
+        model.addAttribute("members", detail.members());
+        model.addAttribute("assignments", detail.assignments());
+        model.addAttribute("allLecturers", detail.canEditStructure() ? userService.findUsersByRole("LECTURER") : List.of());
         model.addAttribute("memberRoles", CouncilMemberRole.values());
-        model.addAttribute("approvedRegistrations", isManager ? registrationService.listApprovedRegistrations().stream()
-                .filter(r -> r.getRegistrationPeriod().getId().equals(council.getRegistrationPeriod().getId()))
-                .toList() : List.of());
+        model.addAttribute("approvedRegistrations", detail.canEditStructure()
+                ? registrationService.listApprovedRegistrationsForPeriod(council.getRegistrationPeriod().getId()) : List.of());
         model.addAttribute("updateForm", toUpdateForm(council));
         model.addAttribute("memberForm", new CouncilMemberForm());
         model.addAttribute("topicForm", new CouncilTopicForm());
-        model.addAttribute("canEditCouncil", councilService.canEditCouncil(council, isManager));
-        model.addAttribute("canEditStructure", councilService.canEditStructure(council, isManager));
-        model.addAttribute("canActivate", councilService.canActivate(council, isManager));
-        model.addAttribute("canComplete", councilService.canComplete(council, isManager));
-        model.addAttribute("canCancel", councilService.canCancel(council, isManager));
-        model.addAttribute("canGrade", councilService.canGradeCouncil(id, auth.getName()));
-        model.addAttribute("gradingRoleConflicts", councilService.roleConflictMessages(id));
+        model.addAttribute("canEditCouncil", detail.canEditCouncil());
+        model.addAttribute("canEditStructure", detail.canEditStructure());
+        model.addAttribute("canActivate", detail.canActivate());
+        model.addAttribute("canComplete", detail.canComplete());
+        model.addAttribute("canCancel", detail.canCancel());
+        model.addAttribute("canGrade", detail.canGrade());
+        model.addAttribute("gradingRoleConflicts", detail.gradingRoleConflicts());
         return "councils/detail";
     }
 

@@ -1,6 +1,7 @@
 package com.group9.topicmanagement.service;
 
 import com.group9.topicmanagement.model.RegistrationPeriod;
+import com.group9.topicmanagement.dto.CouncilDetail;
 import com.group9.topicmanagement.model.User;
 import com.group9.topicmanagement.model.council.Council;
 import com.group9.topicmanagement.model.council.CouncilAssignment;
@@ -82,6 +83,34 @@ public class CouncilService {
             throw new AccessDeniedException("Bạn không được phân công vào hội đồng này");
         }
         return council;
+    }
+
+    @Transactional(readOnly = true)
+    public CouncilDetail detailForViewer(Long id, String username, boolean manager) {
+        Council council = getCouncilForViewer(id, username, manager);
+        var members = memberRepository.findByCouncilId(id);
+        var assignments = assignmentRepository.findByCouncilId(id);
+        var topicIds = assignments.stream().map(a -> a.getTopic().getId()).toList();
+        var conflicts = List.copyOf(evaluationScope.roleConflictReasons(topicIds).values());
+        boolean draft = council.getStatus() == CouncilStatus.DRAFT;
+        boolean active = council.getStatus() == CouncilStatus.ACTIVE;
+        boolean editable = canEditCouncil(council, manager);
+        boolean activate = manager && draft && members.size() >= 3 && members.size() <= 5
+                && members.stream().filter(m -> m.getRole() == CouncilMemberRole.CHAIR).count() == 1
+                && members.stream().filter(m -> m.getRole() == CouncilMemberRole.SECRETARY).count() == 1
+                && !assignments.isEmpty() && conflicts.isEmpty();
+        boolean complete = manager && active && !assignments.isEmpty()
+                && conflicts.isEmpty() && assignments.stream().allMatch(evaluationScope::councilSubmitted);
+        // A single existence query replaces loading every ballot separately for every topic.
+        boolean cancel = editable && (topicIds.isEmpty()
+                || !evaluationRepository.existsByCouncilMember_Council_IdAndTopic_IdInAndEvaluationType(
+                        id, topicIds, com.group9.topicmanagement.model.enums.EvaluationType.COUNCIL_MEMBER));
+        boolean grade = active && members.stream()
+                .anyMatch(m -> m.getMember().getUsername().equalsIgnoreCase(username))
+                && (council.getReportDate() == null
+                    || !LocalDateTime.now().isAfter(council.getReportDate().toLocalDate().atTime(23, 59, 59)));
+        return new CouncilDetail(council, members, assignments, conflicts, editable,
+                manager && draft, activate, complete, cancel, grade);
     }
 
     @PreAuthorize("hasRole('FACULTY_MANAGER')")

@@ -25,6 +25,8 @@ public interface EvaluationRepository extends JpaRepository<Evaluation, Long> {
     Optional<Evaluation> findLockedById(Long id);
 
     boolean existsByTopicId(Long topicId);
+    boolean existsByCouncilMember_Council_IdAndTopic_IdInAndEvaluationType(
+            Long councilId, List<Long> topicIds, EvaluationType evaluationType);
     @EntityGraph(attributePaths = {"evaluator"})
     List<Evaluation> findByTopicId(Long topicId);
     List<Evaluation> findByEvaluatorId(Long evaluatorId);

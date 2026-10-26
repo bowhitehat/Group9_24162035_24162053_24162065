@@ -67,6 +67,11 @@ public interface TopicRegistrationRepository extends JpaRepository<TopicRegistra
     @EntityGraph(attributePaths = {"topic", "registrationPeriod", "studentGroup", "studentGroup.members", "studentGroup.members.member"})
     List<TopicRegistration> findByStatusOrderByIdAsc(RegistrationStatus status);
 
+    // Council's topic picker needs only this period and the topic's display fields.
+    @EntityGraph(attributePaths = {"topic"})
+    List<TopicRegistration> findByRegistrationPeriodIdAndStatusOrderByIdAsc(
+            Long periodId, RegistrationStatus status);
+
     long countByStatus(RegistrationStatus status);
 
     @EntityGraph(attributePaths = {"topic", "studentGroup", "studentGroup.leader", "registrationPeriod"})

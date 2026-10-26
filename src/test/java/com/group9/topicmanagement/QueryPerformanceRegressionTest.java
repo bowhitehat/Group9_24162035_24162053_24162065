@@ -44,6 +44,7 @@ class QueryPerformanceRegressionTest {
     @Autowired TopicRegistrationService registrations;
     @Autowired ReviewerAssignmentService reviewerService;
     @Autowired UserService userService;
+    @Autowired CouncilService councilService;
     private RegistrationPeriod period;
     private Department department;
     private User proposer, lecturer;
@@ -151,6 +152,67 @@ class QueryPerformanceRegressionTest {
             assertThat(user.getRoles()).extracting(Role::getName).contains(RoleName.LECTURER);
         });
         assertThat(statistics.getEntityStatistics(User.class.getName()).getLoadCount()).isEqualTo(2);
+    }
+
+    @Test void councilDetailReusesReadsAndKeepsActivationAndCancellationRules() {
+        var c = draftCouncil();
+        var assignment = new CouncilAssignment(); assignment.setCouncil(c);
+        assignment.setTopic(em.getReference(Topic.class, topicIds.getFirst())); em.persist(assignment);
+        Long id = c.getId(); resetReads();
+        var detail = councilService.detailForViewer(id, "manager", true);
+        assertThat(detail.members()).hasSize(3);
+        assertThat(detail.assignments()).hasSize(1);
+        assertThat(detail.canActivate()).isTrue();
+        assertThat(detail.canCancel()).isTrue();
+        assertThat(detail.canGrade()).isFalse();
+        assertThat(statistics.getPrepareStatementCount()).isLessThanOrEqualTo(5);
+        assertThat(statistics.getEntityStatistics(TopicRegistration.class.getName()).getLoadCount()).isZero();
+
+        var ballot = new com.group9.topicmanagement.model.evaluation.Evaluation();
+        ballot.setTopic(em.getReference(Topic.class, topicIds.getFirst()));
+        ballot.setEvaluator(detail.members().getFirst().getMember());
+        ballot.setCouncilMember(detail.members().getFirst()); ballot.setEvaluationType(EvaluationType.COUNCIL_MEMBER);
+        em.persist(ballot); resetReads();
+        assertThat(councilService.detailForViewer(id, "manager", true).canCancel()).isFalse();
+    }
+
+    @Test void councilDetailStillRejectsUnrelatedLecturerAndLimitsMemberActions() {
+        Long id = draftCouncil().getId(); resetReads();
+        assertThatThrownBy(() -> councilService.detailForViewer(id, proposer.getUsername(), false))
+                .isInstanceOf(org.springframework.security.access.AccessDeniedException.class);
+        var detail = councilService.detailForViewer(id, lecturer.getUsername(), false);
+        assertThat(detail.canEditStructure()).isFalse();
+        assertThat(detail.canActivate()).isFalse();
+        assertThat(detail.canComplete()).isFalse();
+        assertThat(detail.canCancel()).isFalse();
+    }
+
+    @Test void councilTopicPickerFiltersPeriodAndStatusBeforeLoadingEntities() {
+        var first = em.find(TopicRegistration.class, registrationIds.getFirst()); first.setStatus(RegistrationStatus.APPROVED);
+        var other = new RegistrationPeriod(); other.setName(prefix + "other"); other.setType(PeriodType.MON_HOC);
+        other.setLecturerStart(LocalDateTime.now().minusDays(3)); other.setLecturerEnd(LocalDateTime.now().minusDays(2));
+        other.setStudentStart(LocalDateTime.now().minusDays(1)); other.setStudentEnd(LocalDateTime.now().plusDays(1));
+        em.persist(other);
+        var unrelated = em.find(TopicRegistration.class, registrationIds.get(1));
+        unrelated.setStatus(RegistrationStatus.APPROVED); unrelated.setRegistrationPeriod(other);
+        Long expected = first.getId(); resetReads();
+        var options = registrations.listApprovedRegistrationsForPeriod(period.getId());
+        assertThat(options).extracting(TopicRegistration::getId).containsExactly(expected);
+        assertThat(Hibernate.isInitialized(options.getFirst().getTopic())).isTrue();
+        assertThat(statistics.getEntityStatistics(TopicRegistration.class.getName()).getLoadCount()).isEqualTo(1);
+        assertThat(statistics.getPrepareStatementCount()).isEqualTo(1);
+    }
+
+    private Council draftCouncil() {
+        var c = new Council(); c.setName(prefix); c.setRegistrationPeriod(period);
+        c.setLocation("QA"); c.setReportDate(LocalDateTime.now().plusDays(1)); c.setStatus(CouncilStatus.DRAFT); em.persist(c);
+        var people = List.of(em.getReference(User.class, lecturer.getId()), actor("secretary", RoleName.LECTURER),
+                actor("member", RoleName.LECTURER));
+        var positions = List.of(CouncilMemberRole.CHAIR, CouncilMemberRole.SECRETARY, CouncilMemberRole.MEMBER);
+        for (int i = 0; i < people.size(); i++) {
+            var m = new CouncilMember(); m.setCouncil(c); m.setMember(people.get(i)); m.setRole(positions.get(i)); em.persist(m);
+        }
+        return c;
     }
 
     private User actor(String suffix, RoleName role) {

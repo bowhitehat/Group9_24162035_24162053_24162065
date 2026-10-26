@@ -11,7 +11,7 @@ import java.util.Optional;
 
 @Repository
 public interface CouncilMemberRepository extends JpaRepository<CouncilMember, Long> {
-    @EntityGraph(attributePaths = {"member"})
+    @EntityGraph(attributePaths = {"member", "member.roles"})
     List<CouncilMember> findByCouncilId(Long councilId);
     boolean existsByCouncilIdAndMemberId(Long councilId, Long memberId);
 
