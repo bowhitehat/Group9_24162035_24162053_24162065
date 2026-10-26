@@ -1,6 +1,6 @@
 # Hệ thống quản lý đề tài sinh viên — Group 9
 
-**TRƯỜNG ĐẠI HỌC SƯ PHẠM KỸ THUẬT TP.HCM**
+**TRƯỜNG ĐẠI HỌC CÔNG NGHỆ KỸ THUẬT TP.HCM**
 
 **Khoa Công nghệ Thông tin**
 
